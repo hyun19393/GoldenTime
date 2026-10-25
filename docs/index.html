@@ -263,7 +263,7 @@ function render(s) {
   drawMap(s.hospitals);
   drawHours(s.byHour, s.snapshots);
   drawLine(s.timeline);
-  drawSi(s.bySi, s.noEr);
+  drawSi(s.bySi, s.noEr, s.noErOther ?? {}, s.notReporting);
   drawMsgs(s.messages, s.messagesAt);
   drawRuns(s.runs24h);
 }
@@ -344,10 +344,16 @@ function drawLine(tl) {
   $('lineChart').innerHTML = svg + '</svg>';
 }
 
-function drawSi(list, noEr) {
+function drawSi(list, noEr, other, notReporting) {
   $('siTable').innerHTML = '<tr><th>시군</th><th class="num">응급실</th><th class="num">지금 꽉 참</th><th class="num">평균 꽉 찬 비율</th></tr>' +
     list.map((s) => `<tr><td>${esc(s.si)}</td><td class="num">${s.er}</td><td class="num">${s.fullNow ? `<span class="pill full">${s.fullNow}</span>` : 0}</td><td class="num">${pct(s.avgFullRate)}</td></tr>`).join('');
-  $('noEr').textContent = noEr.length ? `실시간 병상 정보가 있는 응급실이 없는 시군: ${noEr.join(', ')}` : '';
+  const none = noEr.filter((s) => !(other[s] ?? []).length);
+  const only = noEr.filter((s) => (other[s] ?? []).length);
+  $('noEr').textContent = [
+    none.length ? `응급의료기관 목록에 응급실이 없는 시군: ${none.join(', ')}.` : '',
+    only.length ? `실시간 병상을 알리지 않는 응급실(응급실운영신고기관)만 있는 시군: ${only.join(', ')}.` : '',
+    notReporting ? `경기도 응급실 목록 중 ${notReporting}곳은 실시간 병상 정보를 내지 않아 이 현황판과 웹앱 계산에서 빠져 있어요.` : '',
+  ].filter(Boolean).join(' ');
 }
 
 function drawMsgs(msgs, at) {
