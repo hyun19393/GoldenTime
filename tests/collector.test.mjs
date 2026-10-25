@@ -152,3 +152,17 @@ test('메시지: 해제되어 사라진 메시지는 해제 기록에 남기고,
   assert.equal(trackActive(msgSpec, parseItems(wrap([parseItems(MSGS).items[0]])).items, '2026-10-25 23:00:00', Date.now()), 0);
   process.exitCode = 0;
 });
+
+test('메시지: 같은 응답 안에서 두 번 온 메시지도 한 번만 저장', async () => {
+  const msgSpec = { ...OPS.find((o) => o.name === 'messages'), everyMin: 0 };
+  const dupItem = { dutyName: '다병원', hpid: 'A3', symBlkMsg: '중복 테스트', symBlkMsgTyp: '응급', symBlkSttDtm: '20261025120000', symTypCod: 'Y000', symTypCodMag: '응급실', symOutDspYon: '차단' };
+  const saved = globalThis.fetch;
+  globalThis.fetch = async (url) => new URL(url).pathname.endsWith('getEmrrmSrsillDissMsgInqire')
+    ? new Response(wrap([dupItem, { ...dupItem, rnum: '2' }]), { status: 200 })
+    : saved(url);
+  await runOp(msgSpec, Date.now());
+  globalThis.fetch = saved;
+  assert.equal(read('messages', `${today}.csv`).filter((r) => r.hpid === 'A3').length, 1);
+  process.exitCode = 0;
+});
+

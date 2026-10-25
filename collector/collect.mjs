@@ -224,7 +224,8 @@ export async function runOp(spec, now) {
   if (spec.dedupe) {
     const key = (r) => spec.dedupe.map((k) => r[k] ?? '').join('|');
     const seen = new Set(existsSync(file) ? parseCSV(readFileSync(file, 'utf8')).map(key) : []);
-    rows = items.filter((r) => !seen.has(key(r)));
+    // 파일에 이미 있는 것과, 같은 응답 안에서 두 번 온 것을 모두 거른다
+    rows = items.filter((r) => { const k = key(r); if (seen.has(k)) return false; seen.add(k); return true; });
   }
   appendRows(file, spec.first, rows, collectedAt);
   if (spec.track && !failed.length) trackActive(spec, items, collectedAt, now); // 일부만 받았을 때는 '사라짐'을 판단하지 않는다
