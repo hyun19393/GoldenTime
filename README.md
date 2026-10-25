@@ -27,7 +27,7 @@
 
 ## 수집 현황판
 
-https://hyun19393.github.io/goldentime/ (GitHub Pages, `docs/` 폴더)
+https://hyun19393.github.io/GoldenTime/ (GitHub Pages, `docs/` 폴더)
 
 수집할 때마다 `scripts/build-status.mjs`가 `docs/status.json`을 새로 만들고, 현황판이 그 파일을 읽어 지도·그래프·표로 보여준다.
 
