@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>골든타임 수집 현황판</title>
+<meta name="description" content="경기도 응급실 실시간 가용병상 공공데이터 수집 현황">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root {
+    --bg: #f6f6f3; --surface: #ffffff; --ink: #1d1d1b; --muted: #6b6a64; --line: #e3e2dc;
+    --full: #d6453d; --low: #e39b1b; --ok: #2f9e66; --stale: #9a9993; --accent: #2a63b8;
+    --full-bg: #fbe9e7; --low-bg: #fcf1dc; --ok-bg: #e4f3ea;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161615; --surface: #1f1f1d; --ink: #ecebe6; --muted: #a3a29b; --line: #34332f;
+      --full: #ef6a5f; --low: #f0b443; --ok: #4cbc84; --stale: #7b7a74; --accent: #6b9ae6;
+      --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161615; --surface: #1f1f1d; --ink: #ecebe6; --muted: #a3a29b; --line: #34332f;
+    --full: #ef6a5f; --low: #f0b443; --ok: #4cbc84; --stale: #7b7a74; --accent: #6b9ae6;
+    --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font-family: "Noto Sans KR", system-ui, sans-serif; font-size: 15px; line-height: 1.6; word-break: keep-all; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; margin-bottom: 20px; }
+  h1 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 16px; font-weight: 700; margin: 0 0 12px; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .kpi .k { font-size: 12.5px; color: var(--muted); }
+  .kpi .v { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.3; }
+  .kpi .v small { font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 2px; }
+  .kpi.full .v { color: var(--full); } .kpi.low .v { color: var(--low); } .kpi.ok .v { color: var(--ok); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; min-width: 0; }
+  .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 820px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+  #map { height: 540px; border-radius: 8px; border: 1px solid var(--line); }
+  @media (max-width: 600px) { #map { height: 360px; } }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+  .note { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-weight: 500; color: var(--muted); font-size: 12.5px; position: sticky; top: 0; background: var(--surface); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .scroll { max-height: 380px; overflow: auto; }
+  #msgTable { table-layout: fixed; }
+  #msgTable td { overflow-wrap: anywhere; }
+  #msgTable col.c1 { width: 27%; } #msgTable col.c2 { width: 20%; } #msgTable col.c3 { width: 33%; } #msgTable col.c4 { width: 20%; }
+  #msgTable td.num { white-space: normal; font-size: 12.5px; }
+  @media (max-width: 600px) {
+    #msgTable colgroup { display: none; }
+    #msgTable tr:first-child { display: none; }
+    #msgTable tr { display: block; padding: 8px 0; border-bottom: 1px solid var(--line); }
+    #msgTable td { display: block; border: 0; padding: 1px 0; text-align: left; }
+    #msgTable td:first-child { font-weight: 500; }
+    #msgTable td.num br { display: none; }
+  }
+  .pill { display: inline-block; padding: 0 8px; border-radius: 10px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .pill.full { background: var(--full-bg); color: var(--full); } .pill.low { background: var(--low-bg); color: var(--low); } .pill.ok { background: var(--ok-bg); color: var(--ok); }
+  input[type=search] { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; margin-bottom: 10px; }
+  svg text { fill: var(--muted); font-family: inherit; font-size: 11px; }
+  .bar { fill: var(--full); } .bar.empty { fill: var(--line); }
+  .runs { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+  .run { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+  .run b { font-weight: 500; }
+  .err { color: var(--full); font-size: 12px; }
+  footer { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+  .warn { background: var(--full-bg); color: var(--full); border-radius: 8px; padding: 8px 12px; font-size: 13px; margin-bottom: 16px; }
+  .leaflet-popup-content { font-family: "Noto Sans KR", system-ui, sans-serif; font-size: 13px; line-height: 1.55; margin: 12px 14px; }
+  .leaflet-popup-content b { font-weight: 700; }
+  #loading { color: var(--muted); padding: 40px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>골든타임 수집 현황판</h1>
+      <div class="sub">경기도 응급실 실시간 가용병상 공공데이터 · 10분마다 자동 수집</div>
+    </div>
+    <div class="sub" id="updated"></div>
+  </header>
+  <div class="warn">교육·탐구용 화면입니다. 실제 응급 상황에서는 119에 신고하세요.</div>
+  <div id="loading">데이터를 불러오는 중…</div>
+  <main id="main" hidden>
+    <section class="kpis" id="kpis"></section>
+
+    <section class="card">
+      <h2>지금 응급실 상태</h2>
+      <div id="map" role="img" aria-label="경기도 응급실 위치와 남은 병상 상태 지도"></div>
+      <div class="legend">
+        <span><span class="dot" style="background:var(--full)"></span>꽉 참 (남은 병상 0 이하)</span>
+        <span><span class="dot" style="background:var(--low)"></span>1~2개 남음</span>
+        <span><span class="dot" style="background:var(--ok)"></span>3개 이상</span>
+        <span><span class="dot" style="background:var(--stale)"></span>입력 60분 넘게 지남</span>
+      </div>
+      <p class="note">점을 누르면 남은 병상, 지금까지 꽉 찼던 비율, 수용 불가 질환을 볼 수 있어요.</p>
+    </section>
+
+    <div class="grid2">
+      <section class="card">
+        <h2>시간대별 꽉 찬 비율</h2>
+        <div id="hourChart"></div>
+        <p class="note" id="hourNote"></p>
+      </section>
+      <section class="card">
+        <h2>최근 7일 꽉 찬 응급실 수</h2>
+        <div id="lineChart"></div>
+        <p class="note">수집할 때마다 남은 병상이 0 이하인 응급실이 몇 곳이었는지 보여줘요.</p>
+      </section>
+    </div>
+
+    <div class="grid2">
+      <section class="card">
+        <h2>시군별</h2>
+        <div class="scroll"><table id="siTable"></table></div>
+        <p class="note" id="noEr"></p>
+      </section>
+      <section class="card">
+        <h2>지금 걸려 있는 수용 불가 메시지 <span class="sub" id="msgCount"></span></h2>
+        <input type="search" id="msgSearch" placeholder="병원 이름이나 내용으로 찾기 (예: 소아, 전문의)">
+        <div class="scroll"><table id="msgTable"></table></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>수집 상태 (최근 24시간)</h2>
+      <div class="runs" id="runs"></div>
+    </section>
+
+    <footer>
+      출처: 공공데이터포털 「국립중앙의료원_전국 응급의료기관 정보 조회 서비스」. 꽉 참 = 응급실 일반병상 가용 수(hvec) 0 이하. 병상 정보는 병원이 입력하는 값이라 실제와 다를 수 있어요.
+    </footer>
+  </main>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pct = (x) => (x == null ? '-' : (x * 100).toFixed(1) + '%');
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const stateOf = (h) => (h.ageMin != null && h.ageMin > 60 ? 'stale' : h.hvec == null ? 'stale' : h.hvec <= 0 ? 'full' : h.hvec <= 2 ? 'low' : 'ok');
+const OP_NAME = { beds: '실시간 가용병상', severe: '중증질환 수용가능', messages: '수용 불가 메시지', hospitals: '기관 목록', hospital_info: '기관 기본정보' };
+
+fetch('status.json', { cache: 'no-store' })
+  .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(render)
+  .catch((e) => { $('loading').textContent = '아직 요약 파일이 없어요. 수집이 한 번 더 돌면 생겨요. (' + e.message + ')'; });
+
+function render(s) {
+  $('loading').hidden = true;
+  $('main').hidden = false;
+  $('updated').textContent = `마지막 수집 ${s.latestAt ?? '-'} · 첫 수집 ${s.firstAt ?? '-'}`;
+
+  const k = s.summary;
+  $('kpis').innerHTML = [
+    ['응급실', k.er, '곳', ''],
+    ['꽉 참', k.fullNow, '곳', 'full'],
+    ['1~2개 남음', k.lowNow, '곳', 'low'],
+    ['3개 이상', k.okNow, '곳', 'ok'],
+    ['수용 불가 메시지', k.activeMessages, '건', ''],
+    ['누적 수집', s.snapshots.toLocaleString(), '회', ''],
+  ].map(([label, v, unit, cls]) => `<div class="kpi ${cls}"><div class="k">${label}</div><div class="v">${v}<small>${unit}</small></div></div>`).join('');
+
+  drawMap(s.hospitals);
+  drawHours(s.byHour, s.snapshots);
+  drawLine(s.timeline);
+  drawSi(s.bySi, s.noEr);
+  drawMsgs(s.messages);
+  drawRuns(s.runs24h);
+}
+
+function drawMap(hs) {
+  const map = L.map('map', { scrollWheelZoom: false }).setView([37.45, 127.1], 9);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18, attribution: '&copy; OpenStreetMap contributors',
+  }).addTo(map);
+  const color = { full: css('--full'), low: css('--low'), ok: css('--ok'), stale: css('--stale') };
+  const pts = [];
+  const order = { ok: 0, stale: 1, low: 2, full: 3 };
+  [...hs].filter((h) => Number.isFinite(h.lat) && Number.isFinite(h.lon))
+    .sort((a, b) => order[stateOf(a)] - order[stateOf(b)])
+    .forEach((h) => {
+      const st = stateOf(h);
+      pts.push([h.lat, h.lon]);
+      const label = { full: '꽉 참', low: '1~2개 남음', ok: '여유', stale: '입력 오래됨' }[st];
+      const sev = h.severeNo.length ? `<br>수용 불가 질환: ${h.severeNo.map(esc).join(', ')}` : '';
+      L.circleMarker([h.lat, h.lon], {
+        radius: h.cls === '권역응급의료센터' ? 9 : 7, color: '#fff', weight: 1.5, fillColor: color[st], fillOpacity: 0.95,
+      }).bindPopup(
+        `<b>${esc(h.name)}</b><br>${esc(h.cls ?? '')} · ${esc(h.si ?? '')}` +
+        `<br><span class="pill ${st === 'stale' ? '' : st}">${label}</span> 남은 병상 <b>${h.hvec ?? '-'}</b> / 기준 ${h.base ?? '-'}` +
+        `<br>병원 입력 ${h.ageMin ?? '-'}분 전` +
+        `<br>지금까지 꽉 찼던 비율 ${pct(h.fullRate)} (${h.records}회 중)` + sev +
+        (h.messages ? `<br>수용 불가 메시지 ${h.messages}건` : '')
+      ).addTo(map);
+    });
+  const fit = () => { map.invalidateSize(); if (pts.length) map.fitBounds(pts, { padding: [24, 24], maxZoom: 12 }); };
+  fit();
+  setTimeout(fit, 300);
+}
+
+function drawHours(byHour, snaps) {
+  const W = 480, H = 170, P = { l: 34, r: 6, t: 8, b: 22 };
+  const max = Math.max(0.05, ...byHour.map((h) => h.rate ?? 0));
+  const bw = (W - P.l - P.r) / 24;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="시간대별 꽉 찬 비율 막대그래프">`;
+  for (const f of [0, 0.5, 1]) {
+    const y = P.t + (1 - f) * (H - P.t - P.b);
+    svg += `<line x1="${P.l}" x2="${W - P.r}" y1="${y}" y2="${y}" stroke="${css('--line')}" />`;
+    svg += `<text x="${P.l - 4}" y="${y + 4}" text-anchor="end">${(max * f * 100).toFixed(0)}%</text>`;
+  }
+  byHour.forEach((h, i) => {
+    const v = h.rate ?? 0;
+    const bh = (v / max) * (H - P.t - P.b);
+    const x = P.l + i * bw + 1;
+    svg += `<rect class="bar ${h.n ? '' : 'empty'}" x="${x}" y="${H - P.b - Math.max(bh, h.n ? 0 : 2)}" width="${bw - 2}" height="${Math.max(bh, h.n ? 0 : 2)}" rx="2"><title>${i}시: ${pct(h.rate)} (${h.n}건)</title></rect>`;
+    if (i % 3 === 0) svg += `<text x="${x + (bw - 2) / 2}" y="${H - 6}" text-anchor="middle">${i}시</text>`;
+  });
+  $('hourChart').innerHTML = svg + '</svg>';
+  const filled = byHour.filter((h) => h.n).length;
+  $('hourNote').textContent = filled < 24
+    ? `아직 ${filled}개 시간대만 기록이 있어요. 하루가 지나면 24시간이 모두 채워져요.`
+    : '응급실·수집 시각마다 남은 병상이 0 이하였던 비율이에요.';
+}
+
+function drawLine(tl) {
+  const W = 480, H = 170, P = { l: 30, r: 8, t: 8, b: 22 };
+  if (tl.length < 2) {
+    $('lineChart').innerHTML = `<p class="note">수집이 두 번 이상 되면 그래프가 그려져요. (지금 ${tl.length}회)</p>`;
+    return;
+  }
+  const max = Math.max(1, ...tl.map((d) => d[1]));
+  const x = (i) => P.l + (i / (tl.length - 1)) * (W - P.l - P.r);
+  const y = (v) => P.t + (1 - v / max) * (H - P.t - P.b);
+  const line = tl.map((d, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(d[1]).toFixed(1)}`).join('');
+  const area = `${line}L${x(tl.length - 1)},${H - P.b}L${x(0)},${H - P.b}Z`;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="최근 꽉 찬 응급실 수 추이">`;
+  for (const f of [0, 0.5, 1]) {
+    const v = Math.round(max * f), yy = y(v);
+    svg += `<line x1="${P.l}" x2="${W - P.r}" y1="${yy}" y2="${yy}" stroke="${css('--line')}" /><text x="${P.l - 4}" y="${yy + 4}" text-anchor="end">${v}</text>`;
+  }
+  svg += `<path d="${area}" fill="${css('--full')}" opacity="0.12"/><path d="${line}" fill="none" stroke="${css('--full')}" stroke-width="2" stroke-linejoin="round"/>`;
+  const ticks = [0, Math.floor((tl.length - 1) / 2), tl.length - 1];
+  for (const i of ticks) svg += `<text x="${x(i)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : i === tl.length - 1 ? 'end' : 'middle'}">${tl[i][0]}</text>`;
+  $('lineChart').innerHTML = svg + '</svg>';
+}
+
+function drawSi(list, noEr) {
+  $('siTable').innerHTML = '<tr><th>시군</th><th class="num">응급실</th><th class="num">지금 꽉 참</th><th class="num">평균 꽉 찬 비율</th></tr>' +
+    list.map((s) => `<tr><td>${esc(s.si)}</td><td class="num">${s.er}</td><td class="num">${s.fullNow ? `<span class="pill full">${s.fullNow}</span>` : 0}</td><td class="num">${pct(s.avgFullRate)}</td></tr>`).join('');
+  $('noEr').textContent = noEr.length ? `실시간 병상 정보가 있는 응급실이 없는 시군: ${noEr.join(', ')}` : '';
+}
+
+function drawMsgs(msgs) {
+  const render = (q) => {
+    const f = q ? msgs.filter((m) => (m.name + m.type + m.msg).includes(q)) : msgs;
+    $('msgCount').textContent = `${f.length}건`;
+    $('msgTable').innerHTML = '<colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"></colgroup><tr><th>병원</th><th>구분</th><th>내용</th><th class="num">기간</th></tr>' +
+      f.map((m) => `<tr><td>${esc(m.name)}</td><td>${esc(m.type)}</td><td>${esc(m.msg)}</td><td class="num">${esc(m.start)}<br>~ ${esc(m.end)}</td></tr>`).join('');
+  };
+  $('msgSearch').addEventListener('input', (e) => render(e.target.value.trim()));
+  render('');
+}
+
+function drawRuns(r) {
+  $('runs').innerHTML = Object.entries(OP_NAME).map(([op, name]) => {
+    const s = r[op];
+    if (!s) return `<div class="run"><b>${name}</b><br><span class="sub">기록 없음</span></div>`;
+    return `<div class="run"><b>${name}</b><br>성공 ${s.ok} · 실패 <span class="${s.fail ? 'err' : ''}">${s.fail}</span>` +
+      (s.lastError ? `<br><span class="err">${esc(s.lastError)}</span>` : '') + '</div>';
+  }).join('');
+}
+</script>
+</body>
+</html>

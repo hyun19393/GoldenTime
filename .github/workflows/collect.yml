@@ -26,12 +26,15 @@ jobs:
         env:
           SERVICE_KEY: ${{ secrets.SERVICE_KEY }}
           STAGES: 경기도   # 수집할 시도 (여러 곳이면 쉼표로 구분, 예: 서울특별시,경기도)
+      - name: 현황판 요약 만들기
+        if: always()
+        run: node scripts/build-status.mjs --data data --out docs/status.json
       - name: 저장소에 기록
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data
+          git add data docs/status.json
           if git diff --cached --quiet; then exit 0; fi
           git commit -q -m "collect $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
           for i in 1 2 3; do git pull -q --rebase && git push -q && break; sleep 5; done

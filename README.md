@@ -25,6 +25,12 @@
 | `data/` | 수집 데이터 (날짜별 CSV) |
 | `tests/` | 자동 검사 (`npm test`) |
 
+## 수집 현황판
+
+https://hyun19393.github.io/goldentime/ (GitHub Pages, `docs/` 폴더)
+
+수집할 때마다 `scripts/build-status.mjs`가 `docs/status.json`을 새로 만들고, 현황판이 그 파일을 읽어 지도·그래프·표로 보여준다.
+
 ## 수집 데이터
 
 출처: 공공데이터포털 「국립중앙의료원_전국 응급의료기관 정보 조회 서비스」
