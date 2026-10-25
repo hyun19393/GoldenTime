@@ -20,7 +20,8 @@
 | `collector/collect.mjs` | 공공데이터 수집기 (cron-job.org가 10분마다 GitHub Actions를 실행) |
 | `engine/model.mjs` | 거절 확률 통계표 만들기, 확률 계산 |
 | `engine/effective.mjs` | 실효 도착 시간 계산 |
-| `engine/geo.mjs` · `engine/stats.mjs` | 직선·택시거리 계산, 순위 상관 (웹앱 거리 비교) |
+| `engine/geo.mjs` · `engine/stats.mjs` | 직선 거리 계산, 순위 상관 (웹앱 거리 비교) |
+| `engine/severe.mjs` | 질환별 거절 확률 (병상 0 이하 또는 그 질환 '불가능'). 통계표 `docs/model-severe.json`은 3시간마다 갱신, 웹앱 공개는 11/1 무렵 |
 | `scripts/validate.mjs` | 앞 기간으로 만든 통계가 뒤 기간을 얼마나 맞히는지 검증 |
 | `scripts/build-model.mjs` | 웹앱용 통계표 `model.json` 만들기 |
 | `scripts/travel-matrix.mjs` | 응급실 사이 도로 이동 시간 표 (카카오 길찾기, 하루 4번 → `data/travel/`) |

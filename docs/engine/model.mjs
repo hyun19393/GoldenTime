@@ -61,7 +61,7 @@ function inc(obj, key, hit) {
  * rows: [{ t(ms), hpid, name, hvec, ageMin }]
  *   ageMin = 수집 시각 - 병원 입력 시각(hvidate), 분
  */
-export function buildModel(rows, { leads = LEADS, toleranceMin = 3, source = '', isReject = isRejectState } = {}) {
+export function buildModel(rows, { leads = LEADS, toleranceMin = 3, source = '', isReject = isRejectState, bucketOf = (r) => bedBucket(r.hvec) } = {}) {
   const byHospital = new Map();
   let used = 0; // 통계에 쓴 기록 수
   let stale = 0; // 병원 입력이 오래돼 '지금 상태'로 쓰지 않은 기록 수
@@ -94,7 +94,7 @@ export function buildModel(rows, { leads = LEADS, toleranceMin = 3, source = '',
       inc(pooled, `base|${hb}`, isReject(s));
 
       if (s.ageMin > STALE_MIN) { stale++; continue; } // 오래된 입력은 '지금 상태'로 쓰지 않음
-      const b = bedBucket(s.hvec);
+      const b = bucketOf(s);
       for (const L of leads) {
         const target = s.t + L * 60e3;
         const j = nearestIndex(ts, target, i + 1);
@@ -126,8 +126,8 @@ export function buildModel(rows, { leads = LEADS, toleranceMin = 3, source = '',
 
 // 칸의 기록이 적을수록 상위 평균(prior) 쪽으로 당겨서 쓴다. m = 당기는 힘(가상의 관측 수)
 export const SHRINK_M = 30;
-const shrink = (cell, prior, m) => (cell ? (cell.k + m * prior) / (cell.n + m) : prior);
-const rate = (cell) => (cell && cell.n ? (cell.k + 0.5) / (cell.n + 1) : null);
+export const shrink = (cell, prior, m) => (cell ? (cell.k + m * prior) / (cell.n + m) : prior);
+export const rate = (cell) => (cell && cell.n ? (cell.k + 0.5) / (cell.n + 1) : null);
 const weightOf = (cell, m) => (cell ? cell.n / (cell.n + m) : 0); // 그 칸 자신의 기록이 차지하는 비중
 
 // ---- 계산 과정을 단계별로 돌려주는 함수 (앱 계산과 현황판 설명이 같은 코드를 쓴다)

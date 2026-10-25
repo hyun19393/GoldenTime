@@ -140,6 +140,8 @@ for (const m of msgRows) {
     hpid: m.hpid,
     name: m.dutyName,
     type: m.symTypCodMag || m.symTypCod,
+    kind: m.symBlkMsgTyp, // 응급(진료과·조건 제한) / 중증(질환별 불가)
+    dept: m.trtPrtCodMag,
     msg: m.symBlkMsg,
     start: st ? formatKST(st).slice(5, 16) : '',
     end: en ? formatKST(en).slice(5, 16) : '',

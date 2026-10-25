@@ -190,3 +190,27 @@ test('순위와 스피어먼 순위 상관', async () => {
   // 손으로 계산: d = (0, 1, -1, 0) → 1 - 6·2/(4·15) = 0.8
   close(spearman([1, 2, 3, 4], [1, 3, 2, 4]), 0.8);
 });
+
+test('질환별 거절 확률: 불가능 표시·병상 0 이하를 거절로, 정보미제공은 확인 필요', async () => {
+  const { buildDiseaseModels, makeDiseaseRejectProb, explainDiseasePoint } = await import('../engine/severe.mjs');
+  const t0 = parseKST('2026-10-10 12:00:00');
+  const beds = [], sev = new Map();
+  for (let i = 0; i < 60; i++) {
+    const t = t0 + i * 600e3;
+    beds.push({ t, hpid: 'A', name: 'A', hvec: 5, ageMin: 5 }, { t, hpid: 'B', name: 'B', hvec: 5, ageMin: 5 }, { t, hpid: 'C', name: 'C', hvec: 5, ageMin: 5 });
+    sev.set(`${t}|A`, { MKioskTy2: i < 30 ? 'Y' : '불가능' }); // 중간부터 계속 불가능
+    sev.set(`${t}|B`, { MKioskTy2: 'Y' });
+    sev.set(`${t}|C`, { MKioskTy2: '정보미제공' });
+  }
+  const dm = buildDiseaseModels(beds, sev, { diseases: ['MKioskTy2'] });
+  assert.ok(!dm.diseases.MKioskTy2.hospitals.C); // 정보미제공은 통계에 넣지 않음
+  assert.equal(dm.diseases.MKioskTy2.hospitals.A.lastFlag, 'N');
+  const rp = makeDiseaseRejectProb(dm, 'MKioskTy2');
+  const pN = rp({ hpid: 'A', hvec: 5, flag: 'N', leadMin: 20, hourKST: 13 }).p;
+  const pY = rp({ hpid: 'B', hvec: 5, flag: 'Y', leadMin: 20, hourKST: 13 }).p;
+  assert.ok(pN > 0.9, `지금 불가능이면 20분 뒤에도 거의 불가능: ${pN}`);
+  assert.ok(pY < 0.2, `계속 가능했던 병원은 낮음: ${pY}`);
+  assert.equal(rp({ hpid: 'C', hvec: 5, flag: null, leadMin: 20, hourKST: 13 }).p, null);
+  assert.equal(rp({ hpid: 'B', hvec: 0, flag: 'Y', leadMin: 0, hourKST: 13 }).p, 1); // 병상 0 이하도 거절
+  close(explainDiseasePoint(dm, { disease: 'MKioskTy2', hpid: 'A', b: 'dN', L: 20, hb: 3 }).p, pN);
+});
