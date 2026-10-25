@@ -1,9 +1,10 @@
 name: collect
 
+# 실행 신호: cron-job.org가 10분마다 이 워크플로를 호출한다(workflow_dispatch).
+# GitHub 예약 실행(schedule)은 이 저장소에서 시작되지 않아 쓰지 않는다. 함께 켜면 실행이 두 배가 되어
+# GitHub Pages 빌드 한도(시간당 약 10회)를 넘길 수 있다.
 on:
-  schedule:
-    - cron: '3-59/10 * * * *'   # 10분마다 (매시 7·17·27…분, 정각은 GitHub이 붐벼서 피함)
-  workflow_dispatch:          # Actions 탭에서 직접 실행 가능
+  workflow_dispatch:          # cron-job.org 호출, 또는 Actions 탭에서 직접 실행
 
 concurrency:
   group: collect
@@ -17,8 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
       - name: 공공데이터 수집

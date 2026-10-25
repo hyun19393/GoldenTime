@@ -17,7 +17,7 @@
 
 | 위치 | 내용 |
 |---|---|
-| `collector/collect.mjs` | 공공데이터 수집기 (GitHub Actions가 10분마다 실행) |
+| `collector/collect.mjs` | 공공데이터 수집기 (cron-job.org가 10분마다 GitHub Actions를 실행) |
 | `engine/model.mjs` | 거절 확률 통계표 만들기, 확률 계산 |
 | `engine/effective.mjs` | 실효 도착 시간 계산 |
 | `scripts/validate.mjs` | 앞 기간으로 만든 통계가 뒤 기간을 얼마나 맞히는지 검증 |
@@ -56,6 +56,12 @@ https://hyun19393.github.io/GoldenTime/ (GitHub Pages, `docs/` 폴더)
    - Name: `SERVICE_KEY`
    - Secret: 공공데이터포털 일반 인증키
 2. **Actions** 탭에서 `collect` 워크플로를 켜고 `Run workflow`로 한 번 실행해 본다.
+3. 10분마다 실행: GitHub 예약 실행(schedule)이 이 저장소에서 시작되지 않아 **cron-job.org**로 호출한다.
+   - GitHub Fine-grained token: 저장소 `GoldenTime`만, 권한은 **Actions: Read and write**만
+   - cron-job.org: `POST https://api.github.com/repos/hyun19393/GoldenTime/actions/workflows/collect.yml/dispatches`, 10분마다
+   - Headers: `Accept: application/vnd.github+json`, `Authorization: Bearer <토큰>`, `X-GitHub-Api-Version: 2022-11-28`, `Content-Type: application/json`
+   - Body: `{"ref":"main"}` (성공 응답: 204)
+   - 토큰 만료일이 지나면 수집이 멈추므로 만료 전에 새 토큰으로 바꾼다.
 
 인증키는 코드나 화면 캡처에 남기지 않는다.
 
