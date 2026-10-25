@@ -129,3 +129,26 @@ test('공공데이터포털 일시 오류는 다시 시도해서 받아온다', 
   assert.equal(n, 2); // 한 번 실패 후 다시 시도
   process.exitCode = 0;
 });
+
+test('메시지: 해제되어 사라진 메시지는 해제 기록에 남기고, 지금 목록에서 뺀다', async () => {
+  const { trackActive } = await import('../collector/collect.mjs');
+  const msgSpec = { ...OPS.find((o) => o.name === 'messages'), everyMin: 0 };
+  assert.equal(read('messages_now.csv').length, 2); // 앞선 실행에서 두 건이 걸려 있었음
+  const saved = globalThis.fetch;
+  // 나병원 메시지가 해제되어 응답에서 빠짐
+  globalThis.fetch = async (url) => new URL(url).pathname.endsWith('getEmrrmSrsillDissMsgInqire')
+    ? new Response(wrap([parseItems(MSGS).items[0]]), { status: 200 })
+    : saved(url);
+  await runOp(msgSpec, Date.now());
+  globalThis.fetch = saved;
+  const nowRows = read('messages_now.csv');
+  assert.deepEqual(nowRows.map((r) => r.hpid), ['A1']);
+  const gone = read('messages_gone', `${today}.csv`);
+  assert.equal(gone.length, 1);
+  assert.equal(gone[0].hpid, 'A2');
+  assert.match(gone[0].last_seen, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+  assert.equal(read('messages', `${today}.csv`).length, 2); // 새로 생긴 것만 쌓는 기록은 그대로
+  // 같은 목록을 다시 받으면 해제 기록이 늘지 않는다
+  assert.equal(trackActive(msgSpec, parseItems(wrap([parseItems(MSGS).items[0]])).items, '2026-10-25 23:00:00', Date.now()), 0);
+  process.exitCode = 0;
+});

@@ -9,9 +9,9 @@ import { pathToFileURL } from 'node:url';
 import { loadSnapshots } from './load.mjs';
 import { buildModel } from '../engine/model.mjs';
 import { parseCSV } from '../engine/csv.mjs';
-import { haversineM } from './travel-matrix.mjs';
+import { haversineM } from '../engine/geo.mjs';
 
-export const ENGINE_FILES = ['model.mjs', 'effective.mjs', 'time.mjs'];
+export const ENGINE_FILES = ['model.mjs', 'effective.mjs', 'time.mjs', 'geo.mjs', 'stats.mjs'];
 
 // 시간대(8·13·18·23시)별로 가장 최근 파일의 값을 쓴다. 같은 짝이 여러 번 있으면 최근 값.
 export function buildTravel(dataDir) {

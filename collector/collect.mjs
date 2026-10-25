@@ -10,6 +10,8 @@
 //   data/beds/날짜.csv              ① 응급실 실시간 가용병상정보 조회              10분
 //   data/severe/날짜.csv            ② 중증질환자 수용가능정보 조회 (질환 28종)     10분
 //   data/messages/날짜.csv          ⑨ 응급실 및 중증질환 메시지 조회               1시간 (새 메시지만 추가)
+//   data/messages_now.csv           ⑨ 지금 걸려 있는 메시지 목록 (받을 때마다 새로 씀)
+//   data/messages_gone/날짜.csv     ⑨ 해제되어 목록에서 사라진 메시지 (last_seen = 마지막으로 보인 시각)
 //   data/hospitals.csv              ③ 응급의료기관 목록정보 조회 (좌표·분류)        하루 1번
 //   data/hospital_info.csv          ⑤ 응급의료기관 기본정보 조회 (진료과목 등)      하루 1번
 //   data/runs.csv                   실행 기록 (성공·실패, 개수, 오류)
@@ -43,7 +45,7 @@ const MSG_KEY = ['hpid', 'symTypCod', 'symBlkMsgTyp', 'symBlkSttDtm', 'symBlkEnd
 export const OPS = [
   { name: 'beds', op: 'getEmrrmRltmUsefulSckbdInfoInqire', params: (r) => ({ STAGE1: r }), first: BED_FIRST, required: true },
   { name: 'severe', op: 'getSrsillDissAceptncPosblInfoInqire', params: (r) => ({ STAGE1: r }), first: SEVERE_FIRST },
-  { name: 'messages', op: 'getEmrrmSrsillDissMsgInqire', params: (r) => ({ Q0: r }), everyMin: 55, dedupe: MSG_KEY, maxPages: 30 },
+  { name: 'messages', op: 'getEmrrmSrsillDissMsgInqire', params: (r) => ({ Q0: r }), everyMin: 55, dedupe: MSG_KEY, maxPages: 30, track: true },
 ];
 const LIST = { name: 'hospitals', op: 'getEgytListInfoInqire', params: (r) => ({ Q0: r }) };
 const INFO = { name: 'hospital_info', op: 'getEgytBassInfoInqire' };
@@ -225,10 +227,25 @@ export async function runOp(spec, now) {
     rows = items.filter((r) => !seen.has(key(r)));
   }
   appendRows(file, spec.first, rows, collectedAt);
+  if (spec.track && !failed.length) trackActive(spec, items, collectedAt, now); // 일부만 받았을 때는 '사라짐'을 판단하지 않는다
   const ok = failed.length ? 0 : 1; // 일부 시도만 실패하면 받은 것은 저장하고 실패로 기록
   logRun({ started_at: collectedAt, op: spec.name, ok, total, items: rows.length, ms: Date.now() - t0, error: failed.join(' / ').slice(0, 200) });
   console.log(`${spec.name}: ${rows.length}/${total}${failed.length ? ` (실패: ${failed.join(' / ')})` : ''}`);
   return ok === 1;
+}
+
+// 메시지는 새로 생긴 것만 쌓기 때문에, 병원이 해제한 메시지를 따로 알 수 없었다.
+// 그래서 받을 때마다 지금 걸려 있는 목록(<이름>_now.csv)을 새로 쓰고,
+// 지난번 목록에는 있었는데 이번에 사라진 메시지는 해제 기록(<이름>_gone/날짜.csv)에 남긴다.
+export function trackActive(spec, items, collectedAt, now) {
+  const key = (r) => spec.dedupe.map((k) => r[k] ?? '').join('|');
+  const nowFile = join(DATA, `${spec.name}_now.csv`);
+  const prev = existsSync(nowFile) ? parseCSV(readFileSync(nowFile, 'utf8')) : [];
+  const cur = new Set(items.map(key));
+  const gone = prev.filter((r) => !cur.has(key(r))).map(({ collected_at, ...r }) => ({ last_seen: collected_at, ...r }));
+  if (gone.length) appendRows(join(DATA, `${spec.name}_gone`, `${kstDate(now)}.csv`), ['last_seen', ...spec.dedupe], gone, collectedAt);
+  writeTable(nowFile, items, collectedAt);
+  return gone.length;
 }
 
 function doneToday(file, today) {

@@ -9,6 +9,9 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseCSV, toCSVLine } from '../engine/csv.mjs';
 import { formatKST, kstDate, kstHour } from '../engine/time.mjs';
+import { haversineM } from '../engine/geo.mjs';
+
+export { haversineM }; // 예전 위치에서 불러 쓰는 코드를 위해 그대로 내보낸다
 
 const KEY = process.env.KAKAO_REST_KEY;
 const DATA = process.env.DATA_DIR || 'data';
@@ -18,12 +21,6 @@ const FAR_K = 5;
 const API = 'https://apis-navi.kakaomobility.com/v1';
 const BUDGET_MS = Number(process.env.TRAVEL_BUDGET_MS ?? 4 * 60e3);
 
-export function haversineM(a, b) {
-  const R = 6371000, r = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
-  const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLon / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(s));
-}
 
 // 응급실 목록: 최근 가용병상 기록에 나온 기관 + 좌표
 export function loadERs(dir = DATA) {

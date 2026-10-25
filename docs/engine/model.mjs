@@ -63,8 +63,11 @@ function inc(obj, key, hit) {
  */
 export function buildModel(rows, { leads = LEADS, toleranceMin = 3, source = '', isReject = isRejectState } = {}) {
   const byHospital = new Map();
+  let used = 0; // 통계에 쓴 기록 수
+  let stale = 0; // 병원 입력이 오래돼 '지금 상태'로 쓰지 않은 기록 수
   for (const r of rows) {
     if (!Number.isFinite(r.hvec) || !Number.isFinite(r.t)) continue;
+    used++;
     if (!byHospital.has(r.hpid)) byHospital.set(r.hpid, []);
     byHospital.get(r.hpid).push(r);
   }
@@ -90,7 +93,7 @@ export function buildModel(rows, { leads = LEADS, toleranceMin = 3, source = '',
       inc(h.base, String(hb), isReject(s));
       inc(pooled, `base|${hb}`, isReject(s));
 
-      if (s.ageMin > STALE_MIN) continue; // 오래된 입력은 '지금 상태'로 쓰지 않음
+      if (s.ageMin > STALE_MIN) { stale++; continue; } // 오래된 입력은 '지금 상태'로 쓰지 않음
       const b = bedBucket(s.hvec);
       for (const L of leads) {
         const target = s.t + L * 60e3;
@@ -113,6 +116,8 @@ export function buildModel(rows, { leads = LEADS, toleranceMin = 3, source = '',
     leads,
     toleranceMin,
     range: [tMin, tMax],
+    rows: used,
+    staleRows: stale,
     pairs,
     pooled,
     hospitals,
@@ -120,8 +125,36 @@ export function buildModel(rows, { leads = LEADS, toleranceMin = 3, source = '',
 }
 
 // 칸의 기록이 적을수록 상위 평균(prior) 쪽으로 당겨서 쓴다. m = 당기는 힘(가상의 관측 수)
+export const SHRINK_M = 30;
 const shrink = (cell, prior, m) => (cell ? (cell.k + m * prior) / (cell.n + m) : prior);
 const rate = (cell) => (cell && cell.n ? (cell.k + 0.5) / (cell.n + 1) : null);
+const weightOf = (cell, m) => (cell ? cell.n / (cell.n + m) : 0); // 그 칸 자신의 기록이 차지하는 비중
+
+// ---- 계산 과정을 단계별로 돌려주는 함수 (앱 계산과 현황판 설명이 같은 코드를 쓴다)
+
+// 지금 상태를 모를 때: 병원의 시간대 평균 거절 비율을 전체 병원의 시간대 평균 쪽으로 당긴다
+export function explainBase(model, { hpid, hb, m = SHRINK_M }) {
+  const allCell = model.pooled[`base|${hb}`] ?? null;
+  const prior = rate(allCell) ?? 0.1;
+  const hospCell = model.hospitals[hpid]?.base[String(hb)] ?? null;
+  return { allCell, prior, hospCell, hospWeight: weightOf(hospCell, m), p: shrink(hospCell, prior, m) };
+}
+
+// 한 칸(지금 병상 구간 b, 도착까지 L분, 시간대 hb)의 확률: 전체 병원·전체 시간대 → 같은 시간대 → 이 병원 순으로 3단계
+export function explainPoint(model, { hpid, b, L, hb, m = SHRINK_M }) {
+  const P = model.pooled;
+  const allCell = P[`${b}|${L}|all`] ?? null;
+  const all = rate(allCell);
+  if (all == null) {
+    const base = explainBase(model, { hpid, hb, m });
+    return { fallback: base, p: base.p }; // 이 병상 구간·도착 시간 기록이 아예 없으면 평균값을 쓴다
+  }
+  const hourCell = P[`${b}|${L}|${hb}`] ?? null;
+  const hour = shrink(hourCell, all, m);
+  const hospCell = model.hospitals[hpid]?.counts[`${b}|${L}|${hb}`] ?? null;
+  const p = shrink(hospCell, hour, m);
+  return { allCell, all, hourCell, hourWeight: weightOf(hourCell, m), hour, hospCell, hospWeight: weightOf(hospCell, m), p };
+}
 
 /**
  * 통계표 -> 확률 함수
@@ -129,20 +162,9 @@ const rate = (cell) => (cell && cell.n ? (cell.k + 0.5) / (cell.n + 1) : null);
  *   hourKST: 출발(= 상태를 확인한) 시각의 시(0~23)
  *   leadMin: 출발부터 그 병원 도착까지 걸리는 분
  */
-export function makeRejectProb(model, { m = 30 } = {}) {
-  const P = model.pooled;
-
-  const baseAt = (hpid, hb) => {
-    const prior = rate(P[`base|${hb}`]) ?? 0.1;
-    return shrink(model.hospitals[hpid]?.base[String(hb)], prior, m);
-  };
-
-  const pointAt = (hpid, b, L, hb) => {
-    const all = rate(P[`${b}|${L}|all`]);
-    if (all == null) return baseAt(hpid, hb);
-    const pooledHour = shrink(P[`${b}|${L}|${hb}`], all, m);
-    return shrink(model.hospitals[hpid]?.counts[`${b}|${L}|${hb}`], pooledHour, m);
-  };
+export function makeRejectProb(model, { m = SHRINK_M } = {}) {
+  const baseAt = (hpid, hb) => explainBase(model, { hpid, hb, m }).p;
+  const pointAt = (hpid, b, L, hb) => explainPoint(model, { hpid, b, L, hb, m }).p;
 
   return function rejectProb({ hpid, hvec, ageMin = 0, leadMin, hourKST }) {
     const hb = hourBin(hourKST);
@@ -168,11 +190,6 @@ export function makeRejectProb(model, { m = 30 } = {}) {
 }
 
 // 병원별 평균 통계만 쓰는 비교용 예측 (현재 상태를 보지 않음)
-export function makeAverageOnlyProb(model, { m = 30 } = {}) {
-  const P = model.pooled;
-  return ({ hpid, hourKST }) => {
-    const hb = hourBin(hourKST);
-    const prior = rate(P[`base|${hb}`]) ?? 0.1;
-    return { p: shrink(model.hospitals[hpid]?.base[String(hb)], prior, m), basis: '병원 시간대 평균' };
-  };
+export function makeAverageOnlyProb(model, { m = SHRINK_M } = {}) {
+  return ({ hpid, hourKST }) => ({ p: explainBase(model, { hpid, hb: hourBin(hourKST), m }).p, basis: '병원 시간대 평균' });
 }

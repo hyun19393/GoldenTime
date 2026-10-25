@@ -79,6 +79,16 @@
   details { font-size: 13px; color: var(--muted); }
   details p { margin: 6px 0; }
   footer { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .dist-wrap { max-height: 420px; overflow: auto; }
+  table.dist { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.dist th, table.dist td { padding: 6px 6px; border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.dist th { position: sticky; top: 0; background: var(--surface); color: var(--muted); font-weight: 500; font-size: 12px; }
+  table.dist th:first-child, table.dist td:first-child { text-align: left; white-space: normal; overflow-wrap: anywhere; }
+  table.dist td small { color: var(--muted); margin-left: 2px; }
+  table.dist tr.sel td { background: var(--accent-bg); }
+  .dsum { font-size: 13px; margin: 0 0 8px; }
+  .dsum b { font-variant-numeric: tabular-nums; }
+  .ln { display: inline-block; width: 22px; height: 0; margin-right: 4px; vertical-align: 3px; }
   a { color: var(--accent); }
 </style>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=42a491bd43887127ca6b4bf69b731aaf&libraries=services&autoload=false"></script>
@@ -118,6 +128,13 @@
         <ol id="list"></ol>
       </section>
 
+      <section class="card" id="distCard" hidden>
+        <h2>거리 비교: 직선 · 택시거리 · 도로</h2>
+        <div class="dsum" id="distSummary"></div>
+        <div class="dist-wrap"><table class="dist" id="distTable"></table></div>
+        <p class="hint">직선 = 두 점을 곧게 이은 거리. 택시거리 = 동서 방향 거리 + 남북 방향 거리(택시기하: 길이 바둑판처럼 동서·남북으로 나 있다고 가정). 도로 = 카카오 길찾기가 고른 실제 경로의 길이. 작은 숫자는 가까운 순위예요. 줄을 누르면 지도에 세 가지 길이 함께 그려져요.</p>
+      </section>
+
       <section class="card">
         <details>
           <summary>계산 방법과 한계</summary>
@@ -137,6 +154,9 @@
         <span><span class="dot" style="background:var(--low)"></span>1~2개</span>
         <span><span class="dot" style="background:var(--full)"></span>0 이하(꽉 참)</span>
         <span><span class="dot" style="background:var(--stale)"></span>정보 없음·오래됨</span>
+        <span><span class="ln" style="border-top:4px solid #2a63b8"></span>도로 경로</span>
+        <span><span class="ln" style="border-top:2px dashed #555550"></span>직선</span>
+        <span><span class="ln" style="border-top:3px dotted #8a4fd8"></span>택시거리 (동서 → 남북)</span>
       </div>
       <footer>지도: 카카오맵 · 길찾기: 카카오모빌리티 · 병상: 국립중앙의료원 공공데이터</footer>
     </div>
@@ -147,6 +167,8 @@
 import { makeRejectProb, STALE_MIN } from './engine/model.mjs';
 import { evaluate } from './engine/effective.mjs';
 import { parseKST, kstHour } from './engine/time.mjs';
+import { haversineM, taxiM } from './engine/geo.mjs';
+import { ranks, spearman } from './engine/stats.mjs';
 
 const PROXY = 'https://goldentime-proxy.gt-er-map.workers.dev';
 const NEAR_M = 9500;       // 다중 목적지 길찾기 반경(10km)보다 조금 안쪽
@@ -160,12 +182,7 @@ const pct = (p) => (p > 0 && p < 0.005 ? '1% 미만' : `${Math.round(p * 100)}%`
 const min1 = (m) => (m < 10 ? m.toFixed(1) : Math.round(m).toString());
 const setStatus = (msg, err = false) => { $('status').textContent = msg; $('status').className = 'status' + (err ? ' err' : ''); };
 
-function haversineM(a, b) {
-  const R = 6371000, r = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
-  const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLon / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(s));
-}
+const km = (m) => (m == null ? '–' : `${(m / 1000).toFixed(1)}km`);
 
 const bedClass = (h, sinceObs) => {
   if (h.hvec == null || h.ageMin == null || h.ageMin + sinceObs > STALE_MIN) return 'stale';
@@ -231,9 +248,13 @@ async function proxy(path, init) {
 }
 const routeTo = (o, h) => proxy(`/route?origin=${o.lon},${o.lat}&destination=${h.lon},${h.lat}`);
 
-// 출발지 → 응급실 도로 시간
+// 출발지 → 응급실 도로 시간 (직선·택시거리·도로 거리도 함께)
 async function roadTimes(origin) {
   const sorted = ers.map((h) => ({ h, m: haversineM(origin, h) })).sort((a, b) => a.m - b.m);
+  const cand = (x, travelMin, roadM, est = false) => ({
+    id: x.h.id, name: x.h.name, travelMin, est,
+    straightM: x.m, taxiM: taxiM(origin, x.h), roadM: Number.isFinite(roadM) ? roadM : null,
+  });
   const near = sorted.filter((x) => x.m <= NEAR_M).slice(0, 30);
   const far = sorted.filter((x) => x.m > NEAR_M).slice(0, Math.max(0, MIN_CANDIDATES - near.length));
   const out = [];
@@ -245,26 +266,41 @@ async function roadTimes(origin) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ origin: { x: origin.lon, y: origin.lat }, destinations: near.map((x) => ({ key: x.h.id, x: x.h.lon, y: x.h.lat })) }),
     });
-    const got = Object.fromEntries((body.routes ?? []).filter((r) => r.result_code === 0 && r.summary).map((r) => [r.key, r.summary.duration]));
+    const got = Object.fromEntries((body.routes ?? []).filter((r) => r.result_code === 0 && r.summary).map((r) => [r.key, r.summary]));
     for (const x of near) {
-      if (got[x.h.id] != null) out.push({ id: x.h.id, name: x.h.name, travelMin: got[x.h.id] / 60 });
-      else { estimated++; out.push({ id: x.h.id, name: x.h.name, travelMin: (x.m * travel.estimate.secPerM) / 60, est: true }); }
+      const g = got[x.h.id];
+      if (g) out.push(cand(x, g.duration / 60, g.distance));
+      else { estimated++; out.push(cand(x, (x.m * travel.estimate.secPerM) / 60, null, true)); }
     }
   }
   await Promise.all(far.map(async (x) => {
     try {
       const r = (await routeTo(origin, x.h)).routes?.[0];
-      if (r?.result_code === 0) { out.push({ id: x.h.id, name: x.h.name, travelMin: r.summary.duration / 60 }); return; }
+      if (r?.result_code === 0) { out.push(cand(x, r.summary.duration / 60, r.summary.distance)); return; }
     } catch { /* 아래에서 추정 */ }
     estimated++;
-    out.push({ id: x.h.id, name: x.h.name, travelMin: (x.m * travel.estimate.secPerM) / 60, est: true });
+    out.push(cand(x, (x.m * travel.estimate.secPerM) / 60, null, true));
   }));
   return { candidates: out, estimated, nearestM: sorted[0]?.m ?? Infinity };
 }
 
 // ---------- 지도
-let map, originMarker, routeLine, pins = {};
+let map, originMarker, routeLine, straightLine, taxiLine, pins = {};
 const LL = (p) => new kakao.maps.LatLng(p.lat, p.lon);
+
+// 직선(점선)과 택시거리 경로(동서로 간 뒤 남북으로, 점)를 지도에 그린다
+function clearGeoLines() {
+  if (straightLine) straightLine.setMap(null);
+  if (taxiLine) taxiLine.setMap(null);
+  straightLine = taxiLine = null;
+}
+function drawGeoLines(o, h) {
+  clearGeoLines();
+  straightLine = new kakao.maps.Polyline({ path: [LL(o), LL(h)], strokeWeight: 2, strokeColor: '#555550', strokeOpacity: 0.9, strokeStyle: 'shortdash' });
+  taxiLine = new kakao.maps.Polyline({ path: [LL(o), LL({ lat: o.lat, lon: h.lon }), LL(h)], strokeWeight: 3, strokeColor: '#8a4fd8', strokeOpacity: 0.9, strokeStyle: 'shortdot' });
+  straightLine.setMap(map);
+  taxiLine.setMap(map);
+}
 
 function drawPins() {
   const since = sinceObsMin();
@@ -297,18 +333,23 @@ async function setOrigin(o) {
   if (originMarker) originMarker.setMap(null);
   originMarker = new kakao.maps.Marker({ position: LL(o), map, zIndex: 5 });
   if (routeLine) routeLine.setMap(null);
+  clearGeoLines();
   $('places').innerHTML = '';
   setStatus(`${o.label}에서 응급실까지 도로 시간 계산 중…`);
   $('list').innerHTML = '';
   $('resultCard').hidden = true;
+  $('distCard').hidden = true;
   try {
     const { candidates, estimated, nearestM } = await roadTimes(o);
     if (my !== runId) return;
     if (!candidates.length) { setStatus('계산할 응급실이 없어요.', true); return; }
     prepareBetween();
     results = evaluate(candidates, between, probAt, { delayMin: DELAY_MIN, depth: DEPTH });
-    const estMap = Object.fromEntries(candidates.map((c) => [c.id, c.est]));
-    results.forEach((r) => (r.est = estMap[r.id]));
+    const candById = Object.fromEntries(candidates.map((c) => [c.id, c]));
+    results.forEach((r) => {
+      const c = candById[r.id];
+      Object.assign(r, { est: c.est, straightM: c.straightM, taxiM: c.taxiM, roadM: c.roadM });
+    });
     const notes = [];
     if (nearestM > 20000) notes.push('가장 가까운 경기도 응급실도 직선 20km 넘게 떨어져 있어요(경기도 밖이면 결과가 맞지 않아요).');
     if (estimated) notes.push(`출발지 길찾기 ${estimated}곳은 직선 거리로 추정했어요.`);
@@ -352,11 +393,43 @@ function render() {
     return `<li data-id="${esc(r.id)}">
       <div class="top"><span class="name">${i + 1}. ${esc(r.name)}</span><span class="eff">${min1(r.effectiveMin)}분</span></div>
       <div class="meta">이동 ${min1(r.travelMin)}분 + 거절 대비 ${min1(r.extraMin)}분 · 도착 시 거절 확률 ${pct(r.pReject)}</div>
+      <div class="meta">직선 ${km(r.straightM)} · 택시 ${km(r.taxiM)} · 도로 ${r.roadM != null ? km(r.roadM) : '추정'}</div>
       <div>${tags}</div>
       <div class="chain" hidden></div>
     </li>`;
   }).join('');
   for (const li of $('list').children) li.addEventListener('click', () => select(li.dataset.id));
+  renderDist();
+}
+
+// 거리 비교: 직선 · 택시거리 · 도로 거리 · 도로 시간
+function renderDist() {
+  const rows = [...results].sort((a, b) => a.straightM - b.straightM);
+  const real = rows.filter((r) => r.roadM != null && !r.est && r.straightM > 50);
+  const rankOf = (key, list) => { const rr = ranks(list.map((r) => r[key])); return Object.fromEntries(list.map((r, i) => [r.id, rr[i]])); };
+  const rS = rankOf('straightM', rows), rT = rankOf('taxiM', rows), rR = rankOf('roadM', real), rM = rankOf('travelMin', rows);
+  const rk = (x) => (x == null ? '' : `<small>${Number.isInteger(x) ? x : x.toFixed(1)}</small>`);
+  $('distTable').innerHTML = '<tr><th>응급실</th><th>직선</th><th>택시거리</th><th>도로 거리</th><th>도로 시간</th></tr>' +
+    rows.map((r) => `<tr data-id="${esc(r.id)}"><td>${esc(r.name)}</td><td>${km(r.straightM)}${rk(rS[r.id])}</td><td>${km(r.taxiM)}${rk(rT[r.id])}</td>` +
+      `<td>${r.roadM != null ? km(r.roadM) + rk(rR[r.id]) : '<small>추정</small>'}</td><td>${min1(r.travelMin)}분${r.est ? '<small>추정</small>' : rk(rM[r.id])}</td></tr>`).join('');
+  for (const tr of $('distTable').querySelectorAll('tr[data-id]')) tr.addEventListener('click', () => select(tr.dataset.id));
+
+  const lines = [];
+  if (real.length >= 2) {
+    const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+    const rs = real.map((r) => r.roadM / r.straightM), rt = real.map((r) => r.roadM / r.taxiM);
+    lines.push(`도로 거리는 직선의 평균 <b>${avg(rs).toFixed(2)}배</b>(${Math.min(...rs).toFixed(2)}~${Math.max(...rs).toFixed(2)}배), 택시거리의 평균 <b>${avg(rt).toFixed(2)}배</b>(${Math.min(...rt).toFixed(2)}~${Math.max(...rt).toFixed(2)}배)예요.`);
+    const t = real.map((r) => r.travelMin);
+    const f = (x) => (x == null ? '–' : x.toFixed(2));
+    lines.push(`도로 시간의 가까운 순서와 닮은 정도 (스피어먼 순위 상관, 1이면 순서가 똑같음): 직선 <b>${f(spearman(real.map((r) => r.straightM), t))}</b> · 택시거리 <b>${f(spearman(real.map((r) => r.taxiM), t))}</b> · 도로 거리 <b>${f(spearman(real.map((r) => r.roadM), t))}</b> <span class="meta">(응급실 ${real.length}곳, 출발지마다 달라요)</span>`);
+  }
+  const first = (key) => [...rows].sort((a, b) => a[key] - b[key])[0];
+  const fs = first('straightM'), ft = first('taxiM'), fm = first('travelMin');
+  lines.push(fs.id === fm.id && ft.id === fm.id
+    ? `직선·택시거리·도로 시간 모두 <b>${esc(fm.name)}</b>이(가) 가장 가까워요.`
+    : `가장 가까운 곳: 직선 <b>${esc(fs.name)}</b> · 택시거리 <b>${esc(ft.name)}</b> · 도로 시간 <b>${esc(fm.name)}</b>`);
+  $('distSummary').innerHTML = lines.map((l) => `<p style="margin:0 0 4px">${l}</p>`).join('');
+  $('distCard').hidden = false;
 }
 
 async function select(id) {
@@ -376,10 +449,15 @@ async function select(id) {
     }
   }
   for (const [pid, el] of Object.entries(pins)) el.classList.toggle('sel', pid === id);
+  for (const tr of $('distTable').querySelectorAll('tr[data-id]')) tr.classList.toggle('sel', tr.dataset.id === id);
 
   const h = byId[id];
   const my = runId;
   if (routeLine) routeLine.setMap(null);
+  drawGeoLines(origin, h);
+  const geoBounds = new kakao.maps.LatLngBounds();
+  [LL(origin), LL(h), LL({ lat: origin.lat, lon: h.lon })].forEach((p) => geoBounds.extend(p));
+  map.setBounds(geoBounds, 40, 40, 40, 40);
   try {
     const route = (await routeTo(origin, h)).routes?.[0];
     if (my !== runId || selectedId !== id || route?.result_code !== 0) return;
@@ -393,6 +471,7 @@ async function select(id) {
     routeLine.setMap(map);
     const bounds = new kakao.maps.LatLngBounds();
     path.forEach((p) => bounds.extend(p));
+    bounds.extend(LL({ lat: origin.lat, lon: h.lon })); // 택시거리 경로의 꺾이는 점도 화면에 들어오게
     map.setBounds(bounds, 40, 40, 40, 40);
   } catch { /* 경로 선은 없어도 계산 결과는 그대로 */ }
 }

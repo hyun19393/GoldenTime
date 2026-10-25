@@ -14,18 +14,25 @@
     --bg: #f6f6f3; --surface: #ffffff; --ink: #1d1d1b; --muted: #6b6a64; --line: #e3e2dc;
     --full: #d6453d; --low: #e39b1b; --ok: #2f9e66; --stale: #9a9993; --accent: #2a63b8;
     --full-bg: #fbe9e7; --low-bg: #fcf1dc; --ok-bg: #e4f3ea;
+    /* 거절 비율 색 단계 (파랑 한 가지 색, 연함 → 진함) */
+    --h0: #cde2fb; --h1: #9ec5f4; --h2: #6da7ec; --h3: #3987e5; --h4: #256abf; --h5: #104281;
+    --h0-ink: #1d1d1b; --h1-ink: #1d1d1b; --h2-ink: #1d1d1b; --h3-ink: #1d1d1b; --h4-ink: #ffffff; --h5-ink: #ffffff;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #161615; --surface: #1f1f1d; --ink: #ecebe6; --muted: #a3a29b; --line: #34332f;
       --full: #ef6a5f; --low: #f0b443; --ok: #4cbc84; --stale: #7b7a74; --accent: #6b9ae6;
       --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f;
+      --h0: #0d366b; --h1: #184f95; --h2: #256abf; --h3: #3987e5; --h4: #6da7ec; --h5: #9ec5f4;
+      --h0-ink: #ecebe6; --h1-ink: #ecebe6; --h2-ink: #ecebe6; --h3-ink: #1d1d1b; --h4-ink: #1d1d1b; --h5-ink: #1d1d1b;
     }
   }
   :root[data-theme="dark"] {
     --bg: #161615; --surface: #1f1f1d; --ink: #ecebe6; --muted: #a3a29b; --line: #34332f;
     --full: #ef6a5f; --low: #f0b443; --ok: #4cbc84; --stale: #7b7a74; --accent: #6b9ae6;
     --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f;
+    --h0: #0d366b; --h1: #184f95; --h2: #256abf; --h3: #3987e5; --h4: #6da7ec; --h5: #9ec5f4;
+    --h0-ink: #ecebe6; --h1-ink: #ecebe6; --h2-ink: #ecebe6; --h3-ink: #1d1d1b; --h4-ink: #1d1d1b; --h5-ink: #1d1d1b;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--ink); }
@@ -80,6 +87,55 @@
   .leaflet-popup-content { font-family: "Noto Sans KR", system-ui, sans-serif; font-size: 13px; line-height: 1.55; margin: 12px 14px; }
   .leaflet-popup-content b { font-weight: 700; }
   #loading { color: var(--muted); padding: 40px 0; text-align: center; }
+  /* 거절 확률 계산 */
+  h3 { font-size: 14.5px; font-weight: 700; margin: 20px 0 8px; }
+  .steps { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 8px; }
+  .steps li { border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; font-size: 13px; line-height: 1.55; }
+  .steps li b { display: block; font-size: 13.5px; margin-bottom: 2px; }
+  .steps .live { display: block; color: var(--accent); font-variant-numeric: tabular-nums; margin-top: 3px; }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+  .seg button { font: inherit; font-size: 12.5px; padding: 3px 10px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .scrollx { overflow-x: auto; }
+  .heat { table-layout: fixed; min-width: 440px; }
+  .heat th, .heat td { text-align: center; padding: 6px 3px; border-bottom: 2px solid var(--surface); border-right: 2px solid var(--surface); }
+  .heat th { position: static; }
+  .heat th[scope=row] { text-align: left; white-space: nowrap; color: var(--ink); font-size: 13px; width: 92px; }
+  .heat td { border-radius: 4px; font-variant-numeric: tabular-nums; }
+  .heat td b { display: block; font-size: 13.5px; font-weight: 700; line-height: 1.3; }
+  .heat td small { display: block; font-size: 11px; opacity: .85; }
+  .heat td.empty { color: var(--muted); background: var(--bg); }
+  .heat td.few { outline: 2px dashed var(--muted); outline-offset: -4px; }
+  .h0 { background: var(--h0); color: var(--h0-ink); } .h1 { background: var(--h1); color: var(--h1-ink); }
+  .h2 { background: var(--h2); color: var(--h2-ink); } .h3 { background: var(--h3); color: var(--h3-ink); }
+  .h4 { background: var(--h4); color: var(--h4-ink); } .h5 { background: var(--h5); color: var(--h5-ink); }
+  .heat-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .heat-legend i { display: inline-block; width: 16px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  .pick { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+  select { font: inherit; font-size: 14px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); max-width: 100%; }
+  .now { font-size: 13.5px; margin: 0 0 8px; }
+  #exTable td, #exTable th { font-variant-numeric: tabular-nums; }
+  #exTable td.p { font-weight: 700; }
+  .calc { background: var(--bg); border-radius: 8px; padding: 9px 12px; font-size: 13px; line-height: 1.7; font-variant-numeric: tabular-nums; margin-top: 8px; overflow-wrap: anywhere; }
+  .calc b { font-weight: 700; }
+  #hospProb tr.row { cursor: pointer; }
+  #hospProb tr.row:hover td { background: var(--bg); }
+  #hospProb tr.sel td { background: var(--ok-bg); }
+  #hospProb td:first-child { overflow-wrap: anywhere; }
+  @media (max-width: 600px) {
+    .heat { min-width: 0; }
+    .heat th[scope=row] { width: 58px; font-size: 12px; white-space: normal; }
+    .heat th { font-size: 11px; }
+    .heat td { padding: 5px 1px; }
+    .heat td b { font-size: 12px; }
+    .heat td small { font-size: 10px; }
+    #exTable tr:first-child { display: none; }
+    #exTable tr { display: block; border-bottom: 1px solid var(--line); padding: 6px 0; }
+    #exTable td { display: inline-block; border: 0; padding: 1px 8px 1px 0; font-size: 12.5px; text-align: left; white-space: normal; }
+    #exTable td:first-child { display: block; font-weight: 700; }
+    #exTable td[data-label]::before { content: attr(data-label) ' '; color: var(--muted); }
+    #hospProb th:nth-child(4), #hospProb td:nth-child(4), #hospProb th:nth-child(5), #hospProb td:nth-child(5) { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -120,6 +176,37 @@
         <p class="note">수집할 때마다 남은 병상이 0 이하인 응급실이 몇 곳이었는지 보여줘요.</p>
       </section>
     </div>
+
+    <section class="card" id="probCard">
+      <h2>거절 확률은 이렇게 계산해요</h2>
+      <p class="sub" id="probMeta">통계표를 불러오는 중…</p>
+      <ol class="steps">
+        <li><b>① 10분마다 기록</b>응급실마다 남은 병상(hvec)을 저장해요. 0 이하이면 '거절(수용 곤란) 상태'로 봐요.<span class="live" id="stepRows"></span></li>
+        <li><b>② 짝짓기</b>같은 병원의 "지금 남은 병상"과 "10·20·30·40·50·60분 뒤 남은 병상"(±3분)을 한 쌍으로 묶어요. 병원 입력이 60분 넘게 지난 기록은 '지금 상태'로 쓰지 않아요.<span class="live" id="stepPairs"></span></li>
+        <li><b>③ 칸별로 세기</b>지금 병상 구간 6개 × 도착까지 시간 6개 × 시간대 6개 = 216칸. 칸마다 "뒤 기록이 0 이하였던 횟수 k ÷ 전체 횟수 n"을 세요.<span class="live" id="stepCells"></span></li>
+        <li><b>④ 기록이 적은 칸 보정</b>p = (k + 30 × 기준값) ÷ (n + 30). 전체 병원 → 같은 시간대 → 이 병원 순으로 적용해요. 사이 시간(예: 14분)은 10분과 20분 값을 직선으로 이어요.<span class="live">기록이 많을수록 그 병원 자신의 비율에 가까워져요.</span></li>
+      </ol>
+
+      <h3>결과: 지금 남은 병상이 k개일 때, n분 뒤 병상이 0 이하였던 비율</h3>
+      <div class="seg" id="heatSeg" role="group" aria-label="시간대 고르기"></div>
+      <div class="scrollx"><table class="heat" id="heat"></table></div>
+      <div class="heat-legend" id="heatLegend"></div>
+      <p class="note">칸의 큰 숫자는 비율, 작은 숫자는 k/n(0 이하였던 횟수 / 전체 횟수)이에요. 경기도 응급실 전체를 합친 값이고, '–'는 아직 기록이 없는 칸이에요.</p>
+
+      <h3>병원 하나로 계산 따라가기</h3>
+      <div class="pick">
+        <label for="hospSel" class="sub">병원</label>
+        <select id="hospSel"></select>
+      </div>
+      <p class="now" id="exNow"></p>
+      <div class="scrollx"><table id="exTable"></table></div>
+      <div class="seg" id="calcSeg" role="group" aria-label="계산식을 볼 도착 시간" style="margin-top:10px"></div>
+      <div class="calc" id="calc"></div>
+
+      <h3>병원별 결과: 지금 상태에서 20분 뒤 도착하면</h3>
+      <div class="scroll"><table id="hospProb"></table></div>
+      <p class="note">줄을 누르면 위에서 그 병원의 계산 과정을 볼 수 있어요. '병원 기록 비중'은 마지막 보정에서 이 병원 자신의 기록이 차지한 몫(n ÷ (n + 30))이에요. 기록이 쌓일수록 커져요.</p>
+    </section>
 
     <div class="grid2">
       <section class="card">
@@ -177,7 +264,7 @@ function render(s) {
   drawHours(s.byHour, s.snapshots);
   drawLine(s.timeline);
   drawSi(s.bySi, s.noEr);
-  drawMsgs(s.messages);
+  drawMsgs(s.messages, s.messagesAt);
   drawRuns(s.runs24h);
 }
 
@@ -263,10 +350,10 @@ function drawSi(list, noEr) {
   $('noEr').textContent = noEr.length ? `실시간 병상 정보가 있는 응급실이 없는 시군: ${noEr.join(', ')}` : '';
 }
 
-function drawMsgs(msgs) {
+function drawMsgs(msgs, at) {
   const render = (q) => {
     const f = q ? msgs.filter((m) => (m.name + m.type + m.msg).includes(q)) : msgs;
-    $('msgCount').textContent = `${f.length}건`;
+    $('msgCount').textContent = `${f.length}건` + (at ? ` · ${at.slice(11, 16)} 확인 (1시간마다)` : '');
     $('msgTable').innerHTML = '<colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"></colgroup><tr><th>병원</th><th>구분</th><th>내용</th><th class="num">기간</th></tr>' +
       f.map((m) => `<tr><td>${esc(m.name)}</td><td>${esc(m.type)}</td><td>${esc(m.msg)}</td><td class="num">${esc(m.start)}<br>~ ${esc(m.end)}</td></tr>`).join('');
   };
@@ -282,6 +369,174 @@ function drawRuns(r) {
       (s.lastError ? `<br><span class="err">${esc(s.lastError)}</span>` : '') + '</div>';
   }).join('');
 }
+</script>
+<script type="module">
+// 거절 확률 계산 과정과 결과 (웹앱과 같은 계산 코드 engine/model.mjs를 그대로 쓴다)
+import { BUCKETS, BUCKET_LABEL, HOUR_BIN_LABEL, STALE_MIN, SHRINK_M, bedBucket, hourBin, explainPoint, explainBase, makeRejectProb } from './engine/model.mjs';
+import { parseKST, kstHour, formatKST } from './engine/time.mjs';
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pc = (x, d = 0) => (x == null ? '–' : `${(x * 100).toFixed(d)}%`);
+const kn = (c) => (c ? `${c.k}/${c.n}` : '0/0');
+const f3 = (x) => x.toFixed(3);
+const HEAT_EDGES = [0.05, 0.15, 0.3, 0.5, 0.75]; // 색 단계 경계
+const heatStep = (p) => HEAT_EDGES.filter((t) => p >= t).length; // 0~5
+const LEGEND = ['5% 미만', '5~15%', '15~30%', '30~50%', '50~75%', '75% 이상'];
+const FEW_N = 10; // 이보다 기록이 적은 칸은 점선으로 표시
+
+let model, status, byId, obsHour, obsHb, rp, selId, calcL = 20;
+
+async function main() {
+  try {
+    [status, model] = await Promise.all(['status.json', 'model.json'].map((f) =>
+      fetch(f, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(`${f} ${r.status}`); return r.json(); })));
+  } catch (e) {
+    $('probMeta').textContent = `통계표를 아직 불러오지 못했어요 (${e.message}).`;
+    return;
+  }
+  rp = makeRejectProb(model);
+  byId = Object.fromEntries(status.hospitals.map((h) => [h.hpid, h]));
+  obsHour = kstHour(parseKST(status.latestAt));
+  obsHb = hourBin(obsHour);
+  if (!model.leads.includes(calcL)) calcL = model.leads[0];
+
+  const days = (model.range[1] - model.range[0]) / 86400e3;
+  $('probMeta').textContent = `기록 기간 ${formatKST(model.range[0]).slice(0, 16)} ~ ${formatKST(model.range[1]).slice(0, 16)} (${days < 1 ? '하루 미만' : `${days.toFixed(1)}일`}) · 거절 상태 정의: ${model.rejectDefinition} · 수집할 때마다 다시 계산돼요.`;
+  $('stepRows').textContent = model.rows != null ? `지금까지 ${model.rows.toLocaleString()}개 기록` : '';
+  $('stepPairs').textContent = `짝 ${model.pairs.toLocaleString()}쌍` + (model.staleRows ? ` · 오래된 입력 ${model.staleRows.toLocaleString()}개 제외` : '');
+  const cells = Object.keys(model.pooled).filter((k) => /^[^|]+\|\d+\|\d$/.test(k)).length;
+  $('stepCells').textContent = `216칸 중 ${cells}칸에 기록 있음 (${pc(cells / 216)})`;
+
+  drawHeatSeg();
+  drawHeat('all');
+  $('heatLegend').innerHTML = '<span>비율</span>' + LEGEND.map((t, i) => `<span><i class="h${i}"></i>${t}</span>`).join('') + '<span><i style="background:var(--bg);border:1px solid var(--line)"></i>기록 없음</span>' +
+    `<span><i style="outline:2px dashed var(--muted);outline-offset:-2px"></i>기록 ${FEW_N}개 미만 (아직 믿기 어려움)</span>`;
+
+  // 기본으로 보여줄 병원: 지금 가장 붐비는 곳 (남은 병상이 가장 적은 곳)
+  const fresh = status.hospitals.filter((h) => h.hvec != null && h.ageMin != null && h.ageMin <= STALE_MIN);
+  selId = (fresh.sort((a, b) => a.hvec - b.hvec)[0] ?? status.hospitals[0])?.hpid;
+  $('hospSel').innerHTML = [...status.hospitals].sort((a, b) => a.name.localeCompare(b.name, 'ko'))
+    .map((h) => `<option value="${esc(h.hpid)}">${esc(h.name)} (${h.hvec == null ? '정보 없음' : `남은 병상 ${h.hvec}`})</option>`).join('');
+  $('hospSel').addEventListener('change', (e) => { selId = e.target.value; drawExplain(); markRow(); });
+  drawCalcSeg();
+  drawExplain();
+  drawHospTable();
+}
+
+function drawHeatSeg() {
+  const opts = [['all', '전체']].concat(HOUR_BIN_LABEL.map((l, i) => [String(i), l]));
+  $('heatSeg').innerHTML = opts.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${v === 'all'}">${l}</button>`).join('');
+  for (const b of $('heatSeg').children) b.addEventListener('click', () => {
+    for (const x of $('heatSeg').children) x.setAttribute('aria-pressed', String(x === b));
+    drawHeat(b.dataset.v);
+  });
+}
+
+function drawHeat(hbKey) {
+  const when = hbKey === 'all' ? '전체 시간대' : HOUR_BIN_LABEL[Number(hbKey)];
+  let html = '<tr><th scope="col" style="text-align:left">지금 남은 병상</th>' + model.leads.map((L) => `<th scope="col">${L}분 뒤</th>`).join('') + '</tr>';
+  for (const b of BUCKETS) {
+    html += `<tr><th scope="row">${BUCKET_LABEL[b]}</th>`;
+    for (const L of model.leads) {
+      const c = model.pooled[`${b}|${L}|${hbKey}`];
+      if (!c) { html += `<td class="empty" title="${when} · 지금 ${BUCKET_LABEL[b]} → ${L}분 뒤: 기록 없음">–</td>`; continue; }
+      const p = c.k / c.n;
+      const few = c.n < FEW_N ? ' few' : '';
+      html += `<td class="h${heatStep(p)}${few}" title="${when} · 지금 ${BUCKET_LABEL[b]} → ${L}분 뒤 0 이하: ${c.k}/${c.n} = ${pc(p, 1)}${few ? ' (기록이 적어 믿기 어려움)' : ''}"><b>${pc(p)}</b><small>${c.k}/${c.n}</small></td>`;
+    }
+    html += '</tr>';
+  }
+  $('heat').innerHTML = html;
+}
+
+const isFresh = (h) => h.hvec != null && h.ageMin != null && h.ageMin <= STALE_MIN;
+
+function drawCalcSeg() {
+  $('calcSeg').innerHTML = '<span class="sub" style="align-self:center">계산식 보기:</span>' +
+    model.leads.map((L) => `<button type="button" data-l="${L}" aria-pressed="${L === calcL}">${L}분</button>`).join('');
+  for (const b of $('calcSeg').querySelectorAll('button')) b.addEventListener('click', () => {
+    calcL = Number(b.dataset.l);
+    for (const x of $('calcSeg').querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b));
+    drawExplain();
+  });
+}
+
+function drawExplain() {
+  const h = byId[selId];
+  if (!h) return;
+  $('hospSel').value = selId;
+  const hb = obsHb;
+  const hbLabel = HOUR_BIN_LABEL[hb];
+  if (!isFresh(h)) {
+    const ex = explainBase(model, { hpid: selId, hb });
+    $('exNow').innerHTML = `<b>${esc(h.name)}</b>: 지금 상태를 알 수 없어요(${h.hvec == null ? '병상 정보 없음' : `병원 입력 ${h.ageMin}분 전`}). 이럴 때는 이 병원의 ${hbLabel} 평균 거절 비율을 써요.`;
+    $('exTable').innerHTML = '<tr><th>단계</th><th class="num">기록 k/n</th><th class="num">값</th></tr>' +
+      `<tr><td>① 전체 병원 ${hbLabel} 평균</td><td class="num">${kn(ex.allCell)}</td><td class="num">${pc(ex.prior, 1)}</td></tr>` +
+      `<tr><td>② 이 병원 ${hbLabel} (비중 ${pc(ex.hospWeight)})</td><td class="num">${kn(ex.hospCell)}</td><td class="num p">${pc(ex.p, 1)}</td></tr>`;
+    $('calcSeg').hidden = true;
+    const k = ex.hospCell?.k ?? 0, n = ex.hospCell?.n ?? 0;
+    $('calc').innerHTML = `② = (k + ${SHRINK_M} × ①) ÷ (n + ${SHRINK_M}) = (${k} + ${SHRINK_M} × ${f3(ex.prior)}) ÷ (${n} + ${SHRINK_M}) = <b>${f3(ex.p)}</b> → ${pc(ex.p, 1)}`;
+    return;
+  }
+  $('calcSeg').hidden = false;
+  const b = bedBucket(h.hvec);
+  $('exNow').innerHTML = `<b>${esc(h.name)}</b>: 지금 남은 병상 <b>${h.hvec}</b> → '${BUCKET_LABEL[b]}' 구간 · 병원 입력 ${h.ageMin}분 전 · 기록 시각 ${status.latestAt.slice(11, 16)} → '${hbLabel}' 시간대`;
+  let html = '<tr><th>도착까지</th><th class="num">① 전체 병원·전체 시간대</th><th class="num">② 같은 시간대(' + hbLabel + ')</th><th class="num">③ 이 병원</th><th class="num">거절 확률</th></tr>';
+  html += `<tr><td>0분</td><td colspan="3" class="sub">지금 상태 그대로 (0 이하이면 100%, 아니면 0%)</td><td class="num p">${h.hvec <= 0 ? '100%' : '0%'}</td></tr>`;
+  for (const L of model.leads) {
+    const ex = explainPoint(model, { hpid: selId, b, L, hb });
+    if (ex.fallback) {
+      html += `<tr><td>${L}분</td><td colspan="3" class="sub">이 병상 구간·도착 시간 기록이 아직 없어 병원 평균(${pc(ex.p, 1)})을 써요</td><td class="num p">${pc(ex.p, 1)}</td></tr>`;
+      continue;
+    }
+    html += `<tr><td>${L}분</td><td class="num" data-label="①">${kn(ex.allCell)} → ${pc(ex.all, 1)}</td><td class="num" data-label="②">${kn(ex.hourCell)} → ${pc(ex.hour, 1)}</td>` +
+      `<td class="num" data-label="③">${kn(ex.hospCell)} · 비중 ${pc(ex.hospWeight)} → ${pc(ex.p, 1)}</td><td class="num p" data-label="거절 확률">${pc(ex.p, 1)}</td></tr>`;
+  }
+  $('exTable').innerHTML = html;
+
+  const ex = explainPoint(model, { hpid: selId, b, L: calcL, hb });
+  if (ex.fallback) {
+    $('calc').innerHTML = `${calcL}분: 이 병상 구간·도착 시간 기록이 아직 없어 병원 평균 ${pc(ex.p, 1)}을 써요.`;
+    return;
+  }
+  const a = ex.allCell, t = ex.hourCell, i = ex.hospCell;
+  $('calc').innerHTML =
+    `<b>${calcL}분 뒤 도착</b><br>` +
+    `① 전체: (k + 0.5) ÷ (n + 1) = (${a.k} + 0.5) ÷ (${a.n} + 1) = ${f3(ex.all)}<br>` +
+    `② 같은 시간대: (k + ${SHRINK_M} × ①) ÷ (n + ${SHRINK_M}) = (${t?.k ?? 0} + ${SHRINK_M} × ${f3(ex.all)}) ÷ (${t?.n ?? 0} + ${SHRINK_M}) = ${f3(ex.hour)}<br>` +
+    `③ 이 병원: (k + ${SHRINK_M} × ②) ÷ (n + ${SHRINK_M}) = (${i?.k ?? 0} + ${SHRINK_M} × ${f3(ex.hour)}) ÷ (${i?.n ?? 0} + ${SHRINK_M}) = <b>${f3(ex.p)}</b> → 거절 확률 <b>${pc(ex.p, 1)}</b>` +
+    `<br><span class="sub">①에 0.5와 1을 더하는 건 기록이 적을 때 0%나 100%로 딱 떨어지지 않게 하려는 거예요.</span>`;
+}
+
+function drawHospTable() {
+  const L = model.leads.includes(20) ? 20 : model.leads[0];
+  const rows = status.hospitals.map((h) => {
+    const fresh = isFresh(h);
+    const p = rp({ hpid: h.hpid, hvec: h.hvec ?? NaN, ageMin: h.ageMin ?? Infinity, leadMin: L, hourKST: obsHour }).p;
+    const ex = fresh ? explainPoint(model, { hpid: h.hpid, b: bedBucket(h.hvec), L, hb: obsHb }) : explainBase(model, { hpid: h.hpid, hb: obsHb });
+    const w = ex.fallback ? ex.fallback.hospWeight : ex.hospWeight;
+    const n = Object.entries(model.hospitals[h.hpid]?.counts ?? {}).filter(([k]) => k.split('|')[1] === String(L)).reduce((s, [, c]) => s + c.n, 0);
+    return { h, fresh, p, w, n };
+  }).sort((a, b) => b.p - a.p || a.h.name.localeCompare(b.h.name, 'ko'));
+  $('hospProb').innerHTML = `<tr><th>병원</th><th class="num">지금 병상</th><th class="num">${L}분 뒤 거절 확률</th><th class="num">병원 기록 비중</th><th class="num">이 병원 짝(${L}분)</th></tr>` +
+    rows.map((r) => `<tr class="row" data-id="${esc(r.h.hpid)}"><td>${esc(r.h.name)}<br><span class="sub">${esc(r.h.si ?? '')}</span></td>` +
+      `<td class="num">${r.fresh ? r.h.hvec : '<span class="sub">모름</span>'}</td><td class="num"><b>${pc(r.p, 1)}</b></td>` +
+      `<td class="num">${pc(r.w)}</td><td class="num">${r.n.toLocaleString()}</td></tr>`).join('');
+  for (const tr of $('hospProb').querySelectorAll('tr.row')) tr.addEventListener('click', () => {
+    selId = tr.dataset.id;
+    drawExplain();
+    markRow();
+    $('hospSel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+  markRow();
+}
+
+function markRow() {
+  for (const tr of $('hospProb').querySelectorAll('tr.row')) tr.classList.toggle('sel', tr.dataset.id === selId);
+}
+
+main();
 </script>
 </body>
 </html>

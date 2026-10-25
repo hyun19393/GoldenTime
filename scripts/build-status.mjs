@@ -121,7 +121,11 @@ const sevBy = Object.fromEntries(
 
 // ---- 메시지 (지금 걸려 있는 것)
 const nowMs = latestAt ? parseKST(latestAt) : Date.now();
-const msgRows = readDir('messages', 2).flatMap((d) => d.rows); // 걸려 있는 메시지는 날마다 다시 저장되므로 최근 2일이면 충분
+// 지금 걸려 있는 목록(messages_now.csv)이 있으면 그것을 쓴다. 해제된 메시지가 남지 않는다.
+// 없으면(예전 기록) 최근 2일 기록에서 기간으로만 거른다.
+const nowMsgs = readTable('messages_now.csv');
+const msgRows = nowMsgs.length ? nowMsgs : readDir('messages', 2).flatMap((d) => d.rows);
+const messagesAt = nowMsgs[0]?.collected_at ?? null;
 const seenMsg = new Set();
 const activeMsgs = [];
 for (const m of msgRows) {
@@ -206,6 +210,7 @@ const status = {
   bySi: siList,
   noEr,
   messages: activeMsgs.sort((a, b) => (a.start < b.start ? 1 : -1)).slice(0, 200),
+  messagesAt,
   runs24h: runStats,
 };
 

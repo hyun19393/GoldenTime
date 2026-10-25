@@ -125,3 +125,68 @@ test('모든 도착 시간 칸이 10분 간격 기록으로 채워진다 (45분�
     assert.ok(n > 0, `${L}분 칸이 비어 있음`);
   }
 });
+
+test('계산 과정 설명(explainPoint)의 최종값이 앱이 쓰는 확률과 같다', async () => {
+  const { buildModel, makeRejectProb, explainPoint, explainBase, bedBucket, hourBin, LEADS } = await import('../engine/model.mjs');
+  const t0 = parseKST('2026-10-10 00:00:00');
+  const rows = [];
+  // 병원 3곳, 이틀 치, 병상 수가 시간에 따라 오르내림
+  for (const [j, id] of ['A', 'B', 'C'].entries()) {
+    for (let i = 0; i < 288; i++) rows.push({ t: t0 + i * 600e3 + j * 7e3, hpid: id, name: id, hvec: ((i + j * 5) % 9) - 2, ageMin: 5 });
+  }
+  const model = buildModel(rows);
+  const rp = makeRejectProb(model);
+  for (const id of ['A', 'B', 'NEW']) {
+    for (const hvec of [-2, 0, 1, 3, 6, 12]) {
+      for (const hour of [1, 9, 15, 22]) {
+        for (const L of LEADS) {
+          const ex = explainPoint(model, { hpid: id, b: bedBucket(hvec), L, hb: hourBin(hour) });
+          close(ex.p, rp({ hpid: id, hvec, leadMin: L, hourKST: hour }).p);
+          if (!ex.fallback) {
+            // 3단계: 전체 → 시간대 → 병원, 병원 비중 = n/(n+30)
+            assert.ok(ex.all > 0 && ex.all < 1);
+            if (ex.hospCell) close(ex.hospWeight, ex.hospCell.n / (ex.hospCell.n + 30));
+            else assert.equal(ex.p, ex.hour);
+          }
+        }
+      }
+    }
+    close(explainBase(model, { hpid: id, hb: 3 }).p, rp({ hpid: id, hvec: NaN, leadMin: 10, hourKST: 13 }).p);
+  }
+});
+
+test('거리: 직선(하버사인)과 택시거리(동서+남북)', async () => {
+  const { haversineM, taxiM, planeDeltaM } = await import('../engine/geo.mjs');
+  const a = { lat: 37.3248, lon: 127.1076 };
+  // 남북으로만 1km: 택시거리 = 직선 거리
+  const north = { lat: a.lat + 1000 / 111195, lon: a.lon };
+  assert.ok(Math.abs(haversineM(a, north) - 1000) < 2);
+  assert.ok(Math.abs(taxiM(a, north) - haversineM(a, north)) < 1);
+  // 동서 1km + 남북 1km 대각선: 직선 √2 km, 택시 2 km
+  const kmLon = 1000 / (111195 * Math.cos((a.lat * Math.PI) / 180));
+  const diag = { lat: a.lat + 1000 / 111195, lon: a.lon + kmLon };
+  assert.ok(Math.abs(haversineM(a, diag) - Math.SQRT2 * 1000) < 3);
+  assert.ok(Math.abs(taxiM(a, diag) - 2000) < 3);
+  const { dx, dy } = planeDeltaM(a, diag);
+  assert.ok(dx > 0 && dy > 0);
+  // 택시거리는 항상 직선 이상, 직선의 √2배 이하
+  for (let k = 0; k < 50; k++) {
+    const b = { lat: a.lat + (Math.sin(k) * 0.2), lon: a.lon + (Math.cos(k * 1.7) * 0.2) };
+    const s = haversineM(a, b), t = taxiM(a, b);
+    assert.ok(t >= s - 1 && t <= s * Math.SQRT2 + 1, `${s} ${t}`);
+  }
+});
+
+test('순위와 스피어먼 순위 상관', async () => {
+  const { ranks, pearson, spearman } = await import('../engine/stats.mjs');
+  assert.deepEqual(ranks([30, 10, 20]), [3, 1, 2]);
+  assert.deepEqual(ranks([5, 1, 5, 2]), [3.5, 1, 3.5, 2]); // 같은 값은 순위 평균
+  close(pearson([1, 2, 3], [2, 4, 6]), 1);
+  close(pearson([1, 2, 3], [3, 2, 1]), -1);
+  assert.equal(pearson([1, 1, 1], [1, 2, 3]), null);
+  close(spearman([1, 2, 3, 4], [10, 20, 30, 1000]), 1); // 순서만 같으면 1
+  close(spearman([1, 2, 3, 4], [4, 3, 2, 1]), -1);
+  assert.equal(spearman([1, 2], [1, 2]), null);
+  // 손으로 계산: d = (0, 1, -1, 0) → 1 - 6·2/(4·15) = 0.8
+  close(spearman([1, 2, 3, 4], [1, 3, 2, 4]), 0.8);
+});

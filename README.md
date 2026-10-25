@@ -20,6 +20,7 @@
 | `collector/collect.mjs` | 공공데이터 수집기 (cron-job.org가 10분마다 GitHub Actions를 실행) |
 | `engine/model.mjs` | 거절 확률 통계표 만들기, 확률 계산 |
 | `engine/effective.mjs` | 실효 도착 시간 계산 |
+| `engine/geo.mjs` · `engine/stats.mjs` | 직선·택시거리 계산, 순위 상관 (웹앱 거리 비교) |
 | `scripts/validate.mjs` | 앞 기간으로 만든 통계가 뒤 기간을 얼마나 맞히는지 검증 |
 | `scripts/build-model.mjs` | 웹앱용 통계표 `model.json` 만들기 |
 | `scripts/travel-matrix.mjs` | 응급실 사이 도로 이동 시간 표 (카카오 길찾기, 하루 4번 → `data/travel/`) |
@@ -37,6 +38,8 @@ https://hyun19393.github.io/GoldenTime/ (GitHub Pages, `docs/` 폴더)
 
 수집할 때마다 `scripts/build-status.mjs`가 `docs/status.json`을 새로 만들고, 현황판이 그 파일을 읽어 지도·그래프·표로 보여준다.
 
+현황판의 '거절 확률은 이렇게 계산해요'는 `docs/model.json`(거절 통계표)을 웹앱과 같은 계산 코드로 읽어, 병상×도착 시간 표, 병원 하나의 단계별 계산식, 병원별 결과를 보여준다.
+
 ## 수집 데이터
 
 출처: 공공데이터포털 「국립중앙의료원_전국 응급의료기관 정보 조회 서비스」
@@ -48,6 +51,8 @@ https://hyun19393.github.io/GoldenTime/ (GitHub Pages, `docs/` 폴더)
 | `data/beds/날짜.csv` | ① 응급실 실시간 가용병상정보 조회 (`hvec` 응급실 일반병상, `hvs01` 일반 기준병상, `hv28` 소아 등) | 10분 |
 | `data/severe/날짜.csv` | ② 중증질환자 수용가능정보 조회 (`MKioskTy1~28`, 질환 28종 Y/불가능/정보미제공) | 10분 |
 | `data/messages/날짜.csv` | ⑨ 응급실 및 중증질환 메시지 조회 (수용 불가 메시지, 시작·해제 시각) | 1시간, 새 메시지만 |
+| `data/messages_now.csv` | ⑨ 지금 걸려 있는 메시지 목록 (현황판의 '걸려 있는 메시지'는 이 파일 기준) | 1시간, 새로 씀 |
+| `data/messages_gone/날짜.csv` | ⑨ 해제되어 사라진 메시지 (`last_seen` = 마지막으로 보인 시각) | 사라질 때 |
 | `data/hospitals.csv` | ③ 응급의료기관 목록정보 조회 (좌표, 기관 분류) | 하루 1번 |
 | `data/hospital_info.csv` | ⑤ 응급의료기관 기본정보 조회 (진료과목, 병상 수) | 하루 1번 |
 | `data/runs.csv` | 수집 실행 기록 | 매번 |
