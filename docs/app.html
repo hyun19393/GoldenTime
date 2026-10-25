@@ -156,7 +156,7 @@ const DEPTH = 3;
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const pct = (p) => `${Math.round(p * 100)}%`;
+const pct = (p) => (p > 0 && p < 0.005 ? '1% 미만' : `${Math.round(p * 100)}%`);
 const min1 = (m) => (m < 10 ? m.toFixed(1) : Math.round(m).toString());
 const setStatus = (msg, err = false) => { $('status').textContent = msg; $('status').className = 'status' + (err ? ' err' : ''); };
 
