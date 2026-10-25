@@ -1,0 +1,14 @@
+{
+  "name": "goldentime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "응급실 뺑뺑이 탐구: 도착 시점 거절 확률과 실효 도착 시간 계산",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "collect": "node collector/collect.mjs",
+    "build-model": "node scripts/build-model.mjs",
+    "validate": "node scripts/validate.mjs"
+  },
+  "engines": { "node": ">=20" }
+}

@@ -1,0 +1,37 @@
+name: collect
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # 10분마다 (GitHub 사정으로 몇 분씩 늦어질 수 있음)
+  workflow_dispatch:          # Actions 탭에서 직접 실행 가능
+
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 공공데이터 수집
+        run: node collector/collect.mjs
+        env:
+          SERVICE_KEY: ${{ secrets.SERVICE_KEY }}
+          STAGES: 경기도   # 수집할 시도 (여러 곳이면 쉼표로 구분, 예: 서울특별시,경기도)
+      - name: 저장소에 기록
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -q -m "collect $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
+          for i in 1 2 3; do git pull -q --rebase && git push -q && break; sleep 5; done
