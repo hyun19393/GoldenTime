@@ -23,6 +23,8 @@
 | `scripts/validate.mjs` | 앞 기간으로 만든 통계가 뒤 기간을 얼마나 맞히는지 검증 |
 | `scripts/build-model.mjs` | 웹앱용 통계표 `model.json` 만들기 |
 | `scripts/travel-matrix.mjs` | 응급실 사이 도로 이동 시간 표 (카카오 길찾기, 하루 4번 → `data/travel/`) |
+| `scripts/build-web.mjs` | 웹앱용 파일 만들기: `docs/model.json`(거절 통계표), `docs/travel.json`(이동 시간표), `docs/engine/`(계산 코드 복사) |
+| `docs/app.html` | 응급실 추천 웹앱 (카카오 지도, 출발지 → 실효 도착 시간 순위·경로) |
 | `proxy/worker.js` | 중계 서버 (Cloudflare Workers): 카카오 키를 숨기고 웹앱의 길찾기 요청만 대신 호출 |
 | `data/` | 수집 데이터 (날짜별 CSV) |
 | `tests/` | 자동 검사 (`npm test`) |
@@ -30,6 +32,8 @@
 ## 수집 현황판
 
 https://hyun19393.github.io/GoldenTime/ (GitHub Pages, `docs/` 폴더)
+
+웹앱: https://hyun19393.github.io/GoldenTime/app.html (카카오 지도 JavaScript 키는 웹페이지에 공개되는 키라 코드에 들어 있고, 카카오 디벨로퍼스에 등록한 도메인에서만 작동한다. REST 키는 중계 서버 Secret에만 둔다.)
 
 수집할 때마다 `scripts/build-status.mjs`가 `docs/status.json`을 새로 만들고, 현황판이 그 파일을 읽어 지도·그래프·표로 보여준다.
 

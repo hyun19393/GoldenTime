@@ -42,12 +42,15 @@ jobs:
       - name: 현황판 요약 만들기
         if: always()
         run: node scripts/build-status.mjs --data data --out docs/status.json
+      - name: 웹앱 파일 만들기 (거절 통계표·이동 시간표·계산 코드)
+        if: always()
+        run: node scripts/build-web.mjs --data data --out docs
       - name: 저장소에 기록
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data docs/status.json
+          git add data docs/status.json docs/model.json docs/travel.json docs/engine
           if git diff --cached --quiet; then exit 0; fi
           git commit -q -m "collect $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
           for i in 1 2 3; do git pull -q --rebase && git push -q && break; sleep 5; done

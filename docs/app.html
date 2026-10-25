@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>골든타임 경로</title>
+<meta name="description" content="도착했을 때 받아줄 가능성까지 계산해 경기도 응급실을 추천하는 탐구용 웹앱">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f6f3; --surface: #ffffff; --ink: #1d1d1b; --muted: #6b6a64; --line: #e3e2dc;
+    --full: #d6453d; --low: #e39b1b; --ok: #2f9e66; --stale: #9a9993; --accent: #2a63b8;
+    --full-bg: #fbe9e7; --low-bg: #fcf1dc; --ok-bg: #e4f3ea; --accent-bg: #e6eefa;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161615; --surface: #1f1f1d; --ink: #ecebe6; --muted: #a3a29b; --line: #34332f;
+      --full: #ef6a5f; --low: #f0b443; --ok: #4cbc84; --stale: #7b7a74; --accent: #6b9ae6;
+      --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f; --accent-bg: #1c2a40;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161615; --surface: #1f1f1d; --ink: #ecebe6; --muted: #a3a29b; --line: #34332f;
+    --full: #ef6a5f; --low: #f0b443; --ok: #4cbc84; --stale: #7b7a74; --accent: #6b9ae6;
+    --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f; --accent-bg: #1c2a40;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font-family: "Noto Sans KR", system-ui, sans-serif; font-size: 15px; line-height: 1.55; word-break: keep-all; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 20px 16px 40px; }
+  header { margin-bottom: 14px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+  .warn { background: var(--full-bg); color: var(--ink); border-radius: 8px; padding: 8px 12px; font-size: 13px; margin: 10px 0 0; }
+  .layout { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 880px) { .layout { grid-template-columns: minmax(0, 1fr); } .mapcol { order: -1; } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; min-width: 0; }
+  h2 { font-size: 15px; margin: 0 0 10px; }
+  #map { height: 640px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
+  @media (max-width: 880px) { #map { height: 380px; } }
+  .row { display: flex; gap: 8px; }
+  input[type=search] { flex: 1; min-width: 0; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+  button { font: inherit; font-size: 14px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); cursor: pointer; white-space: nowrap; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:disabled { opacity: .5; cursor: default; }
+  .hint { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
+  #places { list-style: none; margin: 8px 0 0; padding: 0; }
+  #places li button { width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 7px 4px; white-space: normal; }
+  #places li small { color: var(--muted); display: block; font-size: 12px; }
+  .status { font-size: 13.5px; color: var(--muted); }
+  .status.err { color: var(--full); }
+  .compare { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .cmp { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+  .cmp.best { border-color: var(--accent); background: var(--accent-bg); }
+  .cmp .k { font-size: 12px; color: var(--muted); }
+  .cmp .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; }
+  .cmp .v small { font-size: 12px; font-weight: 500; color: var(--muted); }
+  .cmp .n { font-size: 12.5px; overflow-wrap: anywhere; }
+  .gain { font-size: 13.5px; margin: 10px 0 0; }
+  ol#list { list-style: none; margin: 0; padding: 0; }
+  #list li { border-bottom: 1px solid var(--line); padding: 9px 4px; cursor: pointer; border-radius: 6px; }
+  #list li:hover { background: var(--bg); }
+  #list li.sel { background: var(--accent-bg); }
+  .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .name { font-weight: 700; overflow-wrap: anywhere; }
+  .eff { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .meta { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tag { display: inline-block; font-size: 11.5px; padding: 0 6px; border-radius: 4px; margin-right: 4px; }
+  .tag.full { background: var(--full-bg); color: var(--full); } .tag.low { background: var(--low-bg); color: var(--low); }
+  .tag.ok { background: var(--ok-bg); color: var(--ok); } .tag.gray { background: var(--bg); color: var(--muted); }
+  .chain { font-size: 12.5px; margin-top: 4px; }
+  .pin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); cursor: pointer; }
+  .pin.full { background: var(--full); } .pin.low { background: var(--low); } .pin.ok { background: var(--ok); } .pin.stale { background: var(--stale); }
+  .pin.sel { width: 20px; height: 20px; box-shadow: 0 0 0 3px var(--accent); }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
+  details { font-size: 13px; color: var(--muted); }
+  details p { margin: 6px 0; }
+  footer { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  a { color: var(--accent); }
+</style>
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=42a491bd43887127ca6b4bf69b731aaf&libraries=services&autoload=false"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>골든타임 경로</h1>
+    <p class="sub">도착했을 때 받아줄 가능성까지 계산해 경기도 응급실을 추천해요 · <a href="./">수집 현황판</a></p>
+    <p class="warn"><b>교육·탐구용이에요.</b> 실제 응급 상황에서는 바로 119에 신고하세요.</p>
+  </header>
+
+  <div class="layout">
+    <div>
+      <section class="card">
+        <h2>출발지</h2>
+        <form class="row" id="searchForm">
+          <input type="search" id="q" placeholder="주소나 장소 이름 (예: 죽전역)" autocomplete="off" aria-label="주소나 장소 검색">
+          <button type="submit">검색</button>
+        </form>
+        <ul id="places"></ul>
+        <div class="row" style="margin-top:8px">
+          <button type="button" id="gps">현재 위치</button>
+        </div>
+        <p class="hint">지도를 눌러도 출발지가 정해져요. 출발지 좌표는 길찾기에만 쓰고 저장하지 않아요.</p>
+      </section>
+
+      <section class="card" id="resultCard" hidden>
+        <h2>비교</h2>
+        <div class="compare" id="compare"></div>
+        <p class="gain" id="gain"></p>
+      </section>
+
+      <section class="card">
+        <h2>추천 순위 <span class="meta">(실효 도착 시간 순)</span></h2>
+        <p class="status" id="status">불러오는 중…</p>
+        <ol id="list"></ol>
+      </section>
+
+      <section class="card">
+        <details>
+          <summary>계산 방법과 한계</summary>
+          <p><b>실효 도착 시간</b> = 도로 이동 시간 + 도착 시점 거절 확률 × (확인 지연 3분 + 다음 응급실까지의 실효 도착 시간). 거절이 이어지는 경우를 3단계까지 계산해요.</p>
+          <p><b>거절 확률</b>은 수집한 공공데이터에서 "남은 병상이 k개였을 때 n분 뒤 병상이 0 이하였던 비율"을 시간대·병원별로 센 값이에요.</p>
+          <p>출발지 → 응급실 시간은 카카오 실시간 길찾기, 응급실 → 응급실 시간은 하루 4번 계산해 둔 표를 써요. 표에 없는 짝은 직선 거리로 추정해요.</p>
+          <p>전문의 부재처럼 공공데이터에 없는 거절 사유는 반영하지 않아요. 병상 정보는 병원이 입력한 값이라 실제와 다를 수 있어요. 병원끼리의 거절은 서로 독립이라고 가정해요. 경기도 응급실만 계산해요.</p>
+          <p id="dataInfo"></p>
+        </details>
+      </section>
+    </div>
+
+    <div class="mapcol">
+      <div id="map"></div>
+      <div class="legend">
+        <span><span class="dot" style="background:var(--ok)"></span>병상 3개 이상</span>
+        <span><span class="dot" style="background:var(--low)"></span>1~2개</span>
+        <span><span class="dot" style="background:var(--full)"></span>0 이하(꽉 참)</span>
+        <span><span class="dot" style="background:var(--stale)"></span>정보 없음·오래됨</span>
+      </div>
+      <footer>지도: 카카오맵 · 길찾기: 카카오모빌리티 · 병상: 국립중앙의료원 공공데이터</footer>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { makeRejectProb, STALE_MIN } from './engine/model.mjs';
+import { evaluate } from './engine/effective.mjs';
+import { parseKST, kstHour } from './engine/time.mjs';
+
+const PROXY = 'https://goldentime-proxy.gt-er-map.workers.dev';
+const NEAR_M = 9500;       // 다중 목적지 길찾기 반경(10km)보다 조금 안쪽
+const MIN_CANDIDATES = 6;  // 가까운 곳이 이보다 적으면 더 먼 곳을 하나씩 길찾기로 채운다
+const DELAY_MIN = 3;
+const DEPTH = 3;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const pct = (p) => `${Math.round(p * 100)}%`;
+const min1 = (m) => (m < 10 ? m.toFixed(1) : Math.round(m).toString());
+const setStatus = (msg, err = false) => { $('status').textContent = msg; $('status').className = 'status' + (err ? ' err' : ''); };
+
+function haversineM(a, b) {
+  const R = 6371000, r = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+const bedClass = (h, sinceObs) => {
+  if (h.hvec == null || h.ageMin == null || h.ageMin + sinceObs > STALE_MIN) return 'stale';
+  return h.hvec <= 0 ? 'full' : h.hvec <= 2 ? 'low' : 'ok';
+};
+const bedText = (h) => (h.hvec == null ? '정보 없음' : `남은 병상 ${h.hvec}`);
+
+// ---------- 데이터
+let status, model, travel, rejectProb, ers, byId, obsMs;
+const sinceObsMin = () => Math.max(0, (Date.now() - obsMs) / 60e3);
+
+async function loadData() {
+  const get = (f) => fetch(`${f}?t=${Date.now()}`, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(`${f} ${r.status}`); return r.json(); });
+  [status, model, travel] = await Promise.all([get('status.json'), get('model.json'), get('travel.json')]);
+  rejectProb = makeRejectProb(model);
+  obsMs = parseKST(status.latestAt);
+  ers = status.hospitals
+    .filter((h) => Number.isFinite(h.lat) && Number.isFinite(h.lon) && h.lat && h.lon)
+    .map((h) => ({ ...h, id: h.hpid }));
+  byId = Object.fromEntries(ers.map((h) => [h.id, h]));
+  const days = (model.range[1] - model.range[0]) / 86400e3;
+  $('dataInfo').textContent =
+    `병상 정보 ${status.latestAt.slice(5, 16)} 기준 · 거절 통계: 짝지은 사례 ${model.pairs.toLocaleString()}건(${days < 1 ? '하루 미만' : `${days.toFixed(1)}일`}) · ` +
+    `응급실 사이 이동 시간 ${Object.keys(travel.slots).length}개 시간대`;
+}
+
+// 응급실 → 응급실 시간(분): 지금 시각과 가장 가까운 시간대 표 → 다른 시간대 → 반대 방향 → 직선 거리 추정
+let slotOrder = [];
+let estimatedPairs = 0;
+function prepareBetween() {
+  const h = kstHour(Date.now());
+  const d = (s) => Math.min(Math.abs(s - h), 24 - Math.abs(s - h));
+  slotOrder = Object.keys(travel.slots).map(Number).sort((a, b) => d(a) - d(b)).map((s) => travel.slots[s].t);
+  estimatedPairs = 0;
+}
+function between(a, b) {
+  for (const t of slotOrder) { const v = t[a]?.[b]; if (v != null) return v / 60; }
+  for (const t of slotOrder) { const v = t[b]?.[a]; if (v != null) return v / 60; }
+  if (!byId[a] || !byId[b]) return NaN;
+  estimatedPairs++;
+  return (haversineM(byId[a], byId[b]) * travel.estimate.secPerM) / 60;
+}
+
+// 출발 후 leadMin분에 도착할 때 거절 확률. 병상 정보는 obsMs에 확인한 것이므로 그 뒤 지난 시간도 더한다.
+function probAt(id, leadMin) {
+  const h = byId[id];
+  const since = sinceObsMin();
+  return rejectProb({
+    hpid: id,
+    hvec: h.hvec ?? NaN,
+    ageMin: h.ageMin == null ? Infinity : h.ageMin + since,
+    leadMin: leadMin + since,
+    hourKST: kstHour(obsMs),
+  }).p;
+}
+
+// ---------- 중계 서버
+async function proxy(path, init) {
+  const r = await fetch(PROXY + path, init);
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body.error || body.msg || `길찾기 오류 ${r.status}`);
+  return body;
+}
+const routeTo = (o, h) => proxy(`/route?origin=${o.lon},${o.lat}&destination=${h.lon},${h.lat}`);
+
+// 출발지 → 응급실 도로 시간
+async function roadTimes(origin) {
+  const sorted = ers.map((h) => ({ h, m: haversineM(origin, h) })).sort((a, b) => a.m - b.m);
+  const near = sorted.filter((x) => x.m <= NEAR_M).slice(0, 30);
+  const far = sorted.filter((x) => x.m > NEAR_M).slice(0, Math.max(0, MIN_CANDIDATES - near.length));
+  const out = [];
+  let estimated = 0;
+
+  if (near.length) {
+    const body = await proxy('/matrix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ origin: { x: origin.lon, y: origin.lat }, destinations: near.map((x) => ({ key: x.h.id, x: x.h.lon, y: x.h.lat })) }),
+    });
+    const got = Object.fromEntries((body.routes ?? []).filter((r) => r.result_code === 0 && r.summary).map((r) => [r.key, r.summary.duration]));
+    for (const x of near) {
+      if (got[x.h.id] != null) out.push({ id: x.h.id, name: x.h.name, travelMin: got[x.h.id] / 60 });
+      else { estimated++; out.push({ id: x.h.id, name: x.h.name, travelMin: (x.m * travel.estimate.secPerM) / 60, est: true }); }
+    }
+  }
+  await Promise.all(far.map(async (x) => {
+    try {
+      const r = (await routeTo(origin, x.h)).routes?.[0];
+      if (r?.result_code === 0) { out.push({ id: x.h.id, name: x.h.name, travelMin: r.summary.duration / 60 }); return; }
+    } catch { /* 아래에서 추정 */ }
+    estimated++;
+    out.push({ id: x.h.id, name: x.h.name, travelMin: (x.m * travel.estimate.secPerM) / 60, est: true });
+  }));
+  return { candidates: out, estimated, nearestM: sorted[0]?.m ?? Infinity };
+}
+
+// ---------- 지도
+let map, originMarker, routeLine, pins = {};
+const LL = (p) => new kakao.maps.LatLng(p.lat, p.lon);
+
+function drawPins() {
+  const since = sinceObsMin();
+  for (const h of ers) {
+    const el = document.createElement('div');
+    el.className = `pin ${bedClass(h, since)}`;
+    el.title = `${h.name} · ${bedText(h)}`;
+    el.addEventListener('click', (e) => { e.stopPropagation(); if (results) select(h.id); });
+    const ov = new kakao.maps.CustomOverlay({ position: LL(h), content: el, yAnchor: 0.5, xAnchor: 0.5, zIndex: 2, clickable: true });
+    ov.setMap(map);
+    pins[h.id] = el;
+  }
+}
+
+function initMap() {
+  map = new kakao.maps.Map($('map'), { center: new kakao.maps.LatLng(37.41, 127.25), level: 10 });
+  map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
+  kakao.maps.event.addListener(map, 'click', (e) => {
+    const ll = e.latLng;
+    setOrigin({ lat: ll.getLat(), lon: ll.getLng(), label: '지도에서 고른 곳' });
+  });
+}
+
+// ---------- 계산
+let results = null, origin = null, runId = 0, selectedId = null;
+
+async function setOrigin(o) {
+  origin = o;
+  const my = ++runId;
+  if (originMarker) originMarker.setMap(null);
+  originMarker = new kakao.maps.Marker({ position: LL(o), map, zIndex: 5 });
+  if (routeLine) routeLine.setMap(null);
+  $('places').innerHTML = '';
+  setStatus(`${o.label}에서 응급실까지 도로 시간 계산 중…`);
+  $('list').innerHTML = '';
+  $('resultCard').hidden = true;
+  try {
+    const { candidates, estimated, nearestM } = await roadTimes(o);
+    if (my !== runId) return;
+    if (!candidates.length) { setStatus('계산할 응급실이 없어요.', true); return; }
+    prepareBetween();
+    results = evaluate(candidates, between, probAt, { delayMin: DELAY_MIN, depth: DEPTH });
+    const estMap = Object.fromEntries(candidates.map((c) => [c.id, c.est]));
+    results.forEach((r) => (r.est = estMap[r.id]));
+    const notes = [];
+    if (nearestM > 20000) notes.push('가장 가까운 경기도 응급실도 직선 20km 넘게 떨어져 있어요(경기도 밖이면 결과가 맞지 않아요).');
+    if (estimated) notes.push(`출발지 길찾기 ${estimated}곳은 직선 거리로 추정했어요.`);
+    if (estimatedPairs) notes.push(`응급실 사이 ${estimatedPairs}쌍은 직선 거리로 추정했어요.`);
+    if (sinceObsMin() > 30) notes.push(`병상 정보가 ${Math.round(sinceObsMin())}분 전 것이에요.`);
+    if (model.pairs < 5000) notes.push('거절 통계 기록이 아직 적어 확률이 거칠어요.');
+    setStatus(`${o.label} 출발 · 응급실 ${results.length}곳 계산${notes.length ? ' · ' + notes.join(' ') : ''}`);
+    render();
+    select(results[0].id);
+  } catch (e) {
+    if (my === runId) setStatus(`계산 실패: ${e.message}`, true);
+  }
+}
+
+function render() {
+  const since = sinceObsMin();
+  const best = results[0];
+  const nearest = [...results].sort((a, b) => a.travelMin - b.travelMin)[0];
+  const nearestOpen = [...results].filter((r) => (byId[r.id].hvec ?? 0) > 0).sort((a, b) => a.travelMin - b.travelMin)[0];
+  const box = (k, r, cls = '') => r
+    ? `<div class="cmp ${cls}"><div class="k">${k}</div><div class="v">${min1(r.effectiveMin)}<small>분</small></div><div class="n">${esc(r.name)}</div><div class="meta">이동 ${min1(r.travelMin)}분 · 거절 ${pct(r.pReject)}</div></div>`
+    : `<div class="cmp"><div class="k">${k}</div><div class="n">해당 없음</div></div>`;
+  $('compare').innerHTML = box('추천', best, 'best') + box('가장 가까운 곳', nearest) + box('병상 있는 가장 가까운 곳', nearestOpen);
+  const gain = nearest.effectiveMin - best.effectiveMin;
+  $('gain').textContent = best.id === nearest.id
+    ? '가장 가까운 곳이 실효 도착 시간으로도 가장 빨라요.'
+    : gain < 0.5
+      ? '추천한 곳과 가장 가까운 곳의 실효 도착 시간이 거의 같아요.'
+      : `가장 가까운 곳으로 가는 것보다 평균 ${min1(gain)}분 빨리 받아줄 곳에 도착할 것으로 계산돼요.`;
+  $('resultCard').hidden = false;
+
+  $('list').innerHTML = results.slice(0, 10).map((r, i) => {
+    const h = byId[r.id];
+    const cls = bedClass(h, since);
+    const tags = [
+      `<span class="tag ${cls === 'stale' ? 'gray' : cls}">${esc(bedText(h))}${cls === 'stale' && h.hvec != null ? '(오래됨)' : ''}</span>`,
+      h.erClosed ? '<span class="tag full">응급실 수용 불가 표시</span>' : '',
+      h.messages ? `<span class="tag gray">메시지 ${h.messages}건</span>` : '',
+      r.est ? '<span class="tag gray">시간 추정</span>' : '',
+    ].join('');
+    return `<li data-id="${esc(r.id)}">
+      <div class="top"><span class="name">${i + 1}. ${esc(r.name)}</span><span class="eff">${min1(r.effectiveMin)}분</span></div>
+      <div class="meta">이동 ${min1(r.travelMin)}분 + 거절 대비 ${min1(r.extraMin)}분 · 도착 시 거절 확률 ${pct(r.pReject)}</div>
+      <div>${tags}</div>
+      <div class="chain" hidden></div>
+    </li>`;
+  }).join('');
+  for (const li of $('list').children) li.addEventListener('click', () => select(li.dataset.id));
+}
+
+async function select(id) {
+  const r = results.find((x) => x.id === id);
+  if (!r) return;
+  selectedId = id;
+  for (const li of $('list').children) {
+    const on = li.dataset.id === id;
+    li.classList.toggle('sel', on);
+    const c = li.querySelector('.chain');
+    c.hidden = !on;
+    if (on) {
+      c.innerHTML = r.chain.length > 1
+        ? '거절되면 → ' + r.chain.slice(1).map((s) => `${esc(s.name)} (+${min1(s.travelMin)}분, 거절 ${pct(s.p)})`).join(' → ') +
+          (r.unresolved > 0.05 ? ` · 모두 거절될 확률 ${pct(r.unresolved)}` : '')
+        : '';
+    }
+  }
+  for (const [pid, el] of Object.entries(pins)) el.classList.toggle('sel', pid === id);
+
+  const h = byId[id];
+  const my = runId;
+  if (routeLine) routeLine.setMap(null);
+  try {
+    const route = (await routeTo(origin, h)).routes?.[0];
+    if (my !== runId || selectedId !== id || route?.result_code !== 0) return;
+    const path = [];
+    for (const s of route.sections ?? []) for (const road of s.roads ?? []) {
+      const v = road.vertexes;
+      for (let i = 0; i + 1 < v.length; i += 2) path.push(new kakao.maps.LatLng(v[i + 1], v[i]));
+    }
+    if (routeLine) routeLine.setMap(null);
+    routeLine = new kakao.maps.Polyline({ path, strokeWeight: 6, strokeColor: '#2a63b8', strokeOpacity: 0.85 });
+    routeLine.setMap(map);
+    const bounds = new kakao.maps.LatLngBounds();
+    path.forEach((p) => bounds.extend(p));
+    map.setBounds(bounds, 40, 40, 40, 40);
+  } catch { /* 경로 선은 없어도 계산 결과는 그대로 */ }
+}
+
+// ---------- 출발지 입력
+$('searchForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const q = $('q').value.trim();
+  if (!q) return;
+  const show = (items) => {
+    $('places').innerHTML = items.length
+      ? items.slice(0, 5).map((p, i) => `<li><button type="button" data-i="${i}">${esc(p.name)}<small>${esc(p.addr)}</small></button></li>`).join('')
+      : '<li class="hint">검색 결과가 없어요.</li>';
+    $('places').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+      const p = items[Number(b.dataset.i)];
+      setOrigin({ lat: p.lat, lon: p.lon, label: p.name });
+    }));
+  };
+  const geocoder = new kakao.maps.services.Geocoder();
+  const places = new kakao.maps.services.Places();
+  geocoder.addressSearch(q, (res, st) => {
+    if (st === kakao.maps.services.Status.OK && res.length) {
+      show(res.map((r) => ({ name: r.address_name, addr: r.road_address?.address_name ?? '', lat: Number(r.y), lon: Number(r.x) })));
+      return;
+    }
+    places.keywordSearch(q, (res2, st2) => {
+      show(st2 === kakao.maps.services.Status.OK
+        ? res2.map((r) => ({ name: r.place_name, addr: r.road_address_name || r.address_name, lat: Number(r.y), lon: Number(r.x) }))
+        : []);
+    });
+  });
+});
+
+$('gps').addEventListener('click', () => {
+  if (!navigator.geolocation) { setStatus('이 브라우저는 위치 기능을 지원하지 않아요.', true); return; }
+  $('gps').disabled = true;
+  setStatus('현재 위치 확인 중…');
+  navigator.geolocation.getCurrentPosition(
+    (p) => { $('gps').disabled = false; map.setCenter(new kakao.maps.LatLng(p.coords.latitude, p.coords.longitude)); setOrigin({ lat: p.coords.latitude, lon: p.coords.longitude, label: '현재 위치' }); },
+    (err) => { $('gps').disabled = false; setStatus(err.code === 1 ? '위치 권한이 거부됐어요. 주소 검색이나 지도 클릭을 써 주세요.' : '현재 위치를 찾지 못했어요.', true); },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+  );
+});
+
+// ---------- 시작
+try {
+  if (typeof kakao === 'undefined' || !kakao.maps) throw new Error('카카오 지도를 불러오지 못했어요 (JavaScript 키·도메인 설정 확인)');
+  await Promise.all([new Promise((ok) => kakao.maps.load(ok)), loadData()]);
+  initMap();
+  drawPins();
+  setStatus(`응급실 ${ers.length}곳 · 출발지를 검색하거나 지도를 눌러 주세요.`);
+} catch (e) {
+  setStatus(`시작 실패: ${e.message}`, true);
+}
+</script>
+</body>
+</html>
