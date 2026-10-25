@@ -1,6 +1,7 @@
 // 수집 현황판(docs/)에서 읽을 요약 파일 docs/status.json을 만든다.
 // 수집할 때마다 GitHub Actions에서 실행된다.
-// 사용법: node scripts/build-status.mjs [--data data] [--out docs/status.json] [--days 7]
+// 사용법: node scripts/build-status.mjs [--data data] [--out docs/status.json] [--days 7] [--window 14]
+// 수집 기록이 계속 쌓여도 빨리 끝나도록 병상 기록은 최근 --window일(기본 14일)만 읽는다.
 import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { parseCSV } from '../engine/csv.mjs';
@@ -13,13 +14,15 @@ const args = Object.fromEntries(
 const DATA = args.data ?? 'data';
 const OUT = args.out ?? 'docs/status.json';
 const DAYS = Number(args.days ?? 7);
+const WINDOW = Number(args.window ?? 14);
 
-const readDir = (sub) => {
+const readDir = (sub, lastN = Infinity) => {
   const dir = join(DATA, sub);
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter((f) => /^\d{4}-\d{2}-\d{2}\.csv$/.test(f))
     .sort()
+    .slice(-lastN)
     .map((f) => ({ day: f.slice(0, 10), rows: parseCSV(readFileSync(join(dir, f), 'utf8')) }));
 };
 const readTable = (f) => (existsSync(join(DATA, f)) ? parseCSV(readFileSync(join(DATA, f), 'utf8')) : []);
@@ -46,7 +49,7 @@ const hosp = Object.fromEntries(
 );
 
 // ---- 가용병상 기록
-const bedDays = readDir('beds');
+const bedDays = readDir('beds', WINDOW);
 const snaps = new Map(); // collected_at -> rows
 let totalRows = 0;
 for (const { rows } of bedDays) {
@@ -102,7 +105,7 @@ const timeline = times
   });
 
 // ---- 중증질환 (가장 최근 수집)
-const sevDays = readDir('severe');
+const sevDays = readDir('severe', 1);
 const sevLatestRows = (() => {
   const all = sevDays.at(-1)?.rows ?? [];
   const last = all.at(-1)?.collected_at;
@@ -118,7 +121,7 @@ const sevBy = Object.fromEntries(
 
 // ---- 메시지 (지금 걸려 있는 것)
 const nowMs = latestAt ? parseKST(latestAt) : Date.now();
-const msgRows = readDir('messages').flatMap((d) => d.rows);
+const msgRows = readDir('messages', 2).flatMap((d) => d.rows); // 걸려 있는 메시지는 날마다 다시 저장되므로 최근 2일이면 충분
 const seenMsg = new Set();
 const activeMsgs = [];
 for (const m of msgRows) {

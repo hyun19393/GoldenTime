@@ -9,6 +9,7 @@ const dir = mkdtempSync(join(tmpdir(), 'regions-'));
 process.env.SERVICE_KEY = 'test-key';
 process.env.DATA_DIR = dir;
 process.env.STAGES = '서울특별시, 경기도,인천광역시';
+process.env.RETRY_BASE_MS = '5';
 const { main, STAGES } = await import('../collector/collect.mjs?regions');
 
 const wrap = (items) =>

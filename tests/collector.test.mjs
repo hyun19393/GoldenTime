@@ -5,10 +5,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseCSV } from '../engine/csv.mjs';
 
-const SAMPLE = '/home/claude/tjdalsrb0428-cloud/seoul-er-beds/data/sample_response.xml';
+// 실제 응답 원문: 우리 수집기가 처음 저장한 경기도 응답
+const SAMPLE = new URL('../data/raw/beds.xml', import.meta.url).pathname;
 const dir = mkdtempSync(join(tmpdir(), 'collect-'));
 process.env.SERVICE_KEY = 'test-key';
 process.env.DATA_DIR = dir;
+process.env.RETRY_BASE_MS = '5';
 const { parseItems, main, runOp, OPS } = await import('../collector/collect.mjs');
 
 const wrap = (items, total = items.length) =>
@@ -53,8 +55,13 @@ const read = (...p) => parseCSV(readFileSync(join(dir, ...p), 'utf8'));
 test('응답 XML 해석: 실제 가용병상 응답 예시', { skip: !existsSync(SAMPLE) }, () => {
   const r = parseItems(readFileSync(SAMPLE, 'utf8'));
   assert.equal(r.code, '00');
-  assert.equal(r.items.length, 50);
-  assert.equal(r.items[0].hpid, 'A1100043');
+  assert.equal(r.items.length, r.total); // 경기도 응급실 전부가 한 번에 옴
+  assert.ok(r.items.length > 50);
+  for (const it of r.items) {
+    assert.match(it.hpid, /^[A-Z]\d{7}$/);
+    assert.ok(Number.isFinite(Number(it.hvec)), `hvec 숫자 아님: ${it.hvec}`);
+    assert.match(it.hvidate, /^\d{14}$/);
+  }
 });
 
 test('인증 오류 응답 인식', () => {
@@ -104,5 +111,21 @@ test('메시지: 이미 저장한 메시지는 다시 쌓지 않음', async () =
   const msgSpec = { ...OPS.find((o) => o.name === 'messages'), everyMin: 0 };
   await runOp(msgSpec, Date.now());
   assert.equal(read('messages', `${today}.csv`).length, 2);
+  process.exitCode = 0;
+});
+
+test('공공데이터포털 일시 오류는 다시 시도해서 받아온다', async () => {
+  let n = 0;
+  const saved = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const op = new URL(url).pathname.split('/').pop();
+    if (op === 'getEmrrmRltmUsefulSckbdInfoInqire' && n++ === 0)
+      return new Response('<OpenAPI_ServiceResponse><cmmMsgHeader><errMsg>SERVICE ERROR</errMsg><returnAuthMsg>SERVICETIMEOUT_ERROR</returnAuthMsg><returnReasonCode>05</returnReasonCode></cmmMsgHeader></OpenAPI_ServiceResponse>');
+    return saved(url);
+  };
+  const ok = await runOp(OPS[0], Date.now());
+  globalThis.fetch = saved;
+  assert.equal(ok, true);
+  assert.equal(n, 2); // 한 번 실패 후 다시 시도
   process.exitCode = 0;
 });

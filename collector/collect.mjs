@@ -17,6 +17,7 @@
 
 import { mkdirSync, existsSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { toCSVLine, parseCSV } from '../engine/csv.mjs';
 import { formatKST, kstDate, parseKST } from '../engine/time.mjs';
 
@@ -24,6 +25,13 @@ const KEY = process.env.SERVICE_KEY;
 export const STAGES = (process.env.STAGES || process.env.STAGE1 || '경기도').split(',').map((s) => s.trim()).filter(Boolean);
 const DATA = process.env.DATA_DIR || 'data';
 const BASE = 'apis.data.go.kr/B552657/ErmctInfoInqireService/';
+const RETRY_MS = Number(process.env.RETRY_BASE_MS ?? 3000);
+// 한 번 실행에 쓸 수 있는 시간. GitHub Actions 제한(8분)에 걸려 수집분까지 잃지 않도록 남은 기능은 다음 실행으로 넘긴다.
+const BUDGET_MS = Number(process.env.BUDGET_MS ?? 5.5 * 60e3);
+let deadline = Infinity;
+const timeUp = () => Date.now() > deadline;
+// 공공데이터포털 게이트웨이의 일시적인 오류 (잠시 뒤 다시 부르면 되는 것)
+const TRANSIENT = /SERVICE_?TIMEOUT|HTTP_ERROR|APPLICATION_ERROR|DB_ERROR|<returnReasonCode>0?[1245]</;
 
 // ① 가용병상: 분석에 바로 쓰는 항목을 앞에 둔다 (hvec = 응급실 일반병상, hvs01 = 일반 기준병상)
 const BED_FIRST = ['hpid', 'dutyName', 'hvidate', 'hvec', 'hvs01', 'hv28', 'hvs02', 'hv29', 'hvs03', 'hv30', 'hvs04'];
@@ -69,10 +77,15 @@ async function call(op, params, attempt = 0) {
     const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
     const text = await res.text();
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!text.includes('<resultCode>') && TRANSIENT.test(text)) {
+      const err = new Error('공공데이터포털 일시 오류');
+      err.xml = text;
+      throw err;
+    }
     return text;
   } catch (e) {
-    if (attempt < 2) {
-      await new Promise((r) => setTimeout(r, 3000 * (attempt + 1)));
+    if (attempt < 2 && !timeUp()) {
+      await new Promise((r) => setTimeout(r, RETRY_MS * (attempt + 1)));
       return call(op, params, attempt + 1);
     }
     throw e;
@@ -86,6 +99,7 @@ async function fetchAll(spec, extraParams = {}) {
   let firstXml = '';
   const maxPages = spec.maxPages ?? 10;
   for (let page = 1; page <= maxPages; page++) {
+    if (page > 1 && timeUp()) throw new Error('시간 부족으로 중단');
     const xml = await call(spec.op, { ...spec.params, ...extraParams, pageNo: page, numOfRows: ROWS });
     if (page === 1) firstXml = xml;
     const r = parseItems(xml);
@@ -192,6 +206,7 @@ function saveRaw(name, xml, force = false) {
 
 export async function runOp(spec, now) {
   if (spec.everyMin && now - lastSuccess(spec.name) < spec.everyMin * 60e3) return null; // 아직 주기가 안 됨
+  if (!spec.required && timeUp()) return null; // 시간이 모자라면 다음 실행에서
   const t0 = Date.now();
   const collectedAt = formatKST(now);
   const { items, total, firstXml, failed, errXml } = await fetchRegions(spec);
@@ -241,17 +256,28 @@ async function refreshDaily(now) {
   const hpids = parseCSV(readFileSync(listFile, 'utf8')).map((r) => r.hpid).filter(Boolean);
   const rows = [];
   let failed = 0;
-  for (const HPID of hpids) {
-    try {
-      const { items, firstXml } = await fetchAll({ ...INFO, params: {} }, { HPID });
-      saveRaw(INFO.name, firstXml);
-      rows.push(...items);
-    } catch {
-      failed++;
+  let skipped = 0;
+  let next = 0;
+  // 기관마다 한 번씩 불러야 해서 4곳씩 동시에 부른다
+  const worker = async () => {
+    while (next < hpids.length) {
+      const HPID = hpids[next++];
+      if (timeUp()) { skipped++; continue; }
+      try {
+        const { items, firstXml } = await fetchAll({ ...INFO, params: {} }, { HPID });
+        saveRaw(INFO.name, firstXml);
+        rows.push(...items);
+      } catch {
+        failed++;
+      }
     }
-  }
+  };
+  await Promise.all(Array.from({ length: 4 }, worker));
+  const order = new Map(hpids.map((h, i) => [h, i]));
+  rows.sort((a, b) => (order.get(a.hpid) ?? 1e9) - (order.get(b.hpid) ?? 1e9));
   if (rows.length) writeTable(infoFile, rows, formatKST(now));
-  logRun({ started_at: formatKST(now), op: INFO.name, ok: failed ? 0 : 1, total: hpids.length, items: rows.length, error: failed ? `${failed}곳 실패` : '' });
+  const err = [failed && `${failed}곳 실패`, skipped && `${skipped}곳 시간 부족`].filter(Boolean).join(', ');
+  logRun({ started_at: formatKST(now), op: INFO.name, ok: err ? 0 : 1, total: hpids.length, items: rows.length, error: err });
 }
 
 export async function main() {
@@ -260,6 +286,7 @@ export async function main() {
     process.exit(1);
   }
   const now = Date.now();
+  deadline = now + BUDGET_MS;
   const results = [];
   for (const spec of OPS) results.push([spec, await runOp(spec, now)]);
   await refreshDaily(now);
@@ -268,4 +295,4 @@ export async function main() {
   return results.map(([spec, ok]) => [spec.name, ok]);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
