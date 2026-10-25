@@ -2,7 +2,7 @@ name: collect
 
 on:
   schedule:
-    - cron: '7-59/10 * * * *'   # 10분마다 (매시 7·17·27…분, 정각은 GitHub이 붐벼서 피함)
+    - cron: '3-59/10 * * * *'   # 10분마다 (매시 7·17·27…분, 정각은 GitHub이 붐벼서 피함)
   workflow_dispatch:          # Actions 탭에서 직접 실행 가능
 
 concurrency:
