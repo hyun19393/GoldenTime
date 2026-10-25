@@ -88,13 +88,6 @@
   table.dist tr.sel td { background: var(--accent-bg); }
   .dsum { font-size: 13px; margin: 0 0 8px; }
   .dsum b { font-variant-numeric: tabular-nums; }
-  .conds { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
-  .conds button { font-size: 12.5px; padding: 3px 10px; border-radius: 14px; }
-  .conds button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .msgs { margin-top: 6px; font-size: 12.5px; }
-  .msgs .m { padding: 3px 0; border-top: 1px dashed var(--line); overflow-wrap: anywhere; }
-  .msgs .m.hit { background: var(--full-bg); border-radius: 4px; padding: 3px 5px; }
-  .msgs .d { color: var(--muted); }
   .ln { display: inline-block; width: 22px; height: 0; margin-right: 4px; vertical-align: 3px; }
   a { color: var(--accent); }
 </style>
@@ -121,11 +114,6 @@
           <button type="button" id="gps">현재 위치</button>
         </div>
         <p class="hint">지도를 눌러도 출발지가 정해져요. 출발지 좌표는 길찾기에만 쓰고 저장하지 않아요.</p>
-        <div class="conds" id="conds" role="group" aria-label="환자 조건">
-          <span class="hint" style="margin:0">환자 조건 (병원 메시지 강조):</span>
-          <button type="button" data-c="child" aria-pressed="false">소아</button>
-          <button type="button" data-c="preg" aria-pressed="false">임신·출산</button>
-        </div>
       </section>
 
       <section class="card" id="resultCard" hidden>
@@ -203,15 +191,8 @@ const bedClass = (h, sinceObs) => {
 const bedText = (h) => (h.hvec == null ? '정보 없음' : `남은 병상 ${h.hvec}`);
 
 // ---------- 데이터
-let status, model, travel, rejectProb, ers, byId, obsMs, msgsBy = {};
+let status, model, travel, rejectProb, ers, byId, obsMs;
 
-// 환자 조건과 관련된 병원 메시지 찾기 (확률에는 넣지 않고 강조만 한다)
-const COND = {
-  child: { label: '소아', dept: /소아/, text: /소아|신생아|생후|개월|영유아|유아|어린이|NICU|미숙아|저출생/ },
-  preg: { label: '임신·출산', dept: /산부인과/, text: /산부인과|산과|분만|임신|태아|부인과|NICU|미숙아/ },
-};
-const conds = new Set();
-const condHit = (m) => [...conds].some((c) => COND[c].dept.test(m.dept ?? '') || COND[c].text.test(`${m.type} ${m.msg}`));
 const sinceObsMin = () => Math.max(0, (Date.now() - obsMs) / 60e3);
 
 async function loadData() {
@@ -223,8 +204,6 @@ async function loadData() {
     .filter((h) => Number.isFinite(h.lat) && Number.isFinite(h.lon) && h.lat && h.lon)
     .map((h) => ({ ...h, id: h.hpid }));
   byId = Object.fromEntries(ers.map((h) => [h.id, h]));
-  msgsBy = {};
-  for (const m of status.messages ?? []) (msgsBy[m.hpid] ??= []).push(m);
   const days = (model.range[1] - model.range[0]) / 86400e3;
   $('dataInfo').textContent =
     `병상 정보 ${status.latestAt.slice(5, 16)} 기준 · 거절 통계: 짝지은 사례 ${model.pairs.toLocaleString()}건(${days < 1 ? '하루 미만' : `${days.toFixed(1)}일`}) · ` +
@@ -405,9 +384,6 @@ function render() {
     const cls = bedClass(h, since);
     const tags = [
       `<span class="tag ${cls === 'stale' ? 'gray' : cls}">${esc(bedText(h))}${cls === 'stale' && h.hvec != null ? '(오래됨)' : ''}</span>`,
-      h.erClosed ? '<span class="tag full">응급실 수용 불가 표시</span>' : '',
-      h.messages ? `<span class="tag gray">메시지 ${h.messages}건</span>` : '',
-      (msgsBy[r.id] ?? []).some(condHit) ? `<span class="tag full">${[...conds].map((c) => COND[c].label).join('·')} 관련 메시지 ${(msgsBy[r.id] ?? []).filter(condHit).length}건</span>` : '',
       r.est ? '<span class="tag gray">시간 추정</span>' : '',
     ].join('');
     return `<li data-id="${esc(r.id)}">
@@ -416,7 +392,6 @@ function render() {
       <div class="meta">직선 ${km(r.straightM)} · 도로 ${r.roadM != null ? km(r.roadM) : '추정'}</div>
       <div>${tags}</div>
       <div class="chain" hidden></div>
-      <div class="msgs" hidden></div>
     </li>`;
   }).join('');
   for (const li of $('list').children) li.addEventListener('click', () => select(li.dataset.id));
@@ -467,14 +442,6 @@ async function select(id) {
         ? '거절되면 → ' + r.chain.slice(1).map((s) => `${esc(s.name)} (+${min1(s.travelMin)}분, 거절 ${pct(s.p)})`).join(' → ') +
           (r.unresolved > 0.05 ? ` · 모두 거절될 확률 ${pct(r.unresolved)}` : '')
         : '';
-    }
-    const mb = li.querySelector('.msgs');
-    const ms = msgsBy[li.dataset.id] ?? [];
-    mb.hidden = !on || !ms.length;
-    if (on && ms.length) {
-      const sorted = [...ms].sort((a, b) => condHit(b) - condHit(a));
-      mb.innerHTML = `<b>이 병원이 올린 수용 불가 메시지 ${ms.length}건</b>` + sorted.map((m) =>
-        `<div class="m${condHit(m) ? ' hit' : ''}"><span class="d">[${esc(m.dept || m.type)}]</span> ${esc(m.msg)} <span class="d">(${esc(m.start.slice(0, 5))}~${esc(m.end.slice(0, 5))})</span></div>`).join('');
     }
   }
   for (const [pid, el] of Object.entries(pins)) el.classList.toggle('sel', pid === id);
@@ -542,13 +509,6 @@ $('gps').addEventListener('click', () => {
     (err) => { $('gps').disabled = false; setStatus(err.code === 1 ? '위치 권한이 거부됐어요. 주소 검색이나 지도 클릭을 써 주세요.' : '현재 위치를 찾지 못했어요.', true); },
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
   );
-});
-
-for (const b of $('conds').querySelectorAll('button')) b.addEventListener('click', () => {
-  const c = b.dataset.c;
-  if (conds.has(c)) conds.delete(c); else conds.add(c);
-  b.setAttribute('aria-pressed', String(conds.has(c)));
-  if (results) { render(); if (selectedId) select(selectedId); }
 });
 
 // ---------- 시작
