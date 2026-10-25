@@ -114,3 +114,14 @@ test('활용가이드 코드표', async () => {
   assert.equal(Object.keys(SEVERE).length, 28);
   for (const v of Object.values(MSG_TO_SEVERE)) assert.ok(SEVERE[v], v);
 });
+
+test('모든 도착 시간 칸이 10분 간격 기록으로 채워진다 (45분처럼 빈 칸이 없음)', async () => {
+  const { buildModel, LEADS } = await import('../engine/model.mjs');
+  const t0 = Date.parse('2026-10-25T10:00:00+09:00');
+  const rows = Array.from({ length: 13 }, (_, i) => ({ t: t0 + i * 600e3 + (i % 2) * 40e3, hpid: 'X', name: 'X', hvec: i % 3, ageMin: 5 }));
+  const m = buildModel(rows);
+  for (const L of LEADS) {
+    const n = Object.entries(m.pooled).filter(([k]) => k.split('|')[1] === String(L) && k.endsWith('|all')).reduce((s, [, c]) => s + c.n, 0);
+    assert.ok(n > 0, `${L}분 칸이 비어 있음`);
+  }
+});

@@ -9,7 +9,8 @@
 
 import { kstHour } from './time.mjs';
 
-export const LEADS = [10, 20, 30, 45, 60]; // 분
+// 수집 간격(10분)의 배수로 둔다. 10분 간격 기록에서는 45분 뒤 같은 칸이 생기지 않아(허용 오차 3분) 통계가 비게 된다.
+export const LEADS = [10, 20, 30, 40, 50, 60]; // 분
 export const BUCKETS = ['le0', '1', '2', '3-4', '5-9', '10+'];
 export const BUCKET_LABEL = {
   le0: '0 이하',
