@@ -13,7 +13,6 @@ import { parseCSV } from '../engine/csv.mjs';
 import { haversineM } from '../engine/geo.mjs';
 
 export const ENGINE_FILES = ['model.mjs', 'effective.mjs', 'time.mjs', 'geo.mjs', 'stats.mjs', 'severe.mjs', 'codes.mjs'];
-const DISEASE_EVERY_MS = 3 * 3600e3; // 질환별 통계표는 아직 공개 전이라 3시간에 한 번만 다시 만든다 (저장소 커밋 크기 절약)
 
 // 시간대(8·13·18·23시)별로 가장 최근 파일의 값을 쓴다. 같은 짝이 여러 번 있으면 최근 값.
 export function buildTravel(dataDir) {
@@ -63,10 +62,9 @@ export function main(args = {}) {
   const model = buildModel(rows, { source: 'data/beds' });
   writeFileSync(join(OUT, 'model.json'), JSON.stringify(model));
 
-  const sevFile = join(OUT, 'model-severe.json');
-  const old = existsSync(sevFile) ? Date.parse(JSON.parse(readFileSync(sevFile, 'utf8')).createdAt) : 0;
-  if (args.force || !(Date.now() - old < DISEASE_EVERY_MS)) {
-    writeFileSync(sevFile, JSON.stringify(buildDiseaseModels(rows, loadSevereByKey(join(DATA, 'severe')))));
+  // 질환별 통계표(engine/severe.mjs)는 데이터가 충분히 모인 뒤 다시 다듬어 켠다. 지금은 만들지 않는다.
+  if (args.severe) {
+    writeFileSync(join(OUT, 'model-severe.json'), JSON.stringify(buildDiseaseModels(rows, loadSevereByKey(join(DATA, 'severe')))));
   }
 
   const travel = buildTravel(DATA);
