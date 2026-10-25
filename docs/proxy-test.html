@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>중계 서버 시험</title>
+<style>
+  :root { --bg:#f6f6f3; --ink:#1d1d1b; --muted:#6b6a64; --line:#e3e2dc; --ok:#2f9e66; --bad:#d6453d; --surface:#fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#161615; --ink:#ecebe6; --muted:#a3a29b; --line:#34332f; --surface:#1f1f1d; } }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:system-ui,"Noto Sans KR",sans-serif; line-height:1.6; }
+  main { max-width:760px; margin:0 auto; padding:24px 16px; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px; margin:12px 0; }
+  .ok { color:var(--ok); font-weight:700; } .bad { color:var(--bad); font-weight:700; }
+  table { width:100%; border-collapse:collapse; font-size:14px; } td,th { padding:6px 8px; border-bottom:1px solid var(--line); text-align:left; }
+  td.n { text-align:right; font-variant-numeric:tabular-nums; } .muted { color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body><main>
+<h1 style="font-size:20px">중계 서버 연결 시험</h1>
+<p class="muted">출발지: 죽전역 부근(예시). 카카오 실시간 길찾기로 가까운 응급실까지 걸리는 시간을 받아와요.</p>
+<div class="card" id="r1">1. 자동차 길찾기 시험 중…</div>
+<div class="card" id="r2">2. 다중 목적지 길찾기 시험 중…</div>
+<script>
+const PROXY = 'https://goldentime-proxy.gt-er-map.workers.dev';
+const ORIGIN = { x: 127.1076, y: 37.3248 };
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const dist = (a, b) => { const r = Math.PI / 180, dy = (b.y - a.y) * r, dx = (b.x - a.x) * r * Math.cos(a.y * r); return 6371 * Math.hypot(dx, dy); };
+const fail = (id, step, e) => { $(id).innerHTML = `<span class="bad">실패</span> ${step}: ${esc(e)}`; };
+(async () => {
+  const s = await (await fetch('status.json', { cache: 'no-store' })).json();
+  const hs = s.hospitals.filter((h) => Number.isFinite(h.lat)).map((h) => ({ ...h, km: dist(ORIGIN, { x: h.lon, y: h.lat }) })).sort((a, b) => a.km - b.km);
+  const near = hs.filter((h) => h.km < 9.5).slice(0, 10);
+  try {
+    const t = hs[0];
+    const r = await fetch(`${PROXY}/route?origin=${ORIGIN.x},${ORIGIN.y}&destination=${t.lon},${t.lat}`);
+    const j = await r.json();
+    const route = j.routes?.[0];
+    if (!r.ok || route?.result_code !== 0) throw `HTTP ${r.status} ${JSON.stringify(j).slice(0, 200)}`;
+    const pts = (route.sections ?? []).flatMap((sec) => sec.roads ?? []).reduce((n, rd) => n + (rd.vertexes?.length ?? 0) / 2, 0);
+    $('r1').innerHTML = `<span class="ok">성공</span> ${esc(t.name)}까지 <b>${(route.summary.duration / 60).toFixed(1)}분</b>, ${(route.summary.distance / 1000).toFixed(1)}km (경로 점 ${pts}개)`;
+  } catch (e) { fail('r1', '자동차 길찾기', e); }
+  try {
+    const r = await fetch(`${PROXY}/matrix`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ origin: ORIGIN, destinations: near.map((h) => ({ key: h.hpid, x: h.lon, y: h.lat })) }) });
+    const j = await r.json();
+    if (!r.ok || !Array.isArray(j.routes)) throw `HTTP ${r.status} ${JSON.stringify(j).slice(0, 200)}`;
+    const by = Object.fromEntries(j.routes.map((x) => [x.key, x]));
+    $('r2').innerHTML = `<span class="ok">성공</span> 10km 안 응급실 ${near.length}곳<table><tr><th>응급실</th><th class="n">직선</th><th class="n">도로 시간</th><th class="n">남은 병상</th></tr>` +
+      near.map((h) => { const x = by[h.hpid]; const ok = x?.result_code === 0; return `<tr><td>${esc(h.name)}</td><td class="n">${h.km.toFixed(1)}km</td><td class="n">${ok ? (x.summary.duration / 60).toFixed(1) + '분' : esc(x?.result_msg ?? '-')}</td><td class="n">${h.hvec ?? '-'}</td></tr>`; }).join('') + '</table>';
+  } catch (e) { fail('r2', '다중 목적지', e); }
+})().catch((e) => fail('r1', '준비', e));
+</script>
+</main></body>
+</html>
