@@ -5,6 +5,11 @@ name: collect
 # GitHub Pages 빌드 한도(시간당 약 10회)를 넘길 수 있다.
 on:
   workflow_dispatch:          # cron-job.org 호출, 또는 Actions 탭에서 직접 실행
+    inputs:
+      travel_now:
+        description: '응급실 사이 이동 시간 표를 지금 바로 계산'
+        type: boolean
+        default: false
 
 concurrency:
   group: collect
@@ -16,7 +21,7 @@ permissions:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -27,6 +32,13 @@ jobs:
         env:
           SERVICE_KEY: ${{ secrets.SERVICE_KEY }}
           STAGES: 경기도   # 수집할 시도 (여러 곳이면 쉼표로 구분, 예: 서울특별시,경기도)
+      - name: 응급실 사이 이동 시간 (8·13·18·23시)
+        if: always()
+        continue-on-error: true
+        run: node scripts/travel-matrix.mjs
+        env:
+          KAKAO_REST_KEY: ${{ secrets.KAKAO_REST_KEY }}
+          FORCE: ${{ inputs.travel_now && '1' || '' }}
       - name: 현황판 요약 만들기
         if: always()
         run: node scripts/build-status.mjs --data data --out docs/status.json

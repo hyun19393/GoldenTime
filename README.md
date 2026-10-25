@@ -22,6 +22,8 @@
 | `engine/effective.mjs` | 실효 도착 시간 계산 |
 | `scripts/validate.mjs` | 앞 기간으로 만든 통계가 뒤 기간을 얼마나 맞히는지 검증 |
 | `scripts/build-model.mjs` | 웹앱용 통계표 `model.json` 만들기 |
+| `scripts/travel-matrix.mjs` | 응급실 사이 도로 이동 시간 표 (카카오 길찾기, 하루 4번 → `data/travel/`) |
+| `proxy/worker.js` | 중계 서버 (Cloudflare Workers): 카카오 키를 숨기고 웹앱의 길찾기 요청만 대신 호출 |
 | `data/` | 수집 데이터 (날짜별 CSV) |
 | `tests/` | 자동 검사 (`npm test`) |
 
