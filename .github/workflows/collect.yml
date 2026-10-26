@@ -10,18 +10,26 @@ on:
         description: '응급실 사이 이동 시간 표를 지금 바로 계산'
         type: boolean
         default: false
+      redo:
+        description: '새 실행(앞 실행이 연결 문제로 실패했을 때 워크플로가 스스로 부름). 사람이 켤 필요 없음'
+        type: boolean
+        default: false
 
 concurrency:
   group: collect
   cancel-in-progress: false
 
-permissions:
-  contents: write
+# 권한은 일(job)마다 꼭 필요한 것만 준다
+permissions: {}
 
 jobs:
   collect:
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    permissions:
+      contents: write        # 수집 기록을 저장소에 올리기
+    outputs:
+      redo: ${{ steps.decide.outputs.redo }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -32,6 +40,12 @@ jobs:
         env:
           SERVICE_KEY: ${{ secrets.SERVICE_KEY }}
           STAGES: 경기도   # 수집할 시도 (여러 곳이면 쉼표로 구분, 예: 서울특별시,경기도)
+          REDO: ${{ inputs.redo && '1' || '' }}
+          REDO_FLAG_FILE: ${{ runner.temp }}/redo.flag
+      - name: 새 실행이 필요한지 확인
+        id: decide
+        if: always()
+        run: if [ -f "$RUNNER_TEMP/redo.flag" ]; then echo "redo=1" >> "$GITHUB_OUTPUT"; fi
       - name: 응급실 사이 이동 시간 (8·13·18·23시)
         if: always()
         continue-on-error: true
@@ -54,3 +68,20 @@ jobs:
           if git diff --cached --quiet; then exit 0; fi
           git commit -q -m "collect $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
           for i in 1 2 3; do git pull -q --rebase && git push -q && break; sleep 5; done
+
+  # 가용병상이 연결 문제로 실패하면, 다른 실행 컴퓨터에서 한 번 더 받도록 이 워크플로를 다시 부른다.
+  # (실패한 회차는 매번 3번 모두 연결 시간 초과였고 10분 뒤 회차는 모두 성공 → 실행 컴퓨터 단위 문제로 판단)
+  # GITHUB_TOKEN으로 부른 workflow_dispatch는 새 실행을 만든다. 이 일에만 actions: write 권한을 준다.
+  # 새 실행(inputs.redo)은 다시 부르지 않으므로 반복되지 않는다.
+  redo:
+    needs: collect
+    if: ${{ !cancelled() && needs.collect.outputs.redo == '1' && !inputs.redo }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      actions: write
+    steps:
+      - name: 새 실행 요청
+        run: gh workflow run collect.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME" -f redo=true
+        env:
+          GH_TOKEN: ${{ github.token }}

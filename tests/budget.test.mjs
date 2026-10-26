@@ -8,7 +8,7 @@ import { parseCSV } from '../engine/csv.mjs';
 const dir = mkdtempSync(join(tmpdir(), 'budget-'));
 process.env.SERVICE_KEY = 'test-key';
 process.env.DATA_DIR = dir;
-process.env.RETRY_BASE_MS = '5';
+process.env.RETRY_UNIT_MS = '1';
 process.env.BUDGET_MS = '300'; // 0.3초만 허용
 const { main } = await import('../collector/collect.mjs?budget');
 

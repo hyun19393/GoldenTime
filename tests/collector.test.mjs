@@ -10,7 +10,7 @@ const SAMPLE = new URL('../data/raw/beds.xml', import.meta.url).pathname;
 const dir = mkdtempSync(join(tmpdir(), 'collect-'));
 process.env.SERVICE_KEY = 'test-key';
 process.env.DATA_DIR = dir;
-process.env.RETRY_BASE_MS = '5';
+process.env.RETRY_UNIT_MS = '1';
 const { parseItems, main, runOp, OPS } = await import('../collector/collect.mjs');
 
 const wrap = (items, total = items.length) =>
