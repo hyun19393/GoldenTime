@@ -366,9 +366,9 @@
         <tr><td class="num">30</td><td class="num">50%</td><td class="num">50%</td></tr>
         <tr><td class="num">300</td><td class="num">91%</td><td class="num">9%</td></tr>
         <tr><td class="num">3,000</td><td class="num">99%</td><td class="num">1%</td></tr></table></div>
-      <p style="margin-top:10px">기준값 q는 같은 등급 병원들의 같은 칸(같은 병상 구간·같은 도착 시간)을 모두 합쳐서 구해요.</p>
+      <p style="margin-top:10px">기준값 q는 같은 등급 병원들의 기록 중 지금 병상 구간과 도착까지 시간이 같은 것을 <b>시간대 구분 없이</b> 모두 합쳐서 구해요. 합치면 기록이 많아져서 기준으로 쓰기에 안정적이에요.</p>
       <div class="calc">q = (K + 0.5) ÷ (N + 1)<br>
-        <span class="sub">(q: 기준값 · K: 같은 등급 병원들의 그 칸에서 0 이하였던 횟수를 모두 더한 값 · N: 같은 등급 병원들의 그 칸 짝 수를 모두 더한 값 · 0.5와 1: 기록이 적어도 0%나 100%로 딱 떨어지지 않게 더하는 수)</span></div>
+        <span class="sub">(q: 기준값 · K: 같은 등급 병원들에서 지금 병상 구간·도착까지 시간이 같은 짝 중 도착 시점에 0 이하였던 횟수를 모두 더한 값(시간대 합침) · N: 그런 짝의 수를 모두 더한 값 · 0.5와 1: 기록이 적어도 0%나 100%로 딱 떨어지지 않게 더하는 수)</span></div>
 
       <h3>비슷한 병원 = 같은 등급</h3>
       <p>병원마다 지금까지 모든 수집 기록 중 남은 병상이 0 이하였던 비율(꽉 찬 비율)을 계산해서 세 등급으로 나눠요.</p>
@@ -410,7 +410,7 @@
         <li>10분 간격 기록은 서로 많이 닮아 있어서, 실제 정보량은 짝 수 n보다 적어요. 표의 n은 '독립된 관측 수'가 아니라 '짝 수'로 읽어 주세요.</li>
         <li>거절 상태 = 남은 병상 0 이하로만 정했어요. 전문의 부재 같은 다른 거절 사유는 들어 있지 않아요.</li>
         <li>병원이 직접 입력한 값이라, 입력이 늦거나 틀리면 계산도 그만큼 틀려요(입력이 자주 늦는 병원은 '수집 상태' 탭에서 볼 수 있어요).</li>
-        <li>C등급은 아직 2곳뿐이고, 그중 세종여주병원은 입력이 자주 늦어 꽉 찬 비율이 정확하지 않을 수 있어요. 1주일 기록으로 다시 확인할 예정이에요.</li>
+        <li>병원 수가 적은 등급(특히 C등급, 위 표)은 기준값이 몇 병원의 기록에 크게 좌우돼요. 등급은 수집할 때마다 다시 매기기 때문에 경계(0%, 50%) 근처 병원은 등급이 바뀔 수 있어요. 입력이 자주 늦는 병원은 꽉 찬 비율이 정확하지 않을 수 있어요. 1주일 기록으로 다시 확인할 예정이에요.</li>
       </ul>
     </section>
 
@@ -493,7 +493,7 @@
       <tr><td><b>p</b></td><td>거절 확률: 그 병원에 도착했을 때 남은 병상이 0 이하일 확률</td></tr>
       <tr><td><b>k</b></td><td>그 칸(같은 병원·같은 지금 병상 구간·같은 도착까지 시간·같은 시간대)에서 도착 시점에 남은 병상이 0 이하였던 횟수</td></tr>
       <tr><td><b>n</b></td><td>그 칸의 전체 짝 수 ('지금 기록'과 '몇 분 뒤 기록'을 한 쌍으로 묶은 것의 개수)</td></tr>
-      <tr><td><b>K, N</b></td><td>같은 등급 병원들의 같은 칸을 모두 더한 k와 n</td></tr>
+      <tr><td><b>K, N</b></td><td>합계 칸의 k와 n: 같은 등급 병원들에서 지금 병상 구간·도착까지 시간이 같은 짝을 시간대 구분 없이 모두 더한 '0 이하였던 횟수'(K)와 '짝 수'(N). 등급이 없는 병원은 전체 병원 합계</td></tr>
       <tr><td><b>q</b></td><td>기준값: 같은 등급 병원들의 비율 (K + 0.5) ÷ (N + 1)</td></tr>
       <tr><td><b>30</b></td><td>기준값을 '가상의 짝 30개'만큼 믿는다는 뜻의 수 (기록이 30개보다 많으면 병원 자신의 비율이 더 크게 반영됨)</td></tr>
       <tr><td><b>n ÷ (n + 30)</b></td><td>병원 기록 비중: 마지막 확률에서 병원 자신의 기록이 차지하는 몫</td></tr>
@@ -1002,7 +1002,7 @@ function drawHeatPanel() {
 function stepFormula(st, i) {
   const k = st.cell?.k ?? 0, n = st.cell?.n ?? 0;
   if (st.how === 'default') return `${i}. ${esc(st.label)}: 기록이 없어 기본값 ${f4(st.value)}을 써요`;
-  if (st.how === 'start') return `${i}. ${esc(st.label)}: (k + 0.5) ÷ (n + 1) = (${k} + 0.5) ÷ (${n} + 1) = ${f4(st.value)}`;
+  if (st.how === 'start') return `${i}. ${esc(st.label)}: (K + 0.5) ÷ (N + 1) = (${k} + 0.5) ÷ (${n} + 1) = ${f4(st.value)}`;
   return `${i}. ${esc(st.label)}: (k + ${SHRINK_M} × ${i - 1}단계) ÷ (n + ${SHRINK_M}) = (${k} + ${SHRINK_M} × ${f4(st.prior)}) ÷ (${n} + ${SHRINK_M}) = ${f4(st.value)}` +
     ` <span class="sub">(이 칸 비중 ${fmtP(st.weight)})</span>`;
 }
@@ -1029,7 +1029,7 @@ function drawHospPanel(arg) {
       ex.steps.map((st, i) => `<tr><td>${i + 1}. ${esc(st.label)}${st.weight != null ? ` <span class="sub">(비중 ${fmtP(st.weight)})</span>` : ''}</td><td class="num">${kn(st.cell)}</td><td class="num${i === ex.steps.length - 1 ? ' p' : ''}">${fmtP(st.value)}</td></tr>`).join('');
     $('calcSeg').hidden = true;
     $('calc').innerHTML = ex.steps.map((st, i) => stepFormula(st, i + 1)).join('<br>') + `<br>→ 거절 확률 <b>${fmtP(ex.p)}</b>` +
-      '<br><span class="sub">기호: k = 그 시간대에 0 이하였던 횟수 · n = 그 시간대 기록 수 · 30 = 앞 단계 값을 \'가상의 기록 30개\'만큼 믿는다는 뜻</span>';
+      '<br><span class="sub">기호: K·N = 전체 병원의 그 시간대 기록 중 0 이하였던 횟수·기록 수 · k·n = 이 병원의 그 시간대 기록 중 0 이하였던 횟수·기록 수 · 30 = 앞 단계 값을 \'가상의 기록 30개\'만큼 믿는다는 뜻</span>';
     return;
   }
   $('calcSeg').hidden = false;
@@ -1052,7 +1052,7 @@ function drawHospPanel(arg) {
   const ex = explainPoint(model, { hpid: selId, b, L: calcL, hb: obsHb });
   $('calc').innerHTML = `<b>${calcL}분 뒤 도착</b><br>` + ex.steps.map((st, i) => stepFormula(st, i + 1)).join('<br>') +
     `<br>→ 거절 확률 <b>${fmtP(ex.p)}</b>` + (ex.fallback ? '<br><span class="sub">이 병상 구간·도착 시간 기록이 없어 병원 평균을 썼어요.</span>' : '') +
-    '<br><span class="sub">기호: k = 그 칸에서 0 이하였던 횟수 · n = 그 칸의 짝 수 · 30 = 앞 단계 값을 \'가상의 짝 30개\'만큼 믿는다는 뜻 · 비중 = n ÷ (n + 30). 1단계에 0.5와 1을 더하는 건 기록이 적을 때 0%나 100%로 딱 떨어지지 않게 하려는 거예요.</span>';
+    '<br><span class="sub">기호: K·N = 1단계 합계 칸에서 0 이하였던 횟수·짝 수 · k·n = 그 단계 칸에서 0 이하였던 횟수·짝 수 · 30 = 앞 단계 값을 \'가상의 짝 30개\'만큼 믿는다는 뜻 · 비중 = n ÷ (n + 30). 1단계에 0.5와 1을 더하는 건 기록이 적을 때 0%나 100%로 딱 떨어지지 않게 하려는 거예요.</span>';
 }
 
 function drawHospTable() {
