@@ -51,3 +51,10 @@ test('브라우저 사전 확인(OPTIONS)과 없는 주소', async () => {
 test('키가 설정되지 않았을 때 알려줌', async () => {
   assert.equal((await worker.fetch(req('/route?origin=127.1,37.3&destination=127.2,37.4'), {})).status, 500);
 });
+
+test('자동차 길찾기 summary=true: 시간·거리만 요청하고, 다른 값은 그대로 넘기지 않음', async () => {
+  await worker.fetch(req('/route?origin=127.1,37.3&destination=127.2,37.4&summary=true'), env);
+  assert.match(last.url, /&priority=TIME&summary=true$/);
+  await worker.fetch(req('/route?origin=127.1,37.3&destination=127.2,37.4&summary=yes&alternatives=true'), env);
+  assert.match(last.url, /&priority=TIME$/); // 'true'가 아니거나 모르는 변수는 카카오로 넘기지 않음
+});

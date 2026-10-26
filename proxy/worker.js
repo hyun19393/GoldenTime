@@ -1,6 +1,6 @@
 // 골든타임 중계 서버 (Cloudflare Workers)
 // 카카오 REST API 키를 숨긴 채, 우리 웹앱이 필요한 길찾기 두 가지만 대신 호출한다.
-//   GET  /route?origin=경도,위도&destination=경도,위도   → 자동차 길찾기 (경로 선 포함)
+//   GET  /route?origin=경도,위도&destination=경도,위도[&summary=true]   → 자동차 길찾기 (경로 선 포함, summary=true면 시간·거리만)
 //   POST /matrix  {"origin":{"x":경도,"y":위도},"destinations":[{"key":"병원ID","x":경도,"y":위도}, ...최대 30]}
 //                                                          → 다중 목적지 길찾기 (시간·거리만, 반경 10km)
 // 보안: 허용한 사이트에서 온 요청만 받는다. 출발지 좌표 같은 요청 내용은 기록하지 않는다.
@@ -46,6 +46,7 @@ export default {
         const d = parsePoint(url.searchParams.get('destination'));
         if (!o || !d) return json({ error: '좌표 형식: 경도,위도' }, 400, h);
         const q = new URLSearchParams({ origin: `${o.x},${o.y}`, destination: `${d.x},${d.y}`, priority: 'TIME' });
+        if (url.searchParams.get('summary') === 'true') q.set('summary', 'true'); // 시간·거리만 (경로 선 없이 가볍게)
         const r = await fetch(`${KAKAO}/directions?${q}`, { headers: auth });
         return json(await r.json(), r.status, h);
       }

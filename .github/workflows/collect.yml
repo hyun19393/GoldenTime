@@ -6,8 +6,8 @@ name: collect
 on:
   workflow_dispatch:          # cron-job.org 호출, 또는 Actions 탭에서 직접 실행
     inputs:
-      travel_now:
-        description: '응급실 사이 이동 시간 표를 지금 바로 계산'
+      travel_now:   # 예전 '응급실 사이 표 바로 계산' 입력. 표 만들기는 멈췄지만, 이 입력을 보내는 호출이 실패하지 않도록 남겨 둔다
+        description: '(사용 안 함) 응급실 사이 이동 시간 표 — 2026-10-26부터 웹앱이 실시간으로 계산'
         type: boolean
         default: false
       redo:
@@ -46,13 +46,6 @@ jobs:
         id: decide
         if: always()
         run: if [ -f "$RUNNER_TEMP/redo.flag" ]; then echo "redo=1" >> "$GITHUB_OUTPUT"; fi
-      - name: 응급실 사이 이동 시간 (8·13·18·23시)
-        if: always()
-        continue-on-error: true
-        run: node scripts/travel-matrix.mjs
-        env:
-          KAKAO_REST_KEY: ${{ secrets.KAKAO_REST_KEY }}
-          FORCE: ${{ inputs.travel_now && '1' || '' }}
       - name: 현황판 요약 만들기
         if: always()
         run: node scripts/build-status.mjs --data data --out docs/status.json
