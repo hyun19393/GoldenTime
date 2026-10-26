@@ -333,8 +333,9 @@
         <li><b>1. 10분마다 기록</b>응급실마다 남은 병상(hvec)을 저장해요. 0 이하이면 '거절(수용 곤란) 상태'로 봐요.<span class="live" id="stepRows"></span></li>
         <li><b>2. 짝짓기</b>같은 병원의 "지금 남은 병상"과 "10·20·30·40·50·60분 뒤 남은 병상"(±3분)을 한 쌍으로 묶어요. 병원 입력이 60분 넘게 지난 기록은 '지금 상태'로 쓰지 않아요.<span class="live" id="stepPairs"></span></li>
         <li><b>3. 칸별로 세기</b>지금 병상 구간 6개 × 도착까지 시간 6개 × 시간대 6개 = 216칸. 칸마다 "뒤 기록이 0 이하였던 횟수 k ÷ 전체 횟수 n"을 세요.<span class="live" id="stepCells"></span></li>
-        <li><b>4. 기록이 적은 칸 보정</b>p = (k + 30 × 기준값) ÷ (n + 30). 전체 병원 → 같은 시간대 → 이 병원 순으로 적용해요. 사이 시간(예: 14분)은 10분과 20분 값을 직선으로 이어요.<span class="live">기록이 많을수록 그 병원 자신의 비율에 가까워져요.</span></li>
+        <li id="step4"><b>4. 기록이 적은 칸 보정</b>p = (k + 30 × 기준값) ÷ (n + 30). 전체 병원 → 같은 시간대 → 이 병원 순으로 적용해요. 사이 시간(예: 14분)은 10분과 20분 값을 직선으로 이어요.<span class="live">기록이 많을수록 그 병원 자신의 비율에 가까워져요.</span></li>
       </ol>
+      <div id="classInfo"></div>
       <h3>왜 이렇게 계산하나요 (근거)</h3>
       <ul class="why">
         <li><b>조건부 상대도수</b>: 같은 조건(지금 병상 구간·도착까지 시간·시간대)에서 실제로 일어난 비율 k/n을 확률로 써요. 기록이 쌓일수록 실제 확률에 가까워져요(큰 수의 법칙).</li>
@@ -862,6 +863,18 @@ function drawMethod() {
   $('stepPairs').textContent = `짝 ${model.pairs.toLocaleString()}쌍` + (model.staleRows ? ` · 오래된 입력 ${model.staleRows.toLocaleString()}개 제외` : '');
   const cells = Object.keys(model.pooled).filter((k) => /^[^|]+\|\d+\|\d$/.test(k)).length;
   $('stepCells').textContent = `216칸 중 ${cells}칸에 기록 있음 (${fmtP(cells / 216)})`;
+  if (model.classPooled) {
+    // v2: 병원 등급별 기준값
+    $('step4').innerHTML = '<b>4. 기록이 적은 칸 보정</b>p = (k + 30 × 기준값) ÷ (n + 30). 기준값은 <span style="font-weight:700">같은 등급 병원들</span>의 비율이에요. 사이 시간(예: 14분)은 10분과 20분 값을 직선으로 이어요.' +
+      '<span class="live">기록이 많을수록 그 병원 자신의 비율에 가까워져요.</span>';
+    const hs = Object.entries(model.hospitals);
+    const cnt = (c) => hs.filter(([, h]) => h.cls === c).length;
+    const names = (c) => hs.filter(([, h]) => h.cls === c).map(([id, h]) => byId[id]?.name ?? h.name).sort((a, b) => a.localeCompare(b, 'ko'));
+    $('classInfo').innerHTML = '<h3>병원 등급 (기준값을 나누는 기준)</h3><p class="note" style="margin-top:0">지금까지 꽉 찼던 비율로 병원을 세 등급으로 나눠요. 늘 꽉 찬 큰 병원의 기록이 거의 꽉 차지 않는 병원의 확률을 끌어올리지 않게 하려는 거예요. 기록이 6시간 분량(36번)보다 적은 병원은 등급 없이 전체 병원 → 같은 시간대 → 이 병원 순으로 계산해요.</p>' +
+      '<div class="scrollx"><table><tr><th>등급</th><th class="num">병원 수</th><th>병원</th></tr>' +
+      ['A', 'B', 'C'].map((c) => `<tr><td>${{ A: 'A 꽉 찬 적 없음', B: 'B 꽉 찬 비율 50% 미만', C: 'C 꽉 찬 비율 50% 이상' }[c]}</td><td class="num">${cnt(c)}</td><td class="sub">${esc(names(c).slice(0, c === 'A' ? 8 : 30).join(', '))}${c === 'A' && cnt(c) > 8 ? ` 외 ${cnt(c) - 8}곳` : ''}</td></tr>`).join('') +
+      (hs.some(([, h]) => !h.cls) ? `<tr><td>등급 없음</td><td class="num">${hs.filter(([, h]) => !h.cls).length}</td><td class="sub">기록이 모자람</td></tr>` : '') + '</table></div>';
+  }
 }
 
 function drawHeatPanel() {
@@ -979,7 +992,7 @@ async function drawCheck() {
   const a20 = v.byLead[v.calibLead] ?? v.byLead[leads[0]];
   if (a20?.appMiss?.n) html += `<p class="note">지금 병상이 1개 이상이라 일반 앱에서는 '가능'으로 보이는 경우 중, ${v.calibLead}분 뒤 실제로 꽉 차 있던 비율은 <b>${fmtP(a20.appMiss.k / a20.appMiss.n)}</b> (${a20.appMiss.k}/${a20.appMiss.n.toLocaleString()})이고, 우리 방식은 평균 <b>${fmtP(a20.appMiss.pSum / a20.appMiss.n)}</b>로 예측했어요.</p>`;
   html += `<h3>예측이 실제와 맞나 (${v.calibLead}분 뒤, 예측 확률 구간별)</h3><div class="scrollx"><table><tr><th>예측 구간</th><th class="num">짝 수</th><th class="num">예측 평균</th><th class="num">실제 비율</th><th class="num">차이</th></tr>` +
-    v.calib.filter((c) => c.n).map((c) => `<tr><td>${Math.round(c.lo * 100)}~${Math.round(c.hi * 100)}%</td><td class="num">${c.n.toLocaleString()}</td><td class="num">${fmtP(c.pSum / c.n)}</td><td class="num">${fmtP(c.k / c.n)}</td><td class="num">${((c.pSum / c.n - c.k / c.n) * 100).toFixed(1)}%p</td></tr>`).join('') + '</table></div>';
+    v.calib.filter((c) => c.n).map((c) => `<tr${c.n < 30 ? ' class="sub"' : ''}><td>${Math.round(c.lo * 100)}~${Math.round(c.hi * 100)}%${c.n < 30 ? ' (짝 30개 미만)' : ''}</td><td class="num">${c.n.toLocaleString()}</td><td class="num">${fmtP(c.pSum / c.n)}</td><td class="num">${fmtP(c.k / c.n)}</td><td class="num">${((c.pSum / c.n - c.k / c.n) * 100).toFixed(1)}%p</td></tr>`).join('') + '</table></div>';
   html += `<h3>지금 남은 병상 구간별 (${v.calibLead}분 뒤)</h3><div class="scrollx"><table><tr><th>지금 남은 병상</th><th class="num">짝 수</th><th class="num">예측 평균</th><th class="num">실제 비율</th></tr>` +
     BUCKETS.filter((b) => v.bucket[b]?.n).map((b) => { const c = v.bucket[b]; return `<tr><td>${BUCKET_LABEL[b]}</td><td class="num">${c.n.toLocaleString()}</td><td class="num">${fmtP(c.pSum / c.n)}</td><td class="num">${fmtP(c.k / c.n)}</td></tr>`; }).join('') + '</table></div>' +
     '<p class="note">예측 평균과 실제 비율이 가까울수록 확률이 믿을 만해요. 짝 수가 적은 줄은 아직 흔들릴 수 있어요. 기록이 쌓이면 수집할 때마다 다시 계산돼요.</p>';

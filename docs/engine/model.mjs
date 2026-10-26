@@ -6,6 +6,13 @@
 //
 // 통계표의 한 칸 = (지금 남은 병상 구간, 몇 분 뒤 도착, 관측 시간대)
 //   n = 그런 상황이 몇 번 있었나, k = 그중 도착 시점에 거절 상태였던 횟수
+//
+// 기준값(사전값)을 어디서 가져오나 (v2, 2026-10-26 검토 후 변경)
+//   v1: 전체 병원 → 같은 시간대 → 이 병원. 전체 병원 합계는 늘 꽉 찬 큰 병원 한 곳(짝의 약 40%)에 끌려
+//       '거의 꽉 차지 않는 병원'의 확률을 크게 잡았다.
+//   v2: 병원을 지금까지 꽉 찼던 비율로 세 등급(A 0% · B 50% 미만 · C 50% 이상)으로 나누고,
+//       같은 등급 병원 합계 → 이 병원 순으로 2단계. 같은 기록으로 시점을 바꿔 4번 검증했을 때
+//       Brier 점수 약 9%, 보정 오차 약 38% 줄었다. 등급을 정할 기록이 모자라면 v1 방식을 쓴다.
 
 import { kstHour } from './time.mjs';
 
@@ -22,6 +29,17 @@ export const BUCKET_LABEL = {
 };
 export const HOUR_BIN_LABEL = ['0~4시', '4~8시', '8~12시', '12~16시', '16~20시', '20~24시'];
 export const STALE_MIN = 60; // 병원 입력 시각이 이보다 오래되면 '현재 상태 모름'으로 본다
+export const CLASS_MIN_RECORDS = 36; // 등급을 정하려면 최소 이만큼(약 6시간) 기록이 있어야 한다
+export const CLASS_LABEL = { A: 'A등급: 꽉 찬 적 없음', B: 'B등급: 꽉 찬 비율 50% 미만', C: 'C등급: 꽉 찬 비율 50% 이상' };
+
+// 병원 등급: 지금까지 거절 상태(0 이하)였던 비율로 나눈다. 기록이 모자라면 null(등급 없음)
+export function hospitalClass(baseCells) {
+  let n = 0, k = 0;
+  for (const c of Object.values(baseCells ?? {})) { n += c.n; k += c.k; }
+  if (n < CLASS_MIN_RECORDS) return null;
+  const r = k / n;
+  return r === 0 ? 'A' : r < 0.5 ? 'B' : 'C';
+}
 
 export const isRejectState = (row) => row.hvec <= 0;
 
@@ -108,8 +126,23 @@ export function buildModel(rows, { leads = LEADS, toleranceMin = 3, source = '',
     }
   }
 
+  // 등급별 합계 (시간대는 합친다): classPooled[등급][`${b}|${L}`]
+  const classPooled = {};
+  for (const h of Object.values(hospitals)) {
+    h.cls = hospitalClass(h.base);
+    if (!h.cls) continue;
+    const C = (classPooled[h.cls] ??= {});
+    for (const [key, c] of Object.entries(h.counts)) {
+      const [b, L] = key.split('|');
+      const a = (C[`${b}|${L}`] ??= { n: 0, k: 0 });
+      a.n += c.n;
+      a.k += c.k;
+    }
+  }
+
   return {
-    version: 1,
+    version: 2,
+    method: 'class-prior',
     source,
     createdAt: new Date().toISOString(),
     rejectDefinition: 'hvec <= 0',
@@ -120,6 +153,7 @@ export function buildModel(rows, { leads = LEADS, toleranceMin = 3, source = '',
     staleRows: stale,
     pairs,
     pooled,
+    classPooled,
     hospitals,
   };
 }
@@ -150,8 +184,23 @@ export function explainBase(model, { hpid, hb, m = SHRINK_M }) {
   return { allCell, prior, hospCell, hospWeight, p, steps };
 }
 
-// 한 칸(지금 병상 구간 b, 도착까지 L분, 시간대 hb)의 확률: 전체 병원·전체 시간대 → 같은 시간대 → 이 병원 순으로 3단계
+// 한 칸(지금 병상 구간 b, 도착까지 L분, 시간대 hb)의 확률
+//   v2: 같은 등급 병원 합계 → 이 병원 (2단계)
+//   등급이 없거나 그 등급에 이 칸 기록이 없으면 v1: 전체 병원·전체 시간대 → 같은 시간대 → 이 병원 (3단계)
 export function explainPoint(model, { hpid, b, L, hb, m = SHRINK_M }) {
+  const cls = model.hospitals[hpid]?.cls;
+  const clsCell = cls ? model.classPooled?.[cls]?.[`${b}|${L}`] ?? null : null;
+  const clsRate = rate(clsCell);
+  if (clsRate != null) {
+    const hospCell = model.hospitals[hpid]?.counts[`${b}|${L}|${hb}`] ?? null;
+    const p = shrink(hospCell, clsRate, m);
+    const hospWeight = weightOf(hospCell, m);
+    const steps = [
+      { scope: 'class', label: `같은 등급 병원 (${CLASS_LABEL[cls]})`, cell: clsCell, how: 'start', value: clsRate },
+      { scope: 'hosp', label: `이 병원 (${HOUR_BIN_LABEL[hb]})`, cell: hospCell, how: 'shrink', prior: clsRate, weight: hospWeight, value: p },
+    ];
+    return { method: 'class', cls, clsCell, prior: clsRate, hospCell, hospWeight, p, steps };
+  }
   const P = model.pooled;
   const allCell = P[`${b}|${L}|all`] ?? null;
   const all = rate(allCell);

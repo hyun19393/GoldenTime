@@ -142,8 +142,14 @@ test('계산 과정 설명(explainPoint)의 최종값이 앱이 쓰는 확률과
         for (const L of LEADS) {
           const ex = explainPoint(model, { hpid: id, b: bedBucket(hvec), L, hb: hourBin(hour) });
           close(ex.p, rp({ hpid: id, hvec, leadMin: L, hourKST: hour }).p);
-          if (!ex.fallback) {
-            // 3단계: 전체 → 시간대 → 병원, 병원 비중 = n/(n+30)
+          if (ex.method === 'class') {
+            // v2 2단계: 같은 등급 병원 → 이 병원, 병원 비중 = n/(n+30)
+            assert.ok(ex.prior > 0 && ex.prior < 1);
+            assert.equal(ex.steps.length, 2);
+            if (ex.hospCell) close(ex.hospWeight, ex.hospCell.n / (ex.hospCell.n + 30));
+            else assert.equal(ex.p, ex.prior);
+          } else if (!ex.fallback) {
+            // v1 3단계(등급이 없는 병원): 전체 → 시간대 → 병원
             assert.ok(ex.all > 0 && ex.all < 1);
             if (ex.hospCell) close(ex.hospWeight, ex.hospCell.n / (ex.hospCell.n + 30));
             else assert.equal(ex.p, ex.hour);
@@ -213,4 +219,25 @@ test('질환별 거절 확률: 불가능 표시·병상 0 이하를 거절로, �
   assert.equal(rp({ hpid: 'C', hvec: 5, flag: null, leadMin: 20, hourKST: 13 }).p, null);
   assert.equal(rp({ hpid: 'B', hvec: 0, flag: 'Y', leadMin: 0, hourKST: 13 }).p, 1); // 병상 0 이하도 거절
   close(explainDiseasePoint(dm, { disease: 'MKioskTy2', hpid: 'A', b: 'dN', L: 20, hb: 3 }).p, pN);
+});
+
+test('병원 등급(v2): 꽉 찬 적 없는 병원은 늘 꽉 찬 병원에 끌려가지 않는다', async () => {
+  const { buildModel, explainPoint, hospitalClass, bedBucket, hourBin } = await import('../engine/model.mjs');
+  const t0 = parseKST('2026-10-10 00:00:00');
+  const rows = [];
+  for (let i = 0; i < 288; i++) {
+    const t = t0 + i * 600e3;
+    rows.push({ t, hpid: 'BIG', name: '늘 꽉 참', hvec: i % 4 === 0 ? 1 : -3, ageMin: 5 }); // 꽉 찬 비율 75%
+    rows.push({ t, hpid: 'CALM', name: '가끔 1개', hvec: i % 12 === 0 ? 1 : 5, ageMin: 5 }); // 한 번도 꽉 차지 않음
+    rows.push({ t, hpid: 'MID', name: '가끔 꽉 참', hvec: i % 10 === 0 ? 0 : 3, ageMin: 5 }); // 10%
+  }
+  const model = buildModel(rows);
+  assert.deepEqual(['BIG', 'CALM', 'MID'].map((h) => model.hospitals[h].cls), ['C', 'A', 'B']);
+  assert.equal(hospitalClass({ 0: { n: 10, k: 0 } }), null); // 기록이 모자라면 등급 없음
+  // CALM이 지금 1개 남았을 때: 같은 등급(A) 기록만 기준으로 써서, BIG의 '1개 → 곧 꽉 참'에 끌려가지 않는다
+  const ex = explainPoint(model, { hpid: 'CALM', b: bedBucket(1), L: 20, hb: hourBin(12) });
+  assert.equal(ex.method, 'class');
+  assert.ok(ex.p < 0.05, `CALM 20분 뒤 ${ex.p}`);
+  const big = explainPoint(model, { hpid: 'BIG', b: bedBucket(1), L: 20, hb: hourBin(12) });
+  assert.ok(big.p > 0.5, `BIG 20분 뒤 ${big.p}`);
 });
