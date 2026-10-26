@@ -35,3 +35,11 @@ export function loadSevereByKey(dir) {
   }
   return map;
 }
+
+// 자동 수집이 자리 잡은 시각: 처음으로 '다음 두 번의 수집 간격이 모두 15분 이하'가 된 수집 시각.
+// 그 전(설정하며 손으로 몇 번 돌린 시험 수집)은 수집률 계산에서 빼려고 쓴다. 정렬된 시각(ms) 배열을 받는다.
+export function regularStart(ts, maxGapMin = 15) {
+  const g = maxGapMin * 60e3;
+  for (let i = 0; i + 2 < ts.length; i++) if (ts[i + 1] - ts[i] <= g && ts[i + 2] - ts[i + 1] <= g) return ts[i];
+  return ts[0] ?? null;
+}

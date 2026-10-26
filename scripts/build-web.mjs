@@ -1,6 +1,7 @@
 // 웹앱(docs/app.html)이 읽을 파일을 만든다. 수집할 때마다 GitHub Actions에서 실행된다.
 //   docs/model.json   거절 확률 통계표 (지금까지 모은 가용병상 기록 전체)
 //   docs/travel.json  응급실 사이 도로 이동 시간 (시간대별 가장 최근 값) + 표에 없는 짝의 추정 계수
+//   docs/validation.json  정확도 점검 (앞 70% 기간으로 만든 통계표가 뒤 30% 기간을 얼마나 맞히는지)
 //   docs/engine/      계산 코드(engine/)를 브라우저에서 그대로 쓰도록 복사
 // 사용법: node scripts/build-web.mjs [--data data] [--out docs]
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync } from 'node:fs';
@@ -9,10 +10,11 @@ import { pathToFileURL } from 'node:url';
 import { loadSnapshots, loadSevereByKey } from './load.mjs';
 import { buildDiseaseModels } from '../engine/severe.mjs';
 import { buildModel } from '../engine/model.mjs';
+import { evaluateSplit } from '../engine/validate.mjs';
 import { parseCSV } from '../engine/csv.mjs';
 import { haversineM } from '../engine/geo.mjs';
 
-export const ENGINE_FILES = ['model.mjs', 'effective.mjs', 'time.mjs', 'geo.mjs', 'stats.mjs', 'severe.mjs', 'codes.mjs'];
+export const ENGINE_FILES = ['model.mjs', 'effective.mjs', 'time.mjs', 'geo.mjs', 'stats.mjs', 'severe.mjs', 'codes.mjs', 'validate.mjs', 'causes.mjs'];
 
 // 시간대(8·13·18·23시)별로 가장 최근 파일의 값을 쓴다. 같은 짝이 여러 번 있으면 최근 값.
 export function buildTravel(dataDir) {
@@ -61,6 +63,8 @@ export function main(args = {}) {
   const { rows } = loadSnapshots(join(DATA, 'beds'));
   const model = buildModel(rows, { source: 'data/beds' });
   writeFileSync(join(OUT, 'model.json'), JSON.stringify(model));
+  const check = evaluateSplit(rows);
+  if (check) writeFileSync(join(OUT, 'validation.json'), JSON.stringify({ createdAt: new Date().toISOString(), ...check }));
 
   // 질환별 통계표(engine/severe.mjs)는 데이터가 충분히 모인 뒤 다시 다듬어 켠다. 지금은 만들지 않는다.
   if (args.severe) {

@@ -13,7 +13,7 @@
   :root {
     --bg: #f6f6f3; --surface: #ffffff; --ink: #1d1d1b; --muted: #6b6a64; --line: #e3e2dc;
     --full: #d6453d; --low: #e39b1b; --ok: #2f9e66; --stale: #9a9993; --accent: #2a63b8;
-    --full-bg: #fbe9e7; --low-bg: #fcf1dc; --ok-bg: #e4f3ea;
+    --full-bg: #fbe9e7; --low-bg: #fcf1dc; --ok-bg: #e4f3ea; --accent-bg: #e6eefa;
     /* 거절 비율 색 단계 (파랑 한 가지 색, 연함 → 진함) */
     --h0: #cde2fb; --h1: #9ec5f4; --h2: #6da7ec; --h3: #3987e5; --h4: #256abf; --h5: #104281;
     --h0-ink: #1d1d1b; --h1-ink: #1d1d1b; --h2-ink: #1d1d1b; --h3-ink: #1d1d1b; --h4-ink: #ffffff; --h5-ink: #ffffff;
@@ -22,7 +22,7 @@
     :root:not([data-theme="light"]) {
       --bg: #161615; --surface: #1f1f1d; --ink: #ecebe6; --muted: #a3a29b; --line: #34332f;
       --full: #ef6a5f; --low: #f0b443; --ok: #4cbc84; --stale: #7b7a74; --accent: #6b9ae6;
-      --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f;
+      --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f; --accent-bg: #1b2a44;
       --h0: #0d366b; --h1: #184f95; --h2: #256abf; --h3: #3987e5; --h4: #6da7ec; --h5: #9ec5f4;
       --h0-ink: #ecebe6; --h1-ink: #ecebe6; --h2-ink: #ecebe6; --h3-ink: #1d1d1b; --h4-ink: #1d1d1b; --h5-ink: #1d1d1b;
     }
@@ -30,73 +30,124 @@
   :root[data-theme="dark"] {
     --bg: #161615; --surface: #1f1f1d; --ink: #ecebe6; --muted: #a3a29b; --line: #34332f;
     --full: #ef6a5f; --low: #f0b443; --ok: #4cbc84; --stale: #7b7a74; --accent: #6b9ae6;
-    --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f;
+    --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f; --accent-bg: #1b2a44;
     --h0: #0d366b; --h1: #184f95; --h2: #256abf; --h3: #3987e5; --h4: #6da7ec; --h5: #9ec5f4;
     --h0-ink: #ecebe6; --h1-ink: #ecebe6; --h2-ink: #ecebe6; --h3-ink: #1d1d1b; --h4-ink: #1d1d1b; --h5-ink: #1d1d1b;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--ink); }
   body { font-family: "Noto Sans KR", system-ui, sans-serif; font-size: 15px; line-height: 1.6; word-break: keep-all; }
+  a { color: var(--accent); }
   .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 16px 48px; }
-  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; margin-bottom: 20px; }
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; margin-bottom: 14px; }
   h1 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
-  h2 { font-size: 16px; font-weight: 700; margin: 0 0 12px; }
+  h2 { font-size: 16px; font-weight: 700; margin: 0 0 4px; }
+  h3 { font-size: 14.5px; font-weight: 700; margin: 18px 0 6px; }
   .sub { color: var(--muted); font-size: 13px; }
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
-  .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
-  .kpi .k { font-size: 12.5px; color: var(--muted); }
-  .kpi .v { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.3; }
-  .kpi .v small { font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 2px; }
-  .kpi.full .v { color: var(--full); } .kpi.low .v { color: var(--low); } .kpi.ok .v { color: var(--ok); }
+  .lead { color: var(--muted); font-size: 13.5px; margin: 0 0 12px; }
+  .note { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
+  .warn { background: var(--full-bg); color: var(--full); border-radius: 8px; padding: 8px 12px; font-size: 13px; margin-bottom: 14px; }
+  #loading { color: var(--muted); padding: 40px 0; text-align: center; }
+
+  /* 탭: 화면 맨 위에 늘 같은 네 칸 */
+  nav.tabs { position: sticky; top: 0; z-index: 1000; background: var(--bg); display: flex; gap: 4px; padding: 6px 0 10px; margin-bottom: 6px; overflow-x: auto; border-bottom: 1px solid var(--line); }
+  nav.tabs a { flex: 0 0 auto; text-decoration: none; color: var(--ink); font-size: 14px; font-weight: 500; padding: 7px 14px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); }
+  nav.tabs a[aria-current="page"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+  .crumb { font-size: 13px; color: var(--muted); margin: 6px 0 12px; }
+  .crumb a { text-decoration: none; }
+
+  /* 카드: 모든 묶음이 같은 틀 (제목 → 한 줄 설명 → 내용 → 읽는 법) */
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; min-width: 0; }
   .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
   @media (max-width: 820px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
-  #map { height: 540px; border-radius: 8px; border: 1px solid var(--line); }
-  @media (max-width: 600px) { #map { height: 360px; } }
-  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); margin-top: 10px; }
-  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
-  .note { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .kpi .k { font-size: 12.5px; color: var(--muted); }
+  .kpi .v { font-size: 26px; font-weight: 700; line-height: 1.3; }
+  .kpi .v small { font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 2px; }
+  .kpi .d { font-size: 12px; color: var(--muted); }
+  .kpi.full .v { color: var(--full); } .kpi.low .v { color: var(--low); } .kpi.ok .v { color: var(--ok); } .kpi.stale .v { color: var(--stale); }
+  .statusline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 13.5px; margin: 0 0 12px; }
+
   table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  th { font-weight: 500; color: var(--muted); font-size: 12.5px; position: sticky; top: 0; background: var(--surface); }
+  th { font-weight: 500; color: var(--muted); font-size: 12.5px; position: sticky; top: 0; background: var(--surface); z-index: 1; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .scroll { max-height: 380px; overflow: auto; }
+  .scroll { max-height: 420px; overflow: auto; }
+  .scrollx { overflow-x: auto; }
+  .pill { display: inline-block; padding: 0 8px; border-radius: 10px; font-size: 12px; font-weight: 500; white-space: nowrap; background: var(--bg); color: var(--muted); }
+  .pill.full { background: var(--full-bg); color: var(--full); } .pill.low { background: var(--low-bg); color: var(--low); } .pill.ok { background: var(--ok-bg); color: var(--ok); }
+  .pill.info { background: var(--accent-bg); color: var(--accent); }
+  .err { color: var(--full); }
+  input[type=search] { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; margin-bottom: 10px; }
+  select { font: inherit; font-size: 14px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); max-width: 100%; }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+  .seg button, .seg a { font: inherit; font-size: 12.5px; padding: 3px 11px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; text-decoration: none; }
+  .seg button[aria-pressed="true"], .seg a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .seg.sub2 button { font-size: 12px; padding: 2px 9px; }
+  .row-link { cursor: pointer; }
   #msgTable { table-layout: fixed; }
   #msgTable td { overflow-wrap: anywhere; }
   #msgTable col.c1 { width: 27%; } #msgTable col.c2 { width: 20%; } #msgTable col.c3 { width: 33%; } #msgTable col.c4 { width: 20%; }
   #msgTable td.num { white-space: normal; font-size: 12.5px; }
   @media (max-width: 600px) {
-    #msgTable colgroup { display: none; }
-    #msgTable tr:first-child { display: none; }
+    #msgTable colgroup, #msgTable tr:first-child { display: none; }
     #msgTable tr { display: block; padding: 8px 0; border-bottom: 1px solid var(--line); }
     #msgTable td { display: block; border: 0; padding: 1px 0; text-align: left; }
     #msgTable td:first-child { font-weight: 500; }
     #msgTable td.num br { display: none; }
+    #exTable tr:first-child { display: none; }
+    #exTable tr { display: block; border-bottom: 1px solid var(--line); padding: 6px 0; }
+    #exTable td { display: block; border: 0; padding: 1px 0; font-size: 12.5px; text-align: left; white-space: normal; }
+    #exTable td:first-child { font-weight: 700; }
+    #exTable td[data-label]::before { content: attr(data-label) ' · '; color: var(--muted); }
+    #exTable td .sub { margin-left: 4px; }
+    #exTable td br { display: none; }
   }
-  .pill { display: inline-block; padding: 0 8px; border-radius: 10px; font-size: 12px; font-weight: 500; white-space: nowrap; }
-  .pill.full { background: var(--full-bg); color: var(--full); } .pill.low { background: var(--low-bg); color: var(--low); } .pill.ok { background: var(--ok-bg); color: var(--ok); }
-  input[type=search] { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; margin-bottom: 10px; }
-  svg text { fill: var(--muted); font-family: inherit; font-size: 11px; }
-  .bar { fill: var(--full); } .bar.empty { fill: var(--line); }
-  .runs { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
-  .run { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
-  .run b { font-weight: 500; }
-  .err { color: var(--full); font-size: 12px; }
+  .row-link:hover td { background: var(--bg); }
   footer { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
-  .warn { background: var(--full-bg); color: var(--full); border-radius: 8px; padding: 8px 12px; font-size: 13px; margin-bottom: 16px; }
+
+  /* 지도 */
+  #map { height: 520px; border-radius: 8px; border: 1px solid var(--line); }
+  @media (max-width: 600px) { #map { height: 360px; } }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+  .sw { display: inline-block; width: 14px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
   .leaflet-popup-content { font-family: "Noto Sans KR", system-ui, sans-serif; font-size: 13px; line-height: 1.55; margin: 12px 14px; }
   .leaflet-popup-content b { font-weight: 700; }
-  #loading { color: var(--muted); padding: 40px 0; text-align: center; }
-  /* 거절 확률 계산 */
-  h3 { font-size: 14.5px; font-weight: 700; margin: 20px 0 8px; }
+
+  /* 차트 */
+  svg text { fill: var(--muted); font-family: inherit; font-size: 11px; }
+  svg .lbl { fill: var(--ink); font-size: 11.5px; font-weight: 500; }
+  .bar { fill: var(--full); } .bar.empty { fill: var(--line); }
+  #tip { position: fixed; z-index: 2000; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12.5px; line-height: 1.5; padding: 6px 9px; border-radius: 6px; max-width: 280px; display: none; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+
+  /* 날짜별 기록 */
+  .days { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+  .day { display: block; text-decoration: none; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .day:hover { border-color: var(--accent); }
+  .day b { font-size: 15px; }
+  .day .m { font-size: 12.5px; color: var(--muted); line-height: 1.7; }
+  .slots { margin: 4px 0 6px; }
+  .slotrow { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 6px; margin-bottom: 3px; }
+  .slotrow > span { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .slotrow > div { display: grid; gap: 2px; }
+  .slots i { display: block; height: 22px; border-radius: 3px; }
+  .s-o { background: var(--ok); } .s-r { background: var(--accent); } .s-f { background: var(--full); } .s-m { background: var(--stale); } .s-- { background: var(--line); }
+  .strip-wrap { overflow-x: auto; }
+  .strip-names { font-size: 11.5px; }
+  .dayhead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 12px; }
+  .dayhead h2 { margin: 0; font-size: 18px; }
+  .navbtn { font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-decoration: none; }
+  .navbtn[aria-disabled="true"] { opacity: .4; pointer-events: none; }
+
+  /* 거절 확률 */
   .steps { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 8px; }
   .steps li { border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; font-size: 13px; line-height: 1.55; }
   .steps li b { display: block; font-size: 13.5px; margin-bottom: 2px; }
   .steps .live { display: block; color: var(--accent); font-variant-numeric: tabular-nums; margin-top: 3px; }
-  .seg { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
-  .seg button { font: inherit; font-size: 12.5px; padding: 3px 10px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
-  .seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .scrollx { overflow-x: auto; }
+  .why { margin: 0; padding-left: 18px; font-size: 13.5px; }
+  .why li { margin: 4px 0; }
   .heat { table-layout: fixed; min-width: 440px; }
   .heat th, .heat td { text-align: center; padding: 6px 3px; border-bottom: 2px solid var(--surface); border-right: 2px solid var(--surface); }
   .heat th { position: static; }
@@ -112,16 +163,13 @@
   .heat-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12px; color: var(--muted); margin-top: 6px; }
   .heat-legend i { display: inline-block; width: 16px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
   .pick { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
-  select { font: inherit; font-size: 14px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); max-width: 100%; }
   .now { font-size: 13.5px; margin: 0 0 8px; }
-  #exTable td, #exTable th { font-variant-numeric: tabular-nums; }
-  #exTable td.p { font-weight: 700; }
-  .calc { background: var(--bg); border-radius: 8px; padding: 9px 12px; font-size: 13px; line-height: 1.7; font-variant-numeric: tabular-nums; margin-top: 8px; overflow-wrap: anywhere; }
+  td.p { font-weight: 700; }
+  .calc { background: var(--bg); border-radius: 8px; padding: 9px 12px; font-size: 13px; line-height: 1.75; font-variant-numeric: tabular-nums; margin-top: 8px; overflow-wrap: anywhere; }
   .calc b { font-weight: 700; }
-  #hospProb tr.row { cursor: pointer; }
-  #hospProb tr.row:hover td { background: var(--bg); }
-  #hospProb tr.sel td { background: var(--ok-bg); }
-  #hospProb td:first-child { overflow-wrap: anywhere; }
+  tr.sel td { background: var(--ok-bg); }
+  .hbar { display: inline-block; height: 8px; border-radius: 0 4px 4px 0; background: var(--accent); vertical-align: middle; margin-right: 6px; }
+  .hbar.ref { background: var(--stale); }
   @media (max-width: 600px) {
     .heat { min-width: 0; }
     .heat th[scope=row] { width: 58px; font-size: 12px; white-space: normal; }
@@ -129,12 +177,7 @@
     .heat td { padding: 5px 1px; }
     .heat td b { font-size: 12px; }
     .heat td small { font-size: 10px; }
-    #exTable tr:first-child { display: none; }
-    #exTable tr { display: block; border-bottom: 1px solid var(--line); padding: 6px 0; }
-    #exTable td { display: inline-block; border: 0; padding: 1px 8px 1px 0; font-size: 12.5px; text-align: left; white-space: normal; }
-    #exTable td:first-child { display: block; font-weight: 700; }
-    #exTable td[data-label]::before { content: attr(data-label) ' '; color: var(--muted); }
-    #hospProb th:nth-child(4), #hospProb td:nth-child(4), #hospProb th:nth-child(5), #hospProb td:nth-child(5) { display: none; }
+    .hide-sm { display: none; }
   }
 </style>
 </head>
@@ -148,12 +191,21 @@
     <div class="sub" id="updated"></div>
   </header>
   <div class="warn">교육·탐구용 화면입니다. 실제 응급 상황에서는 119에 신고하세요.</div>
+  <nav class="tabs" aria-label="현황판 메뉴">
+    <a href="#/now" data-tab="now">지금</a>
+    <a href="#/history" data-tab="history">날짜별 기록</a>
+    <a href="#/prob" data-tab="prob">거절 확률</a>
+    <a href="#/status" data-tab="status">수집 상태</a>
+  </nav>
   <div id="loading">데이터를 불러오는 중…</div>
-  <main id="main" hidden>
-    <section class="kpis" id="kpis"></section>
 
+  <!-- ① 지금 -->
+  <section class="tab" id="tab-now" hidden>
+    <div class="statusline" id="nowLine"></div>
+    <div class="kpis" id="kpis"></div>
     <section class="card">
-      <h2>지금 응급실 상태</h2>
+      <h2>지도</h2>
+      <p class="lead">응급실 위치와 지금 남은 병상 상태예요. 점을 누르면 자세한 값이 나와요.</p>
       <div id="map" role="img" aria-label="경기도 응급실 위치와 남은 병상 상태 지도"></div>
       <div class="legend">
         <span><span class="dot" style="background:var(--full)"></span>꽉 참 (남은 병상 0 이하)</span>
@@ -161,198 +213,434 @@
         <span><span class="dot" style="background:var(--ok)"></span>3개 이상</span>
         <span><span class="dot" style="background:var(--stale)"></span>입력 60분 넘게 지남</span>
       </div>
-      <p class="note">점을 누르면 남은 병상, 지금까지 꽉 찼던 비율, 수용 불가 질환을 볼 수 있어요.</p>
     </section>
-
+    <section class="card">
+      <h2>수집 중인 응급실 <span class="sub" id="erCount"></span></h2>
+      <p class="lead">실시간 병상을 알리는 경기도 응급실 전체 목록이에요. 줄을 누르면 그 병원의 거절 확률 계산을 볼 수 있어요.</p>
+      <div class="seg" id="erFilter" role="group" aria-label="상태로 거르기"></div>
+      <input type="search" id="erSearch" placeholder="병원 이름이나 시군으로 찾기">
+      <div class="scroll"><table id="erTable"></table></div>
+      <p class="note">입력 경과 = 수집 시각 − 병원이 마지막으로 값을 입력한 시각. 60분이 넘으면 '지금 상태'로 믿기 어려워 계산에서 빼요.</p>
+    </section>
     <div class="grid2">
       <section class="card">
         <h2>시간대별 꽉 찬 비율</h2>
+        <p class="lead">지금까지 모은 기록에서 시각마다 남은 병상이 0 이하였던 비율이에요.</p>
         <div id="hourChart"></div>
         <p class="note" id="hourNote"></p>
       </section>
       <section class="card">
         <h2>최근 7일 꽉 찬 응급실 수</h2>
+        <p class="lead">수집할 때마다 남은 병상이 0 이하인 응급실이 몇 곳이었는지예요.</p>
         <div id="lineChart"></div>
-        <p class="note">수집할 때마다 남은 병상이 0 이하인 응급실이 몇 곳이었는지 보여줘요.</p>
+        <p class="note">날짜별로 자세히 보려면 '날짜별 기록' 탭을 쓰세요.</p>
       </section>
     </div>
-
-    <section class="card" id="probCard">
-      <h2>거절 확률은 이렇게 계산해요</h2>
-      <p class="sub" id="probMeta">통계표를 불러오는 중…</p>
-      <ol class="steps">
-        <li><b>① 10분마다 기록</b>응급실마다 남은 병상(hvec)을 저장해요. 0 이하이면 '거절(수용 곤란) 상태'로 봐요.<span class="live" id="stepRows"></span></li>
-        <li><b>② 짝짓기</b>같은 병원의 "지금 남은 병상"과 "10·20·30·40·50·60분 뒤 남은 병상"(±3분)을 한 쌍으로 묶어요. 병원 입력이 60분 넘게 지난 기록은 '지금 상태'로 쓰지 않아요.<span class="live" id="stepPairs"></span></li>
-        <li><b>③ 칸별로 세기</b>지금 병상 구간 6개 × 도착까지 시간 6개 × 시간대 6개 = 216칸. 칸마다 "뒤 기록이 0 이하였던 횟수 k ÷ 전체 횟수 n"을 세요.<span class="live" id="stepCells"></span></li>
-        <li><b>④ 기록이 적은 칸 보정</b>p = (k + 30 × 기준값) ÷ (n + 30). 전체 병원 → 같은 시간대 → 이 병원 순으로 적용해요. 사이 시간(예: 14분)은 10분과 20분 값을 직선으로 이어요.<span class="live">기록이 많을수록 그 병원 자신의 비율에 가까워져요.</span></li>
-      </ol>
-
-      <h3>결과: 지금 남은 병상이 k개일 때, n분 뒤 병상이 0 이하였던 비율</h3>
-      <div class="seg" id="heatSeg" role="group" aria-label="시간대 고르기"></div>
-      <div class="scrollx"><table class="heat" id="heat"></table></div>
-      <div class="heat-legend" id="heatLegend"></div>
-      <p class="note">칸의 큰 숫자는 비율, 작은 숫자는 k/n(0 이하였던 횟수 / 전체 횟수)이에요. 경기도 응급실 전체를 합친 값이고, '–'는 아직 기록이 없는 칸이에요.</p>
-
-      <h3>병원 하나로 계산 따라가기</h3>
-      <div class="pick">
-        <label for="hospSel" class="sub">병원</label>
-        <select id="hospSel"></select>
-      </div>
-      <p class="now" id="exNow"></p>
-      <div class="scrollx"><table id="exTable"></table></div>
-      <div class="seg" id="calcSeg" role="group" aria-label="계산식을 볼 도착 시간" style="margin-top:10px"></div>
-      <div class="calc" id="calc"></div>
-
-      <h3>병원별 결과: 지금 상태에서 20분 뒤 도착하면</h3>
-      <div class="scroll"><table id="hospProb"></table></div>
-      <p class="note">줄을 누르면 위에서 그 병원의 계산 과정을 볼 수 있어요. '병원 기록 비중'은 마지막 보정에서 이 병원 자신의 기록이 차지한 몫(n ÷ (n + 30))이에요. 기록이 쌓일수록 커져요.</p>
-    </section>
-
     <div class="grid2">
       <section class="card">
         <h2>시군별</h2>
+        <p class="lead">시군마다 응급실 수와 지금 꽉 찬 곳이에요.</p>
         <div class="scroll"><table id="siTable"></table></div>
         <p class="note" id="noEr"></p>
       </section>
       <section class="card">
         <h2>지금 걸려 있는 수용 불가 메시지 <span class="sub" id="msgCount"></span></h2>
+        <p class="lead">병원이 직접 올린 '이런 환자는 받기 어려움' 안내예요. 확률 계산에는 쓰지 않아요.</p>
         <input type="search" id="msgSearch" placeholder="병원 이름이나 내용으로 찾기 (예: 소아, 전문의)">
         <div class="scroll"><table id="msgTable"></table></div>
       </section>
     </div>
+  </section>
 
-    <section class="card">
-      <h2>수집 상태 (최근 24시간)</h2>
-      <div class="runs" id="runs"></div>
+  <!-- ② 날짜별 기록 -->
+  <section class="tab" id="tab-history" hidden>
+    <div id="histList">
+      <section class="card">
+        <h2>날짜 고르기</h2>
+        <p class="lead">날짜를 누르면 그날의 수집 결과, 꽉 찬 응급실 변화, 응급실별 상태, 시각별 기록을 볼 수 있어요.</p>
+        <div class="days" id="days"></div>
+      </section>
+    </div>
+    <div id="histDay" hidden>
+      <div class="dayhead">
+        <a class="navbtn" href="#/history">← 날짜 목록</a>
+        <h2 id="dayTitle"></h2>
+        <a class="navbtn" id="dayPrev">◀ 전날</a>
+        <a class="navbtn" id="dayNext">다음날 ▶</a>
+      </div>
+      <div class="kpis" id="dayKpis"></div>
+      <section class="card">
+        <h2>시간대 고르기</h2>
+        <p class="lead">아래 모든 내용이 고른 시간대만 보여 줘요. 4시간 단위로 고른 뒤 1시간 단위로 더 좁힐 수 있어요.</p>
+        <div class="seg" id="rangeSeg" role="group" aria-label="4시간 단위 시간대"></div>
+        <div class="seg sub2" id="hourSeg" role="group" aria-label="1시간 단위 시간대"></div>
+        <div class="sub" id="rangeInfo"></div>
+      </section>
+      <section class="card">
+        <h2>수집 결과 (10분 칸)</h2>
+        <p class="lead">10분마다 한 칸이에요. 칸에 마우스를 올리거나 누르면 시각과 결과가 나와요.</p>
+        <div class="slots" id="slotBar"></div>
+        <div class="legend" id="slotLegend"></div>
+        <div id="slotFails"></div>
+      </section>
+      <section class="card">
+        <h2>꽉 찬 응급실 수 변화</h2>
+        <p class="lead">수집할 때마다 꽉 찬(0 이하) 곳과 1~2개 남은 곳이 몇 곳이었는지예요.</p>
+        <div id="dayLine"></div>
+      </section>
+      <section class="card">
+        <h2>응급실별 상태 띠</h2>
+        <p class="lead">한 줄이 응급실 하나, 한 칸이 수집 한 번이에요. 어느 병원이 언제 꽉 찼는지 한눈에 보여요.</p>
+        <div class="seg" id="stripSeg" role="group" aria-label="보여 줄 응급실"></div>
+        <div class="strip-wrap" id="strip"></div>
+        <div class="legend">
+          <span><span class="sw" style="background:var(--full)"></span>꽉 참 (0 이하)</span>
+          <span><span class="sw" style="background:var(--low)"></span>1~2개</span>
+          <span><span class="sw" style="background:var(--ok-bg);border:1px solid var(--ok)"></span>3개 이상</span>
+          <span><span class="sw" style="background:var(--stale)"></span>입력 60분 넘음</span>
+          <span><span class="sw" style="background:var(--bg);border:1px solid var(--line)"></span>기록 없음</span>
+        </div>
+      </section>
+      <section class="card">
+        <h2>한 시각의 기록 보기</h2>
+        <p class="lead">고른 시각에 수집한 응급실별 값 그대로예요 (남은 병상이 적은 순).</p>
+        <div class="pick"><label for="snapSel" class="sub">수집 시각</label><select id="snapSel"></select></div>
+        <div class="scroll"><table id="snapTable"></table></div>
+      </section>
+      <section class="card">
+        <h2>실행 기록</h2>
+        <p class="lead">고른 시간대에 수집기가 남긴 기록이에요 (기능별 성공·실패, 걸린 시간, 원인).</p>
+        <div class="scroll"><table id="runTable"></table></div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ③ 거절 확률 -->
+  <section class="tab" id="tab-prob" hidden>
+    <div class="seg" id="probNav" role="navigation" aria-label="거절 확률 메뉴">
+      <a href="#/prob/method" data-sub="method">① 계산 방법</a>
+      <a href="#/prob/table" data-sub="table">② 결과표</a>
+      <a href="#/prob/hospital" data-sub="hospital">③ 병원 하나 따라가기</a>
+      <a href="#/prob/list" data-sub="list">④ 병원별 결과</a>
+      <a href="#/prob/check" data-sub="check">⑤ 정확도 점검</a>
+    </div>
+    <p class="sub" id="probMeta">통계표를 불러오는 중…</p>
+
+    <section class="card sub-panel" id="p-method" hidden>
+      <h2>① 계산 방법</h2>
+      <p class="lead">"지금 남은 병상이 k개인 응급실에 n분 뒤 도착하면 꽉 차 있을 확률"을 지금까지의 기록으로 셉니다.</p>
+      <ol class="steps">
+        <li><b>1. 10분마다 기록</b>응급실마다 남은 병상(hvec)을 저장해요. 0 이하이면 '거절(수용 곤란) 상태'로 봐요.<span class="live" id="stepRows"></span></li>
+        <li><b>2. 짝짓기</b>같은 병원의 "지금 남은 병상"과 "10·20·30·40·50·60분 뒤 남은 병상"(±3분)을 한 쌍으로 묶어요. 병원 입력이 60분 넘게 지난 기록은 '지금 상태'로 쓰지 않아요.<span class="live" id="stepPairs"></span></li>
+        <li><b>3. 칸별로 세기</b>지금 병상 구간 6개 × 도착까지 시간 6개 × 시간대 6개 = 216칸. 칸마다 "뒤 기록이 0 이하였던 횟수 k ÷ 전체 횟수 n"을 세요.<span class="live" id="stepCells"></span></li>
+        <li><b>4. 기록이 적은 칸 보정</b>p = (k + 30 × 기준값) ÷ (n + 30). 전체 병원 → 같은 시간대 → 이 병원 순으로 적용해요. 사이 시간(예: 14분)은 10분과 20분 값을 직선으로 이어요.<span class="live">기록이 많을수록 그 병원 자신의 비율에 가까워져요.</span></li>
+      </ol>
+      <h3>왜 이렇게 계산하나요 (근거)</h3>
+      <ul class="why">
+        <li><b>조건부 상대도수</b>: 같은 조건(지금 병상 구간·도착까지 시간·시간대)에서 실제로 일어난 비율 k/n을 확률로 써요. 기록이 쌓일수록 실제 확률에 가까워져요(큰 수의 법칙).</li>
+        <li><b>(k + 0.5) ÷ (n + 1)</b>: 맨 바깥 단계에 쓰는 베이즈 추정값(제프리스 사전분포)이에요. 기록이 적을 때 0%나 100%로 딱 떨어지는 것을 막아요.</li>
+        <li><b>(k + 30 × 기준값) ÷ (n + 30)</b>: 베타-이항 모형의 '수축' 추정(경험적 베이즈)이에요. 기록 n이 30보다 훨씬 많으면 그 칸 자신의 비율, 적으면 위 단계 평균에 가까워져요.</li>
+        <li><b>직선 보간</b>: 10분 간격 사이 도착 시간은 양옆 값을 시간 비율대로 섞어요.</li>
+      </ul>
+      <h3>알고 써야 할 한계</h3>
+      <ul class="why" id="limits">
+        <li>10분 간격 기록은 서로 많이 닮아 있어요(앞뒤 기록이 같은 상태일 때가 많음). 그래서 실제 정보량은 기록 수 n보다 적어요. 표의 n은 '독립된 관측 수'가 아니라 '짝 수'로 읽어 주세요.</li>
+        <li>거절 상태 = 남은 병상 0 이하로만 정했어요. 전문의 부재 같은 다른 거절 사유는 들어 있지 않아요.</li>
+        <li>병원이 직접 입력한 값이라, 입력이 늦거나 틀리면 계산도 그만큼 틀려요(입력이 자주 늦는 병원은 '수집 상태' 탭에서 볼 수 있어요).</li>
+      </ul>
     </section>
 
-    <footer>
-      출처: 공공데이터포털 「국립중앙의료원_전국 응급의료기관 정보 조회 서비스」. 꽉 참 = 응급실 일반병상 가용 수(hvec) 0 이하. 병상 정보는 병원이 입력하는 값이라 실제와 다를 수 있어요.
-    </footer>
-  </main>
+    <section class="card sub-panel" id="p-table" hidden>
+      <h2>② 결과표: 지금 남은 병상이 k개일 때, n분 뒤 0 이하였던 비율</h2>
+      <p class="lead">경기도 응급실 전체를 합친 실제 비율(보정 전 k/n)이에요. 시간대를 골라 볼 수 있어요.</p>
+      <div class="seg" id="heatSeg" role="group" aria-label="시간대 고르기"></div>
+      <div class="scrollx"><table class="heat" id="heat"></table></div>
+      <div class="heat-legend" id="heatLegend"></div>
+      <p class="note">칸의 큰 숫자는 비율, 작은 숫자는 k/n(0 이하였던 횟수 / 전체 횟수)이에요. 0%는 '지금까지 한 번도 없었다'는 뜻이지 '절대 없다'는 뜻이 아니에요. 칸에 마우스를 올리면 95% 신뢰 상한(대략 3 ÷ n)을 보여 줘요.</p>
+    </section>
+
+    <section class="card sub-panel" id="p-hospital" hidden>
+      <h2>③ 병원 하나로 계산 따라가기</h2>
+      <p class="lead">고른 병원의 지금 상태에서 도착 시간별 거절 확률이 어떻게 나오는지 단계마다 보여 줘요.</p>
+      <div class="pick"><label for="hospSel" class="sub">병원</label><select id="hospSel"></select></div>
+      <p class="now" id="exNow"></p>
+      <div class="scrollx"><table id="exTable"></table></div>
+      <div class="seg" id="calcSeg" role="group" aria-label="계산식을 볼 도착 시간" style="margin-top:10px"></div>
+      <div class="calc" id="calc"></div>
+    </section>
+
+    <section class="card sub-panel" id="p-list" hidden>
+      <h2>④ 병원별 결과: 지금 상태에서 20분 뒤 도착하면</h2>
+      <p class="lead">모든 응급실의 20분 뒤 거절 확률이에요. 줄을 누르면 ③에서 계산 과정을 볼 수 있어요.</p>
+      <div class="scroll"><table id="hospProb"></table></div>
+      <p class="note">'0.1% 미만'은 그 병상 구간에서 지금까지 거의(또는 한 번도) 꽉 찬 적이 없는 병원이에요. 확률이 정확히 0이라는 뜻은 아니에요. '병원 기록 비중'은 마지막 보정에서 이 병원 자신의 기록이 차지한 몫(n ÷ (n + 30))이에요.</p>
+    </section>
+
+    <section class="card sub-panel" id="p-check" hidden>
+      <h2>⑤ 정확도 점검</h2>
+      <p class="lead" id="checkLead">앞부분 기간의 기록만으로 통계표를 만들고, 뒷부분 기간에 실제로 어땠는지 맞혀 봐요(미래를 미리 보지 않도록 시간 순서로 나눔).</p>
+      <div id="checkBody"></div>
+    </section>
+  </section>
+
+  <!-- ④ 수집 상태 -->
+  <section class="tab" id="tab-status" hidden>
+    <div class="statusline" id="stLine"></div>
+    <section class="card">
+      <h2>수집률</h2>
+      <p class="lead">10분 칸 수집률 = 기간 안의 10분 칸 중 가용병상 기록이 있는 칸의 비율이에요. 기능별 숫자는 실행 기록(성공·실패·건너뜀) 수예요.</p>
+      <div class="scrollx"><table id="rateTable"></table></div>
+      <p class="note" id="rateNote"></p>
+    </section>
+    <section class="card">
+      <h2>실패 기록 (최근 7일)</h2>
+      <p class="lead">실패할 때마다 무엇이, 왜, 어떻게 실패했고 언제 다시 받았는지 남겨요.</p>
+      <div class="scroll"><table id="failTable"></table></div>
+    </section>
+    <section class="card">
+      <h2>원인 분석</h2>
+      <p class="lead">실패 기록을 원인별로 묶어 본 결과예요.</p>
+      <div id="causeBody"></div>
+    </section>
+    <div class="grid2">
+      <section class="card">
+        <h2>수집 간격</h2>
+        <p class="lead">가용병상 기록 사이 간격이에요(최근 7일). 정상은 약 10분이에요.</p>
+        <div id="gapBody"></div>
+      </section>
+      <section class="card">
+        <h2>수집에서 빠진 기관 <span class="sub" id="exCount"></span></h2>
+        <p class="lead">경기도 응급의료기관 목록에는 있지만 실시간 병상 정보를 내지 않아 수집·계산에서 빠진 곳이에요.</p>
+        <div class="scroll"><table id="exTable2"></table></div>
+      </section>
+    </div>
+    <section class="card">
+      <h2>응급실별 입력 신선도</h2>
+      <p class="lead">병원이 값을 얼마나 제때 입력하는지예요. '60분 넘은 비율'이 높을수록 그 병원 기록은 '지금 상태'로 덜 쓰여요.</p>
+      <div class="scroll"><table id="freshTable"></table></div>
+    </section>
+  </section>
+
+  <footer>
+    출처: 공공데이터포털 「국립중앙의료원_전국 응급의료기관 정보 조회 서비스」. 꽉 참 = 응급실 일반병상 가용 수(hvec) 0 이하. 병상 정보는 병원이 입력하는 값이라 실제와 다를 수 있어요.
+  </footer>
 </div>
+<div id="tip" role="tooltip"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script>
+<script type="module">
+import { BUCKETS, BUCKET_LABEL, HOUR_BIN_LABEL, STALE_MIN, SHRINK_M, bedBucket, hourBin, explainPoint, explainBase, makeRejectProb } from './engine/model.mjs';
+import { parseKST, kstHour, formatKST } from './engine/time.mjs';
+import { causeText, parseAttempts } from './engine/causes.mjs';
+
+// ---------- 공통 도구
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const pct = (x) => (x == null ? '-' : (x * 100).toFixed(1) + '%');
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-const stateOf = (h) => (h.ageMin != null && h.ageMin > 60 ? 'stale' : h.hvec == null ? 'stale' : h.hvec <= 0 ? 'full' : h.hvec <= 2 ? 'low' : 'ok');
+const getJSON = (f) => fetch(f, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(`${f} ${r.status}`); return r.json(); });
+// 확률 표기: 아주 작은 값이 0.0%로 보이지 않게 자릿수를 바꾼다
+const fmtP = (p) => {
+  if (p == null || !Number.isFinite(p)) return '–';
+  if (p <= 0) return '0%';
+  if (p >= 1) return '100%';
+  if (p < 0.001) return '0.1% 미만';
+  if (p < 0.01) return `${(p * 100).toFixed(2)}%`;
+  if (p > 0.999) return '99.9% 초과';
+  return `${(p * 100).toFixed(1)}%`;
+};
+const fmtP0 = (p) => (p == null ? '–' : p === 0 ? '0%' : p < 0.01 ? '1% 미만' : `${Math.round(p * 100)}%`);
+const f4 = (x) => x.toFixed(4);
+const kn = (c) => (c ? `${c.k.toLocaleString()}/${c.n.toLocaleString()}` : '0/0');
 const OP_NAME = { beds: '실시간 가용병상', severe: '중증질환 수용가능', messages: '수용 불가 메시지', hospitals: '기관 목록', hospital_info: '기관 기본정보' };
+const STATE_LABEL = { full: '꽉 참', low: '1~2개 남음', ok: '3개 이상', stale: '입력 오래됨', none: '정보 없음' };
+const stateOf = (hvec, age) => (hvec == null ? 'none' : age != null && age > STALE_MIN ? 'stale' : hvec <= 0 ? 'full' : hvec <= 2 ? 'low' : 'ok');
+const pillOf = (st) => `<span class="pill ${st === 'stale' || st === 'none' ? '' : st}">${STATE_LABEL[st]}</span>`;
+const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
+const dayLabel = (d) => { const t = new Date(`${d}T12:00:00+09:00`); return `${Number(d.slice(5, 7))}월 ${Number(d.slice(8, 10))}일 (${WEEK[t.getUTCDay()]})`; };
+const minsAgo = (s) => Math.max(0, Math.round((Date.now() - parseKST(s)) / 60e3));
+const attemptsText = (a) => parseAttempts(a).map((x) => `${x.proto} ${x.sec}초 ${causeText(x.cause)[0]}`).join(' → ');
 
-fetch('status.json', { cache: 'no-store' })
-  .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then(render)
-  .catch((e) => { $('loading').textContent = '아직 요약 파일이 없어요. 수집이 한 번 더 돌면 생겨요. (' + e.message + ')'; });
+// 마우스를 올리면 나오는 설명 (data-tip 속성)
+const tip = $('tip');
+function showTip(html, x, y) {
+  tip.innerHTML = html; tip.style.display = 'block';
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = `${Math.min(window.innerWidth - w - 8, x + 12)}px`;
+  tip.style.top = `${y + h + 20 > window.innerHeight ? y - h - 10 : y + 14}px`;
+}
+const hideTip = () => { tip.style.display = 'none'; };
+const setCurrent = (a, on) => (on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
+document.addEventListener('pointermove', (e) => {
+  const el = e.target.closest?.('[data-tip]');
+  if (el) showTip(el.dataset.tip, e.clientX, e.clientY);
+  else if (!e.target.closest?.('.has-tip')) hideTip();
+});
+document.addEventListener('scroll', hideTip, true);
 
-function render(s) {
+// ---------- 데이터와 화면 이동
+let status, model, validation, histIndex;
+const histCache = {};
+const inited = {};
+
+async function main() {
+  try { status = await getJSON('status.json'); }
+  catch (e) { $('loading').textContent = `아직 요약 파일이 없어요. 수집이 한 번 더 돌면 생겨요. (${e.message})`; return; }
   $('loading').hidden = true;
-  $('main').hidden = false;
-  $('updated').textContent = `마지막 수집 ${s.latestAt ?? '-'} · 첫 수집 ${s.firstAt ?? '-'}`;
+  $('updated').textContent = `마지막 수집 ${status.latestAt ?? '-'} · 첫 수집 ${status.firstAt ?? '-'}`;
+  window.addEventListener('hashchange', route);
+  route();
+}
 
-  const k = s.summary;
-  $('kpis').innerHTML = [
-    ['응급실', k.er, '곳', ''],
-    ['꽉 참', k.fullNow, '곳', 'full'],
-    ['1~2개 남음', k.lowNow, '곳', 'low'],
-    ['3개 이상', k.okNow, '곳', 'ok'],
-    ['수용 불가 메시지', k.activeMessages, '건', ''],
-    ['누적 수집', s.snapshots.toLocaleString(), '회', ''],
-  ].map(([label, v, unit, cls]) => `<div class="kpi ${cls}"><div class="k">${label}</div><div class="v">${v}<small>${unit}</small></div></div>`).join('');
+function route() {
+  hideTip();
+  const parts = (location.hash.replace(/^#\/?/, '') || 'now').split('/');
+  const tab = ['now', 'history', 'prob', 'status'].includes(parts[0]) ? parts[0] : 'now';
+  for (const a of document.querySelectorAll('nav.tabs a')) setCurrent(a, a.dataset.tab === tab);
+  for (const s of document.querySelectorAll('section.tab')) s.hidden = s.id !== `tab-${tab}`;
+  if (tab === 'now') showNow();
+  if (tab === 'history') showHistory(parts[1], parts[2]);
+  if (tab === 'prob') showProb(parts[1] || 'method', parts[2]);
+  if (tab === 'status') showStatus();
+}
 
-  drawMap(s.hospitals);
-  drawHours(s.byHour, s.snapshots);
-  drawLine(s.timeline);
-  drawSi(s.bySi, s.noEr, s.noErOther ?? {}, s.notReporting);
-  drawMsgs(s.messages, s.messagesAt);
-  drawRuns(s.runs24h);
+// =====================================================================
+// ① 지금
+// =====================================================================
+let map;
+function showNow() {
+  if (!inited.now) {
+    inited.now = true;
+    const s = status, hs = s.hospitals;
+    const lr = s.collect?.lastRun;
+    const bedsOk = lr?.ops.find((o) => o.op === 'beds')?.ok;
+    $('nowLine').innerHTML = `<span>마지막 수집 <b>${esc((s.latestAt ?? '').slice(5, 16))}</b> (${minsAgo(s.latestAt)}분 전)</span>` +
+      (lr ? (bedsOk ? '<span class="pill ok">수집 정상</span>' : `<span class="pill full">마지막 실행 실패 · ${esc(causeText(lr.ops.find((o) => o.op === 'beds')?.cause)[0])}</span> <a href="#/status">원인 보기</a>`) : '');
+    const k = s.summary;
+    const staleN = hs.filter((h) => h.hvec != null && h.ageMin != null && h.ageMin > STALE_MIN).length;
+    $('kpis').innerHTML = [
+      ['응급실', k.er, '곳', '', '실시간 병상을 알리는 곳'],
+      ['꽉 참', k.fullNow, '곳', 'full', '남은 병상 0 이하'],
+      ['1~2개 남음', k.lowNow, '곳', 'low', ''],
+      ['3개 이상', k.okNow, '곳', 'ok', ''],
+      ['입력 오래됨', staleN, '곳', 'stale', '병원 입력 60분 넘음'],
+      ['수용 불가 메시지', k.activeMessages, '건', '', '병원이 올린 안내'],
+    ].map(([label, v, unit, cls, d]) => `<div class="kpi ${cls}"><div class="k">${label}</div><div class="v">${v}<small>${unit}</small></div>${d ? `<div class="d">${d}</div>` : ''}</div>`).join('');
+    drawMap(hs);
+    drawErTable(hs);
+    drawHours(s.byHour);
+    drawLine(s.timeline);
+    drawSi(s.bySi, s.noEr, s.noErOther ?? {}, s.notReporting);
+    drawMsgs(s.messages, s.messagesAt);
+  }
+  setTimeout(() => map && map.invalidateSize(), 50);
 }
 
 function drawMap(hs) {
-  const map = L.map('map', { scrollWheelZoom: false }).setView([37.45, 127.1], 9);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 18, attribution: '&copy; OpenStreetMap contributors',
-  }).addTo(map);
-  const color = { full: css('--full'), low: css('--low'), ok: css('--ok'), stale: css('--stale') };
+  map = L.map('map', { scrollWheelZoom: false }).setView([37.45, 127.1], 9);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+  const color = { full: css('--full'), low: css('--low'), ok: css('--ok'), stale: css('--stale'), none: css('--stale') };
+  const order = { ok: 0, none: 1, stale: 1, low: 2, full: 3 };
   const pts = [];
-  const order = { ok: 0, stale: 1, low: 2, full: 3 };
   [...hs].filter((h) => Number.isFinite(h.lat) && Number.isFinite(h.lon))
-    .sort((a, b) => order[stateOf(a)] - order[stateOf(b)])
+    .sort((a, b) => order[stateOf(a.hvec, a.ageMin)] - order[stateOf(b.hvec, b.ageMin)])
     .forEach((h) => {
-      const st = stateOf(h);
+      const st = stateOf(h.hvec, h.ageMin);
       pts.push([h.lat, h.lon]);
-      const label = { full: '꽉 참', low: '1~2개 남음', ok: '여유', stale: '입력 오래됨' }[st];
       const sev = h.severeNo.length ? `<br>수용 불가 질환: ${h.severeNo.map(esc).join(', ')}` : '';
-      L.circleMarker([h.lat, h.lon], {
-        radius: h.cls === '권역응급의료센터' ? 9 : 7, color: '#fff', weight: 1.5, fillColor: color[st], fillOpacity: 0.95,
-      }).bindPopup(
-        `<b>${esc(h.name)}</b><br>${esc(h.cls ?? '')} · ${esc(h.si ?? '')}` +
-        `<br><span class="pill ${st === 'stale' ? '' : st}">${label}</span> 남은 병상 <b>${h.hvec ?? '-'}</b> / 기준 ${h.base ?? '-'}` +
-        `<br>병원 입력 ${h.ageMin ?? '-'}분 전` +
-        `<br>지금까지 꽉 찼던 비율 ${pct(h.fullRate)} (${h.records}회 중)` + sev +
-        (h.messages ? `<br>수용 불가 메시지 ${h.messages}건` : '')
-      ).addTo(map);
+      L.circleMarker([h.lat, h.lon], { radius: h.cls === '권역응급의료센터' ? 9 : 7, color: '#fff', weight: 1.5, fillColor: color[st], fillOpacity: 0.95 })
+        .bindPopup(`<b>${esc(h.name)}</b><br>${esc(h.cls ?? '')} · ${esc(h.si ?? '')}` +
+          `<br>${pillOf(st)} 남은 병상 <b>${h.hvec ?? '-'}</b> / 기준 ${h.base ?? '-'}` +
+          `<br>병원 입력 ${h.ageMin ?? '-'}분 전` +
+          `<br>지금까지 꽉 찼던 비율 ${fmtP(h.fullRate)} (${h.records}회 중)` + sev +
+          (h.messages ? `<br>수용 불가 메시지 ${h.messages}건` : '') +
+          `<br><a href="#/prob/hospital/${esc(h.hpid)}">거절 확률 계산 보기</a>`)
+        .addTo(map);
     });
   const fit = () => { map.invalidateSize(); if (pts.length) map.fitBounds(pts, { padding: [24, 24], maxZoom: 12 }); };
-  fit();
-  setTimeout(fit, 300);
+  fit(); setTimeout(fit, 300);
 }
 
-function drawHours(byHour, snaps) {
+function drawErTable(hs) {
+  const rows = hs.map((h) => ({ h, st: stateOf(h.hvec, h.ageMin) }));
+  const order = { full: 0, low: 1, stale: 2, none: 3, ok: 4 };
+  rows.sort((a, b) => order[a.st] - order[b.st] || (a.h.hvec ?? 99) - (b.h.hvec ?? 99) || a.h.name.localeCompare(b.h.name, 'ko'));
+  const cnt = (st) => rows.filter((r) => r.st === st).length;
+  const filters = [['all', `전체 ${rows.length}`], ['full', `꽉 참 ${cnt('full')}`], ['low', `1~2개 ${cnt('low')}`], ['ok', `3개 이상 ${cnt('ok')}`], ['stale', `입력 오래됨 ${cnt('stale') + cnt('none')}`]];
+  let f = 'all', q = '';
+  $('erFilter').innerHTML = filters.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${v === 'all'}">${l}</button>`).join('');
+  const render = () => {
+    const list = rows.filter((r) => (f === 'all' || r.st === f || (f === 'stale' && r.st === 'none')) && (!q || (r.h.name + r.h.si).includes(q)));
+    $('erCount').textContent = `${rows.length}곳`;
+    $('erTable').innerHTML = '<tr><th>병원</th><th class="num">남은 / 기준</th><th>상태</th><th class="num">입력 경과</th><th class="num hide-sm">지금까지 꽉 찬 비율</th></tr>' +
+      list.map(({ h, st }) => `<tr class="row-link" data-id="${esc(h.hpid)}"><td>${esc(h.name)}<br><span class="sub">${esc(h.si)} · ${esc(h.cls ?? '')}</span></td>` +
+        `<td class="num"><b>${h.hvec ?? '-'}</b> / ${h.base ?? '-'}</td><td>${pillOf(st)}</td><td class="num">${h.ageMin ?? '-'}분</td><td class="num hide-sm">${fmtP(h.fullRate)}</td></tr>`).join('') +
+      (list.length ? '' : '<tr><td colspan="5" class="sub">해당하는 응급실이 없어요.</td></tr>');
+  };
+  $('erFilter').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; f = b.dataset.v; for (const x of $('erFilter').children) x.setAttribute('aria-pressed', String(x === b)); render(); });
+  $('erSearch').addEventListener('input', (e) => { q = e.target.value.trim(); render(); });
+  $('erTable').addEventListener('click', (e) => { const tr = e.target.closest('tr[data-id]'); if (tr) location.hash = `#/prob/hospital/${tr.dataset.id}`; });
+  render();
+}
+
+function drawHours(byHour) {
   const W = 480, H = 170, P = { l: 34, r: 6, t: 8, b: 22 };
   const max = Math.max(0.05, ...byHour.map((h) => h.rate ?? 0));
   const bw = (W - P.l - P.r) / 24;
   let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="시간대별 꽉 찬 비율 막대그래프">`;
   for (const f of [0, 0.5, 1]) {
     const y = P.t + (1 - f) * (H - P.t - P.b);
-    svg += `<line x1="${P.l}" x2="${W - P.r}" y1="${y}" y2="${y}" stroke="${css('--line')}" />`;
-    svg += `<text x="${P.l - 4}" y="${y + 4}" text-anchor="end">${(max * f * 100).toFixed(0)}%</text>`;
+    svg += `<line x1="${P.l}" x2="${W - P.r}" y1="${y}" y2="${y}" stroke="${css('--line')}" /><text x="${P.l - 4}" y="${y + 4}" text-anchor="end">${(max * f * 100).toFixed(0)}%</text>`;
   }
   byHour.forEach((h, i) => {
-    const v = h.rate ?? 0;
-    const bh = (v / max) * (H - P.t - P.b);
-    const x = P.l + i * bw + 1;
-    svg += `<rect class="bar ${h.n ? '' : 'empty'}" x="${x}" y="${H - P.b - Math.max(bh, h.n ? 0 : 2)}" width="${bw - 2}" height="${Math.max(bh, h.n ? 0 : 2)}" rx="2"><title>${i}시: ${pct(h.rate)} (${h.n}건)</title></rect>`;
+    const v = h.rate ?? 0, bh = Math.max((v / max) * (H - P.t - P.b), h.n ? 0 : 2), x = P.l + i * bw + 1;
+    svg += `<rect class="bar ${h.n ? '' : 'empty'}" x="${x}" y="${H - P.b - bh}" width="${bw - 2}" height="${bh}" rx="2"/>`;
+    svg += `<rect x="${P.l + i * bw}" y="${P.t}" width="${bw}" height="${H - P.t - P.b}" fill="transparent" data-tip="${i}시: 꽉 찬 비율 ${fmtP(h.rate)} (${h.n.toLocaleString()}건)"/>`;
     if (i % 3 === 0) svg += `<text x="${x + (bw - 2) / 2}" y="${H - 6}" text-anchor="middle">${i}시</text>`;
   });
   $('hourChart').innerHTML = svg + '</svg>';
   const filled = byHour.filter((h) => h.n).length;
-  $('hourNote').textContent = filled < 24
-    ? `아직 ${filled}개 시간대만 기록이 있어요. 하루가 지나면 24시간이 모두 채워져요.`
-    : '응급실·수집 시각마다 남은 병상이 0 이하였던 비율이에요.';
+  $('hourNote').textContent = filled < 24 ? `아직 ${filled}개 시간대만 기록이 있어요.` : '응급실·수집 시각마다 남은 병상이 0 이하였던 비율이에요.';
+}
+
+// 선 그래프 (꽉 참·1~2개 두 줄). pts: [{ label, full, low }]
+function lineSvg(pts, { W = 480, H = 180, marks = [], aria = '' } = {}) {
+  const P = { l: 30, r: 44, t: 10, b: 22 };
+  if (pts.length < 2) return `<p class="note">기록이 두 번 이상 있어야 그래프가 그려져요. (지금 ${pts.length}번)</p>`;
+  const max = Math.max(1, ...pts.map((d) => Math.max(d.full, d.low)));
+  const x = (i) => P.l + (i / (pts.length - 1)) * (W - P.l - P.r);
+  const y = (v) => P.t + (1 - v / max) * (H - P.t - P.b);
+  const path = (k) => pts.map((d, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(d[k]).toFixed(1)}`).join('');
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(aria)}">`;
+  for (const f of [0, 0.5, 1]) {
+    const v = Math.round(max * f), yy = y(v);
+    svg += `<line x1="${P.l}" x2="${W - P.r}" y1="${yy}" y2="${yy}" stroke="${css('--line')}"/><text x="${P.l - 4}" y="${yy + 4}" text-anchor="end">${v}</text>`;
+  }
+  svg += `<path d="${path('low')}" fill="none" stroke="${css('--low')}" stroke-width="2" stroke-linejoin="round"/>`;
+  svg += `<path d="${path('full')}" fill="none" stroke="${css('--full')}" stroke-width="2" stroke-linejoin="round"/>`;
+  const last = pts.length - 1;
+  svg += `<text class="lbl" x="${x(last) + 4}" y="${y(pts[last].full) + 4}">꽉 참</text>`;
+  if (Math.abs(y(pts[last].low) - y(pts[last].full)) > 10) svg += `<text class="lbl" x="${x(last) + 4}" y="${y(pts[last].low) + 4}">1~2개</text>`;
+  for (const m of marks) svg += `<path d="M${x(m.i) - 4},${H - P.b + 1} l4,-6 l4,6 z" fill="${css('--full')}"><title>${esc(m.title)}</title></path>`;
+  const ticks = [0, Math.floor(last / 2), last];
+  for (const i of ticks) svg += `<text x="${x(i)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : i === last ? 'end' : 'middle'}">${esc(pts[i].label)}</text>`;
+  // 마우스 위치에서 가장 가까운 기록을 보여 주는 투명 층
+  const step = (W - P.l - P.r) / last;
+  pts.forEach((d, i) => { svg += `<rect x="${x(i) - step / 2}" y="${P.t}" width="${step}" height="${H - P.t - P.b}" fill="transparent" data-tip="${esc(d.label)}<br>꽉 참 ${d.full}곳 · 1~2개 ${d.low}곳"/>`; });
+  return svg + '</svg>' + `<div class="legend"><span><span class="sw" style="background:var(--full)"></span>꽉 참 (0 이하)</span><span><span class="sw" style="background:var(--low)"></span>1~2개 남음</span>${marks.length ? '<span>▲ 수집 실패</span>' : ''}</div>`;
 }
 
 function drawLine(tl) {
-  const W = 480, H = 170, P = { l: 30, r: 8, t: 8, b: 22 };
-  if (tl.length < 2) {
-    $('lineChart').innerHTML = `<p class="note">수집이 두 번 이상 되면 그래프가 그려져요. (지금 ${tl.length}회)</p>`;
-    return;
-  }
-  const max = Math.max(1, ...tl.map((d) => d[1]));
-  const x = (i) => P.l + (i / (tl.length - 1)) * (W - P.l - P.r);
-  const y = (v) => P.t + (1 - v / max) * (H - P.t - P.b);
-  const line = tl.map((d, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(d[1]).toFixed(1)}`).join('');
-  const area = `${line}L${x(tl.length - 1)},${H - P.b}L${x(0)},${H - P.b}Z`;
-  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="최근 꽉 찬 응급실 수 추이">`;
-  for (const f of [0, 0.5, 1]) {
-    const v = Math.round(max * f), yy = y(v);
-    svg += `<line x1="${P.l}" x2="${W - P.r}" y1="${yy}" y2="${yy}" stroke="${css('--line')}" /><text x="${P.l - 4}" y="${yy + 4}" text-anchor="end">${v}</text>`;
-  }
-  svg += `<path d="${area}" fill="${css('--full')}" opacity="0.12"/><path d="${line}" fill="none" stroke="${css('--full')}" stroke-width="2" stroke-linejoin="round"/>`;
-  const ticks = [0, Math.floor((tl.length - 1) / 2), tl.length - 1];
-  for (const i of ticks) svg += `<text x="${x(i)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : i === tl.length - 1 ? 'end' : 'middle'}">${tl[i][0]}</text>`;
-  $('lineChart').innerHTML = svg + '</svg>';
+  $('lineChart').innerHTML = lineSvg(tl.map(([label, full, low]) => ({ label, full, low })), { aria: '최근 7일 꽉 찬 응급실 수 추이' });
 }
 
 function drawSi(list, noEr, other, notReporting) {
   $('siTable').innerHTML = '<tr><th>시군</th><th class="num">응급실</th><th class="num">지금 꽉 참</th><th class="num">평균 꽉 찬 비율</th></tr>' +
-    list.map((s) => `<tr><td>${esc(s.si)}</td><td class="num">${s.er}</td><td class="num">${s.fullNow ? `<span class="pill full">${s.fullNow}</span>` : 0}</td><td class="num">${pct(s.avgFullRate)}</td></tr>`).join('');
+    list.map((s) => `<tr><td>${esc(s.si)}</td><td class="num">${s.er}</td><td class="num">${s.fullNow ? `<span class="pill full">${s.fullNow}</span>` : 0}</td><td class="num">${fmtP(s.avgFullRate)}</td></tr>`).join('');
   const none = noEr.filter((s) => !(other[s] ?? []).length);
   const only = noEr.filter((s) => (other[s] ?? []).length);
-  $('noEr').textContent = [
-    none.length ? `응급의료기관 목록에 응급실이 없는 시군: ${none.join(', ')}.` : '',
-    only.length ? `실시간 병상을 알리지 않는 응급실(응급실운영신고기관)만 있는 시군: ${only.join(', ')}.` : '',
-    notReporting ? `경기도 응급실 목록 중 ${notReporting}곳은 실시간 병상 정보를 내지 않아 이 현황판과 웹앱 계산에서 빠져 있어요.` : '',
+  $('noEr').innerHTML = [
+    none.length ? `응급의료기관 목록에 응급실이 없는 시군: ${esc(none.join(', '))}.` : '',
+    only.length ? `실시간 병상을 알리지 않는 응급실(응급실운영신고기관)만 있는 시군: ${esc(only.join(', '))}.` : '',
+    notReporting ? `실시간 병상 정보를 내지 않는 ${notReporting}곳은 <a href="#/status">수집 상태</a> 탭에 따로 적어 두었어요.` : '',
   ].filter(Boolean).join(' ');
 }
 
@@ -367,152 +655,292 @@ function drawMsgs(msgs, at) {
   render('');
 }
 
-function drawRuns(r) {
-  $('runs').innerHTML = Object.entries(OP_NAME).map(([op, name]) => {
-    const s = r[op];
-    if (!s) return `<div class="run"><b>${name}</b><br><span class="sub">기록 없음</span></div>`;
-    return `<div class="run"><b>${name}</b><br>성공 ${s.ok} · 실패 <span class="${s.fail ? 'err' : ''}">${s.fail}</span>` +
-      (s.lastError ? `<br><span class="err">${esc(s.lastError)}</span>` : '') + '</div>';
+// =====================================================================
+// ② 날짜별 기록
+// =====================================================================
+const hist = { day: null, data: null, range: 'all', hour: null, strip: 'busy' };
+
+async function showHistory(day, sub) {
+  if (!histIndex) {
+    try { histIndex = await getJSON('history/index.json'); }
+    catch (e) { $('days').innerHTML = `<p class="sub">날짜별 기록 파일을 아직 만들지 않았어요. 다음 수집 때 생겨요. (${esc(e.message)})</p>`; return; }
+  }
+  $('histList').hidden = !!day;
+  $('histDay').hidden = !day;
+  if (!day) return drawDayList();
+  if (!histCache[day]) {
+    try { histCache[day] = await getJSON(`history/${day}.json`); }
+    catch (e) { $('dayTitle').textContent = `${day} 기록을 불러오지 못했어요`; return; }
+  }
+  if (hist.day !== day) Object.assign(hist, { day, data: histCache[day], range: 'all', hour: null });
+  if (sub && /^h[0-5]$/.test(sub)) hist.range = sub.slice(1);
+  drawDay();
+}
+
+function drawDayList() {
+  const today = formatKST(Date.now()).slice(0, 10);
+  $('days').innerHTML = histIndex.days.map((d) => {
+    const rate = d.expected ? d.okSlots / d.expected : null;
+    return `<a class="day" href="#/history/${d.day}"><b>${dayLabel(d.day)}</b>${d.day === today ? ' <span class="pill info">오늘 · 진행 중</span>' : ''}` +
+      `<div class="m">수집 ${d.okSlots}/${d.expected}칸 (${fmtP(rate)})${d.failSlots ? ` · <span class="err">실패 ${d.failSlots}</span>` : ''}${d.missSlots ? ` · 실행 없음 ${d.missSlots}` : ''}${d.redoSlots ? ` · 새 실행으로 다시 받음 ${d.redoSlots}` : ''}<br>` +
+      `꽉 참 평균 ${d.fullAvg == null ? '-' : d.fullAvg.toFixed(1)}곳 · 최대 ${d.fullMax}곳${d.fullMaxAt ? ` (${d.fullMaxAt})` : ''}<br>한 번이라도 꽉 찬 응급실 ${d.everFull}곳</div></a>`;
   }).join('');
 }
-</script>
-<script type="module">
-// 거절 확률 계산 과정과 결과 (웹앱과 같은 계산 코드 engine/model.mjs를 그대로 쓴다)
-import { BUCKETS, BUCKET_LABEL, HOUR_BIN_LABEL, STALE_MIN, SHRINK_M, bedBucket, hourBin, explainPoint, explainBase, makeRejectProb } from './engine/model.mjs';
-import { parseKST, kstHour, formatKST } from './engine/time.mjs';
 
-const $ = (id) => document.getElementById(id);
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const pc = (x, d = 0) => (x == null ? '–' : `${(x * 100).toFixed(d)}%`);
-const kn = (c) => (c ? `${c.k}/${c.n}` : '0/0');
-const f3 = (x) => x.toFixed(3);
-const HEAT_EDGES = [0.05, 0.15, 0.3, 0.5, 0.75]; // 색 단계 경계
-const heatStep = (p) => HEAT_EDGES.filter((t) => p >= t).length; // 0~5
-const LEGEND = ['5% 미만', '5~15%', '15~30%', '30~50%', '50~75%', '75% 이상'];
-const FEW_N = 10; // 이보다 기록이 적은 칸은 점선으로 표시
+// 고른 시간대(분 단위 범위)
+function histRange() {
+  if (hist.hour != null) return [hist.hour * 60, hist.hour * 60 + 60, `${hist.hour}시~${hist.hour + 1}시`];
+  if (hist.range === 'all') return [0, 1440, '하루 전체'];
+  const b = Number(hist.range);
+  return [b * 240, b * 240 + 240, HOUR_BIN_LABEL[b]];
+}
+const minOf = (hms) => Number(hms.slice(0, 2)) * 60 + Number(hms.slice(3, 5));
 
-let model, status, byId, obsHour, obsHb, rp, selId, calcL = 20;
+function drawDay() {
+  const d = hist.data, idx = histIndex.days.findIndex((x) => x.day === hist.day);
+  $('dayTitle').textContent = `${dayLabel(hist.day)} 기록`;
+  const newer = histIndex.days[idx - 1], older = histIndex.days[idx + 1]; // 목록은 최근 날짜가 먼저
+  $('dayPrev').href = older ? `#/history/${older.day}` : '#'; $('dayPrev').setAttribute('aria-disabled', String(!older));
+  $('dayNext').href = newer ? `#/history/${newer.day}` : '#'; $('dayNext').setAttribute('aria-disabled', String(!newer));
+  const s = d.summary;
+  $('dayKpis').innerHTML = [
+    ['수집 성공', `${s.okSlots}<small>/${s.expected}칸</small>`, '', s.expected ? `10분 칸의 ${fmtP(s.okSlots / s.expected)}` : ''],
+    ['실패', `${s.failSlots}<small>칸</small>`, s.failSlots ? 'full' : '', s.redoSlots ? `새 실행으로 다시 받음 ${s.redoSlots}` : s.missSlots ? `실행 없음 ${s.missSlots}칸` : ''],
+    ['꽉 참 평균', `${s.fullAvg == null ? '-' : s.fullAvg.toFixed(1)}<small>곳</small>`, 'full', `최대 ${s.fullMax}곳${s.fullMaxAt ? ` (${s.fullMaxAt})` : ''}`],
+    ['한 번이라도 꽉 찬 곳', `${s.everFull}<small>곳</small>`, '', `응급실 ${s.hospitals}곳 중`],
+    ['입력 60분 넘은 기록', fmtP(s.staleShare), 'stale', '병원 입력이 늦은 비율'],
+  ].map(([k, v, cls, dd]) => `<div class="kpi ${cls}"><div class="k">${k}</div><div class="v">${v}</div>${dd ? `<div class="d">${dd}</div>` : ''}</div>`).join('');
 
-async function main() {
-  try {
-    [status, model] = await Promise.all(['status.json', 'model.json'].map((f) =>
-      fetch(f, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(`${f} ${r.status}`); return r.json(); })));
-  } catch (e) {
-    $('probMeta').textContent = `통계표를 아직 불러오지 못했어요 (${e.message}).`;
-    return;
+  // 시간대 고르기
+  const opts = [['all', '하루 전체']].concat(HOUR_BIN_LABEL.map((l, i) => [String(i), l]));
+  $('rangeSeg').innerHTML = opts.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${v === hist.range}">${l}</button>`).join('');
+  $('rangeSeg').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; hist.range = b.dataset.v; hist.hour = null; drawDay(); };
+  if (hist.range === 'all') $('hourSeg').innerHTML = '';
+  else {
+    const b0 = Number(hist.range) * 4;
+    $('hourSeg').innerHTML = `<span class="sub" style="align-self:center">1시간씩:</span>` + [0, 1, 2, 3].map((i) => `<button type="button" data-h="${b0 + i}" aria-pressed="${hist.hour === b0 + i}">${b0 + i}시</button>`).join('');
   }
-  rp = makeRejectProb(model);
-  byId = Object.fromEntries(status.hospitals.map((h) => [h.hpid, h]));
-  obsHour = kstHour(parseKST(status.latestAt));
-  obsHb = hourBin(obsHour);
-  if (!model.leads.includes(calcL)) calcL = model.leads[0];
+  $('hourSeg').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; const h = Number(b.dataset.h); hist.hour = hist.hour === h ? null : h; drawDay(); };
+  const [lo, hi, rl] = histRange();
+  const ti = d.times.map((t, i) => i).filter((i) => { const m = minOf(d.times[i]); return m >= lo && m < hi; });
+  $('rangeInfo').textContent = `${rl} · 수집 ${ti.length}번`;
 
-  const days = (model.range[1] - model.range[0]) / 86400e3;
-  $('probMeta').textContent = `기록 기간 ${formatKST(model.range[0]).slice(0, 16)} ~ ${formatKST(model.range[1]).slice(0, 16)} (${days < 1 ? '하루 미만' : `${days.toFixed(1)}일`}) · 거절 상태 정의: ${model.rejectDefinition} · 수집할 때마다 다시 계산돼요.`;
+  drawSlots(d, lo, hi);
+  // 꽉 찬 응급실 수 변화
+  const pts = ti.map((i) => ({ label: d.times[i].slice(0, 5), full: d.hvec[i].filter((v) => v != null && v <= 0).length, low: d.hvec[i].filter((v) => v != null && v >= 1 && v <= 2).length }));
+  const failRuns = d.runs.filter((r) => r.op === 'beds' && !r.ok && minOf(r.at) >= lo && minOf(r.at) < hi);
+  const marks = failRuns.map((r) => { const m = minOf(r.at); let i = pts.findIndex((p) => minOf(p.label) > m); if (i < 0) i = pts.length - 1; return { i: Math.max(0, i - 0.5), title: `${r.at.slice(0, 5)} 수집 실패: ${causeText(r.cause)[0]}` }; });
+  $('dayLine').innerHTML = lineSvg(pts, { W: 720, H: 200, marks, aria: `${dayLabel(hist.day)} ${rl} 꽉 찬 응급실 수` });
+  drawStrip(d, ti);
+  drawSnap(d, ti);
+  drawRuns(d, lo, hi);
+}
+
+function drawSlots(d, lo, hi) {
+  const S = { o: '수집 성공', r: '새 실행으로 다시 받음', f: '실패', m: '실행 기록 없음', '-': '자동 수집 전 / 아직 안 옴' };
+  const from = lo / 10, to = hi / 10, cells = d.slots.slice(from, to);
+  const per = Math.min(cells.length, window.matchMedia('(max-width: 600px)').matches ? 18 : 36); // 한 줄 = 3시간(휴대폰) 또는 6시간
+  const runsBySlot = {};
+  for (const r of d.runs.filter((x) => x.op === 'beds')) (runsBySlot[Math.floor(minOf(r.at) / 10)] ??= []).push(r);
+  const snapBySlot = {};
+  for (const t of d.times) (snapBySlot[Math.floor(minOf(t) / 10)] ??= []).push(t);
+  const cellHtml = (c, j) => {
+    const k = from + j, hh = String(Math.floor(k / 6)).padStart(2, '0'), mm = String((k % 6) * 10).padStart(2, '0');
+    const rs = runsBySlot[k] ?? [];
+    const why = rs.filter((r) => !r.ok).map((r) => `${r.at} ${causeText(r.cause)[0]}`).join('<br>');
+    const got = (snapBySlot[k] ?? []).join(', ');
+    const note = c === '-' && d.regularFrom && `${d.day} ${hh}:${mm}` < d.regularFrom ? '<br>자동 수집 시작 전(시험 수집 기간)' : '';
+    return `<i class="s-${c}" data-tip="${hh}:${mm}~ · <b>${S[c]}</b>${got ? `<br>기록 ${got}` : ''}${why ? `<br>${esc(why)}` : ''}${note}"></i>`;
+  };
+  let rowsHtml = '';
+  for (let j0 = 0; j0 < cells.length; j0 += per) {
+    const k = from + j0;
+    rowsHtml += `<div class="slotrow"><span>${String(Math.floor(k / 6)).padStart(2, '0')}:${String((k % 6) * 10).padStart(2, '0')}</span>` +
+      `<div style="grid-template-columns:repeat(${per},minmax(0,1fr))">${cells.slice(j0, j0 + per).map((c, x) => cellHtml(c, j0 + x)).join('')}</div></div>`;
+  }
+  $('slotBar').innerHTML = rowsHtml;
+  const count = (c) => cells.filter((x) => x === c).length;
+  $('slotLegend').innerHTML = [['o', '--ok'], ['r', '--accent'], ['f', '--full'], ['m', '--stale'], ['-', '--line']]
+    .filter(([c]) => count(c) || c === 'o' || c === 'f')
+    .map(([c, v]) => `<span><span class="sw" style="background:var(${v})"></span>${S[c]} ${count(c)}</span>`).join('');
+  const fails = d.runs.filter((r) => !r.ok && minOf(r.at) >= lo && minOf(r.at) < hi);
+  $('slotFails').innerHTML = fails.length
+    ? '<h3>이 시간대의 실패</h3><div class="scroll"><table><tr><th>시각</th><th>기능</th><th>원인</th><th class="hide-sm">자세히</th></tr>' +
+      fails.map((r) => { const [t] = causeText(r.cause); return `<tr><td>${r.at}${r.redo ? ' <span class="pill info">새 실행</span>' : ''}</td><td>${OP_NAME[r.op] ?? r.op}</td><td class="err">${esc(t)}</td><td class="hide-sm sub">${r.attempts ? esc(attemptsText(r.attempts)) : r.ms ? `걸린 시간 ${(r.ms / 1000).toFixed(1)}초` : ''}</td></tr>`; }).join('') + '</table></div><p class="note">원인의 뜻은 <a href="#/status">수집 상태</a> 탭의 \'원인 분석\'에 있어요.</p>' + ''
+    : '<p class="note">이 시간대에는 실패가 없어요.</p>';
+}
+
+function drawStrip(d, ti) {
+  const opts = [['busy', '붐빈 응급실만'], ['all', `${d.hospitals.length}곳 모두`]];
+  $('stripSeg').innerHTML = opts.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${v === hist.strip}">${l}</button>`).join('');
+  $('stripSeg').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; hist.strip = b.dataset.v; drawStrip(d, ti); };
+  let rows = d.hospitals.map((h, j) => ({ h, j, full: ti.filter((i) => d.hvec[i][j] != null && d.hvec[i][j] <= 0).length, low: ti.filter((i) => d.hvec[i][j] != null && d.hvec[i][j] >= 1 && d.hvec[i][j] <= 2).length }));
+  if (hist.strip === 'busy') rows = rows.filter((r) => r.full || r.low).sort((a, b) => b.full - a.full || b.low - a.low);
+  if (!ti.length) { $('strip').innerHTML = '<p class="note">이 시간대에는 수집 기록이 없어요.</p>'; return; }
+  if (!rows.length) { $('strip').innerHTML = '<p class="note">이 시간대에는 꽉 차거나 1~2개 남은 응급실이 없었어요.</p>'; return; }
+  const NAME = 150, cw = Math.max(4, Math.min(14, Math.floor(560 / ti.length))), rh = 16, W = NAME + cw * ti.length + 8, H = rh * rows.length + 22;
+  const fill = { full: css('--full'), low: css('--low'), ok: css('--ok-bg'), stale: css('--stale'), none: css('--bg') };
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="응급실별 상태 띠" class="has-tip" id="stripSvg">`;
+  rows.forEach((r, y) => {
+    const nm = r.h.name.length > 11 ? r.h.name.slice(0, 10) + '…' : r.h.name;
+    svg += `<text class="lbl" x="0" y="${y * rh + 12}"><title>${esc(r.h.name)}</title>${esc(nm)}</text>`;
+    ti.forEach((i, x) => {
+      const v = d.hvec[i][r.j], a = d.age[i][r.j];
+      svg += `<rect x="${NAME + x * cw}" y="${y * rh + 1}" width="${cw - 1}" height="${rh - 2}" rx="1.5" fill="${fill[stateOf(v, a)]}"/>`;
+    });
+  });
+  const ticks = [0, Math.floor((ti.length - 1) / 2), ti.length - 1];
+  for (const x of [...new Set(ticks)]) svg += `<text x="${NAME + x * cw + (x === ti.length - 1 ? cw : 0)}" y="${H - 6}" text-anchor="${x === 0 ? 'start' : x === ti.length - 1 ? 'end' : 'middle'}">${d.times[ti[x]].slice(0, 5)}</text>`;
+  $('strip').innerHTML = svg + '</svg>';
+  const el = $('stripSvg');
+  el.onpointermove = (e) => {
+    const box = el.getBoundingClientRect(), sx = W / box.width;
+    const px = (e.clientX - box.left) * sx, py = (e.clientY - box.top) * sx;
+    const x = Math.floor((px - NAME) / cw), y = Math.floor(py / rh);
+    if (x < 0 || x >= ti.length || y < 0 || y >= rows.length) return hideTip();
+    const r = rows[y], i = ti[x], v = d.hvec[i][r.j], a = d.age[i][r.j];
+    showTip(`<b>${esc(r.h.name)}</b><br>${d.times[i].slice(0, 5)} · 남은 병상 ${v ?? '-'}${a != null ? ` · 입력 ${a}분 전` : ''}<br>${STATE_LABEL[stateOf(v, a)]}`, e.clientX, e.clientY);
+  };
+  el.onpointerleave = hideTip;
+}
+
+function drawSnap(d, ti) {
+  if (!ti.length) { $('snapSel').innerHTML = ''; $('snapTable').innerHTML = '<tr><td class="sub">이 시간대에는 수집 기록이 없어요.</td></tr>'; return; }
+  $('snapSel').innerHTML = ti.map((i) => `<option value="${i}">${d.times[i]}</option>`).reverse().join('');
+  const render = () => {
+    const i = Number($('snapSel').value);
+    const rows = d.hospitals.map((h, j) => ({ h, v: d.hvec[i][j], a: d.age[i][j] })).sort((x, y) => (x.v ?? 99) - (y.v ?? 99) || x.h.name.localeCompare(y.h.name, 'ko'));
+    $('snapTable').innerHTML = '<tr><th>병원</th><th class="num">남은 병상</th><th>상태</th><th class="num">입력 경과</th></tr>' +
+      rows.map((r) => `<tr><td>${esc(r.h.name)}<br><span class="sub">${esc(r.h.si)}</span></td><td class="num"><b>${r.v ?? '-'}</b></td><td>${pillOf(stateOf(r.v, r.a))}</td><td class="num">${r.a ?? '-'}분</td></tr>`).join('');
+  };
+  $('snapSel').onchange = render;
+  render();
+}
+
+function drawRuns(d, lo, hi) {
+  const rs = d.runs.filter((r) => minOf(r.at) >= lo && minOf(r.at) < hi).slice().reverse();
+  $('runTable').innerHTML = '<tr><th>시각</th><th>기능</th><th>결과</th><th class="num">걸린 시간</th><th class="num hide-sm">받은 개수</th></tr>' +
+    rs.map((r) => `<tr><td>${r.at}${r.redo ? ' <span class="pill info">새 실행</span>' : ''}</td><td>${OP_NAME[r.op] ?? r.op}</td>` +
+      `<td>${r.ok ? '<span class="pill ok">성공</span>' : `<span class="pill full">${esc(causeText(r.cause)[0] || '실패')}</span>`}${r.ok && r.attempts ? `<br><span class="sub">다시 시도해서 받음: ${esc(attemptsText(r.attempts))}</span>` : ''}</td>` +
+      `<td class="num">${r.ms == null ? '-' : `${(r.ms / 1000).toFixed(1)}초`}</td><td class="num hide-sm">${r.items ?? '-'}</td></tr>`).join('') +
+    (rs.length ? '' : '<tr><td colspan="5" class="sub">이 시간대에는 실행 기록이 없어요.</td></tr>');
+}
+
+// =====================================================================
+// ③ 거절 확률
+// =====================================================================
+const HEAT_EDGES = [0.05, 0.15, 0.3, 0.5, 0.75];
+const heatStep = (p) => HEAT_EDGES.filter((t) => p >= t).length;
+const LEGEND = ['5% 미만', '5~15%', '15~30%', '30~50%', '50~75%', '75% 이상'];
+const FEW_N = 10;
+let rp, byId, obsHour, obsHb, selId, calcL = 20, heatKey = 'all';
+const isFresh = (h) => h.hvec != null && h.ageMin != null && h.ageMin <= STALE_MIN;
+
+async function showProb(sub, arg) {
+  for (const a of document.querySelectorAll('#probNav a')) setCurrent(a, a.dataset.sub === sub);
+  for (const p of document.querySelectorAll('.sub-panel')) p.hidden = p.id !== `p-${sub}`;
+  if (!model) {
+    try { model = await getJSON('model.json'); }
+    catch (e) { $('probMeta').textContent = `통계표를 아직 불러오지 못했어요 (${e.message}).`; return; }
+    rp = makeRejectProb(model);
+    byId = Object.fromEntries(status.hospitals.map((h) => [h.hpid, h]));
+    obsHour = kstHour(parseKST(status.latestAt));
+    obsHb = hourBin(obsHour);
+    if (!model.leads.includes(calcL)) calcL = model.leads[0];
+    const days = (model.range[1] - model.range[0]) / 86400e3;
+    $('probMeta').textContent = `기록 기간 ${formatKST(model.range[0]).slice(0, 16)} ~ ${formatKST(model.range[1]).slice(0, 16)} (${days < 1 ? '하루 미만' : `${days.toFixed(1)}일`}) · 거절 상태 = ${model.rejectDefinition} · 수집할 때마다 다시 계산돼요.`;
+  }
+  if (sub === 'method') drawMethod();
+  if (sub === 'table') drawHeatPanel();
+  if (sub === 'hospital') drawHospPanel(arg);
+  if (sub === 'list') drawHospTable();
+  if (sub === 'check') drawCheck();
+}
+
+function drawMethod() {
   $('stepRows').textContent = model.rows != null ? `지금까지 ${model.rows.toLocaleString()}개 기록` : '';
   $('stepPairs').textContent = `짝 ${model.pairs.toLocaleString()}쌍` + (model.staleRows ? ` · 오래된 입력 ${model.staleRows.toLocaleString()}개 제외` : '');
   const cells = Object.keys(model.pooled).filter((k) => /^[^|]+\|\d+\|\d$/.test(k)).length;
-  $('stepCells').textContent = `216칸 중 ${cells}칸에 기록 있음 (${pc(cells / 216)})`;
-
-  drawHeatSeg();
-  drawHeat('all');
-  $('heatLegend').innerHTML = '<span>비율</span>' + LEGEND.map((t, i) => `<span><i class="h${i}"></i>${t}</span>`).join('') + '<span><i style="background:var(--bg);border:1px solid var(--line)"></i>기록 없음</span>' +
-    `<span><i style="outline:2px dashed var(--muted);outline-offset:-2px"></i>기록 ${FEW_N}개 미만 (아직 믿기 어려움)</span>`;
-
-  // 기본으로 보여줄 병원: 지금 가장 붐비는 곳 (남은 병상이 가장 적은 곳)
-  const fresh = status.hospitals.filter((h) => h.hvec != null && h.ageMin != null && h.ageMin <= STALE_MIN);
-  selId = (fresh.sort((a, b) => a.hvec - b.hvec)[0] ?? status.hospitals[0])?.hpid;
-  $('hospSel').innerHTML = [...status.hospitals].sort((a, b) => a.name.localeCompare(b.name, 'ko'))
-    .map((h) => `<option value="${esc(h.hpid)}">${esc(h.name)} (${h.hvec == null ? '정보 없음' : `남은 병상 ${h.hvec}`})</option>`).join('');
-  $('hospSel').addEventListener('change', (e) => { selId = e.target.value; drawExplain(); markRow(); });
-  drawCalcSeg();
-  drawExplain();
-  drawHospTable();
+  $('stepCells').textContent = `216칸 중 ${cells}칸에 기록 있음 (${fmtP(cells / 216)})`;
 }
 
-function drawHeatSeg() {
+function drawHeatPanel() {
   const opts = [['all', '전체']].concat(HOUR_BIN_LABEL.map((l, i) => [String(i), l]));
-  $('heatSeg').innerHTML = opts.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${v === 'all'}">${l}</button>`).join('');
-  for (const b of $('heatSeg').children) b.addEventListener('click', () => {
-    for (const x of $('heatSeg').children) x.setAttribute('aria-pressed', String(x === b));
-    drawHeat(b.dataset.v);
-  });
-}
-
-function drawHeat(hbKey) {
-  const when = hbKey === 'all' ? '전체 시간대' : HOUR_BIN_LABEL[Number(hbKey)];
+  $('heatSeg').innerHTML = opts.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${v === heatKey}">${l}</button>`).join('');
+  $('heatSeg').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; heatKey = b.dataset.v; drawHeatPanel(); };
+  const when = heatKey === 'all' ? '전체 시간대' : HOUR_BIN_LABEL[Number(heatKey)];
   let html = '<tr><th scope="col" style="text-align:left">지금 남은 병상</th>' + model.leads.map((L) => `<th scope="col">${L}분 뒤</th>`).join('') + '</tr>';
   for (const b of BUCKETS) {
     html += `<tr><th scope="row">${BUCKET_LABEL[b]}</th>`;
     for (const L of model.leads) {
-      const c = model.pooled[`${b}|${L}|${hbKey}`];
-      if (!c) { html += `<td class="empty" title="${when} · 지금 ${BUCKET_LABEL[b]} → ${L}분 뒤: 기록 없음">–</td>`; continue; }
-      const p = c.k / c.n;
-      const few = c.n < FEW_N ? ' few' : '';
-      html += `<td class="h${heatStep(p)}${few}" title="${when} · 지금 ${BUCKET_LABEL[b]} → ${L}분 뒤 0 이하: ${c.k}/${c.n} = ${pc(p, 1)}${few ? ' (기록이 적어 믿기 어려움)' : ''}"><b>${pc(p)}</b><small>${c.k}/${c.n}</small></td>`;
+      const c = model.pooled[`${b}|${L}|${heatKey}`];
+      if (!c) { html += `<td class="empty" data-tip="${when} · 지금 ${BUCKET_LABEL[b]} → ${L}분 뒤: 기록 없음">–</td>`; continue; }
+      const p = c.k / c.n, few = c.n < FEW_N ? ' few' : '';
+      const upper = c.k === 0 && c.n >= 30 ? `<br>0번이어도 실제 확률의 95% 신뢰 상한은 약 ${fmtP(3 / c.n)} (3 ÷ n)` : '';
+      html += `<td class="h${heatStep(p)}${few}" data-tip="${when} · 지금 ${BUCKET_LABEL[b]} → ${L}분 뒤 0 이하<br>${kn(c)} = ${fmtP(p)}${few ? '<br>기록이 적어 아직 믿기 어려움' : ''}${upper}"><b>${fmtP0(p)}</b><small>${kn(c)}</small></td>`;
     }
     html += '</tr>';
   }
   $('heat').innerHTML = html;
+  $('heatLegend').innerHTML = '<span>비율</span>' + LEGEND.map((t, i) => `<span><i class="h${i}"></i>${t}</span>`).join('') +
+    '<span><i style="background:var(--bg);border:1px solid var(--line)"></i>기록 없음</span>' +
+    `<span><i style="outline:2px dashed var(--muted);outline-offset:-2px"></i>기록 ${FEW_N}개 미만</span>`;
 }
 
-const isFresh = (h) => h.hvec != null && h.ageMin != null && h.ageMin <= STALE_MIN;
-
-function drawCalcSeg() {
-  $('calcSeg').innerHTML = '<span class="sub" style="align-self:center">계산식 보기:</span>' +
-    model.leads.map((L) => `<button type="button" data-l="${L}" aria-pressed="${L === calcL}">${L}분</button>`).join('');
-  for (const b of $('calcSeg').querySelectorAll('button')) b.addEventListener('click', () => {
-    calcL = Number(b.dataset.l);
-    for (const x of $('calcSeg').querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b));
-    drawExplain();
-  });
+// 계산 한 단계를 식으로
+function stepFormula(st, i) {
+  const k = st.cell?.k ?? 0, n = st.cell?.n ?? 0;
+  if (st.how === 'default') return `${i}. ${esc(st.label)}: 기록이 없어 기본값 ${f4(st.value)}을 써요`;
+  if (st.how === 'start') return `${i}. ${esc(st.label)}: (k + 0.5) ÷ (n + 1) = (${k} + 0.5) ÷ (${n} + 1) = ${f4(st.value)}`;
+  return `${i}. ${esc(st.label)}: (k + ${SHRINK_M} × ${i - 1}단계) ÷ (n + ${SHRINK_M}) = (${k} + ${SHRINK_M} × ${f4(st.prior)}) ÷ (${n} + ${SHRINK_M}) = ${f4(st.value)}` +
+    ` <span class="sub">(이 칸 비중 ${fmtP(st.weight)})</span>`;
 }
 
-function drawExplain() {
+function drawHospPanel(arg) {
+  if (!$('hospSel').options.length) {
+    $('hospSel').innerHTML = [...status.hospitals].sort((a, b) => a.name.localeCompare(b.name, 'ko'))
+      .map((h) => `<option value="${esc(h.hpid)}">${esc(h.name)} (${h.hvec == null ? '정보 없음' : `남은 병상 ${h.hvec}`})</option>`).join('');
+    $('hospSel').addEventListener('change', (e) => { location.hash = `#/prob/hospital/${e.target.value}`; });
+  }
+  if (arg && byId[arg]) selId = arg;
+  if (!selId) {
+    const fresh = status.hospitals.filter(isFresh);
+    selId = (fresh.sort((a, b) => a.hvec - b.hvec)[0] ?? status.hospitals[0])?.hpid;
+  }
   const h = byId[selId];
   if (!h) return;
   $('hospSel').value = selId;
-  const hb = obsHb;
-  const hbLabel = HOUR_BIN_LABEL[hb];
+  const hbLabel = HOUR_BIN_LABEL[obsHb];
   if (!isFresh(h)) {
-    const ex = explainBase(model, { hpid: selId, hb });
+    const ex = explainBase(model, { hpid: selId, hb: obsHb });
     $('exNow').innerHTML = `<b>${esc(h.name)}</b>: 지금 상태를 알 수 없어요(${h.hvec == null ? '병상 정보 없음' : `병원 입력 ${h.ageMin}분 전`}). 이럴 때는 이 병원의 ${hbLabel} 평균 거절 비율을 써요.`;
     $('exTable').innerHTML = '<tr><th>단계</th><th class="num">기록 k/n</th><th class="num">값</th></tr>' +
-      `<tr><td>① 전체 병원 ${hbLabel} 평균</td><td class="num">${kn(ex.allCell)}</td><td class="num">${pc(ex.prior, 1)}</td></tr>` +
-      `<tr><td>② 이 병원 ${hbLabel} (비중 ${pc(ex.hospWeight)})</td><td class="num">${kn(ex.hospCell)}</td><td class="num p">${pc(ex.p, 1)}</td></tr>`;
+      ex.steps.map((st, i) => `<tr><td>${i + 1}. ${esc(st.label)}${st.weight != null ? ` <span class="sub">(비중 ${fmtP(st.weight)})</span>` : ''}</td><td class="num">${kn(st.cell)}</td><td class="num${i === ex.steps.length - 1 ? ' p' : ''}">${fmtP(st.value)}</td></tr>`).join('');
     $('calcSeg').hidden = true;
-    const k = ex.hospCell?.k ?? 0, n = ex.hospCell?.n ?? 0;
-    $('calc').innerHTML = `② = (k + ${SHRINK_M} × ①) ÷ (n + ${SHRINK_M}) = (${k} + ${SHRINK_M} × ${f3(ex.prior)}) ÷ (${n} + ${SHRINK_M}) = <b>${f3(ex.p)}</b> → ${pc(ex.p, 1)}`;
+    $('calc').innerHTML = ex.steps.map((st, i) => stepFormula(st, i + 1)).join('<br>') + `<br>→ 거절 확률 <b>${fmtP(ex.p)}</b>`;
     return;
   }
   $('calcSeg').hidden = false;
   const b = bedBucket(h.hvec);
-  $('exNow').innerHTML = `<b>${esc(h.name)}</b>: 지금 남은 병상 <b>${h.hvec}</b> → '${BUCKET_LABEL[b]}' 구간 · 병원 입력 ${h.ageMin}분 전 · 기록 시각 ${status.latestAt.slice(11, 16)} → '${hbLabel}' 시간대`;
-  let html = '<tr><th>도착까지</th><th class="num">① 전체 병원·전체 시간대</th><th class="num">② 같은 시간대(' + hbLabel + ')</th><th class="num">③ 이 병원</th><th class="num">거절 확률</th></tr>';
-  html += `<tr><td>0분</td><td colspan="3" class="sub">지금 상태 그대로 (0 이하이면 100%, 아니면 0%)</td><td class="num p">${h.hvec <= 0 ? '100%' : '0%'}</td></tr>`;
-  for (const L of model.leads) {
-    const ex = explainPoint(model, { hpid: selId, b, L, hb });
-    if (ex.fallback) {
-      html += `<tr><td>${L}분</td><td colspan="3" class="sub">이 병상 구간·도착 시간 기록이 아직 없어 병원 평균(${pc(ex.p, 1)})을 써요</td><td class="num p">${pc(ex.p, 1)}</td></tr>`;
+  $('exNow').innerHTML = `<b>${esc(h.name)}</b>: 지금 남은 병상 <b>${h.hvec}</b> → '${BUCKET_LABEL[b]}' 구간 · 병원 입력 ${h.ageMin}분 전 · 기록 시각 ${esc(status.latestAt.slice(11, 16))} → '${hbLabel}' 시간대`;
+  const exs = model.leads.map((L) => [L, explainPoint(model, { hpid: selId, b, L, hb: obsHb })]);
+  const proto = exs.find(([, ex]) => !ex.fallback)?.[1].steps ?? [];
+  let html = `<tr><th>도착까지</th>${proto.map((st, i) => `<th class="num">${i + 1}. ${esc(st.label)}</th>`).join('')}<th class="num">거절 확률</th></tr>`;
+  html += `<tr><td>0분</td><td colspan="${proto.length}" class="sub">지금 상태 그대로 (0 이하이면 100%, 아니면 0%)</td><td class="num p">${h.hvec <= 0 ? '100%' : '0%'}</td></tr>`;
+  for (const [L, ex] of exs) {
+    if (ex.fallback || ex.steps.length !== proto.length) {
+      html += `<tr><td>${L}분</td><td colspan="${proto.length}" class="sub">이 병상 구간·도착 시간 기록이 아직 없어 병원 평균을 써요</td><td class="num p">${fmtP(ex.p)}</td></tr>`;
       continue;
     }
-    html += `<tr><td>${L}분</td><td class="num" data-label="①">${kn(ex.allCell)} → ${pc(ex.all, 1)}</td><td class="num" data-label="②">${kn(ex.hourCell)} → ${pc(ex.hour, 1)}</td>` +
-      `<td class="num" data-label="③">${kn(ex.hospCell)} · 비중 ${pc(ex.hospWeight)} → ${pc(ex.p, 1)}</td><td class="num p" data-label="거절 확률">${pc(ex.p, 1)}</td></tr>`;
+    html += `<tr><td>${L}분</td>${ex.steps.map((st, i) => `<td class="num" data-label="${i + 1}. ${esc(st.label)}">${kn(st.cell)} → ${fmtP(st.value)}${st.weight != null ? `<br><span class="sub">비중 ${fmtP(st.weight)}</span>` : ''}</td>`).join('')}<td class="num p" data-label="거절 확률">${fmtP(ex.p)}</td></tr>`;
   }
   $('exTable').innerHTML = html;
-
-  const ex = explainPoint(model, { hpid: selId, b, L: calcL, hb });
-  if (ex.fallback) {
-    $('calc').innerHTML = `${calcL}분: 이 병상 구간·도착 시간 기록이 아직 없어 병원 평균 ${pc(ex.p, 1)}을 써요.`;
-    return;
-  }
-  const a = ex.allCell, t = ex.hourCell, i = ex.hospCell;
-  $('calc').innerHTML =
-    `<b>${calcL}분 뒤 도착</b><br>` +
-    `① 전체: (k + 0.5) ÷ (n + 1) = (${a.k} + 0.5) ÷ (${a.n} + 1) = ${f3(ex.all)}<br>` +
-    `② 같은 시간대: (k + ${SHRINK_M} × ①) ÷ (n + ${SHRINK_M}) = (${t?.k ?? 0} + ${SHRINK_M} × ${f3(ex.all)}) ÷ (${t?.n ?? 0} + ${SHRINK_M}) = ${f3(ex.hour)}<br>` +
-    `③ 이 병원: (k + ${SHRINK_M} × ②) ÷ (n + ${SHRINK_M}) = (${i?.k ?? 0} + ${SHRINK_M} × ${f3(ex.hour)}) ÷ (${i?.n ?? 0} + ${SHRINK_M}) = <b>${f3(ex.p)}</b> → 거절 확률 <b>${pc(ex.p, 1)}</b>` +
-    `<br><span class="sub">①에 0.5와 1을 더하는 건 기록이 적을 때 0%나 100%로 딱 떨어지지 않게 하려는 거예요.</span>`;
+  $('calcSeg').innerHTML = '<span class="sub" style="align-self:center">계산식 보기:</span>' + model.leads.map((L) => `<button type="button" data-l="${L}" aria-pressed="${L === calcL}">${L}분</button>`).join('');
+  $('calcSeg').onclick = (e) => { const bt = e.target.closest('button'); if (!bt) return; calcL = Number(bt.dataset.l); drawHospPanel(); };
+  const ex = explainPoint(model, { hpid: selId, b, L: calcL, hb: obsHb });
+  $('calc').innerHTML = `<b>${calcL}분 뒤 도착</b><br>` + ex.steps.map((st, i) => stepFormula(st, i + 1)).join('<br>') +
+    `<br>→ 거절 확률 <b>${fmtP(ex.p)}</b>` + (ex.fallback ? '<br><span class="sub">이 병상 구간·도착 시간 기록이 없어 병원 평균을 썼어요.</span>' : '') +
+    '<br><span class="sub">1단계에 0.5와 1을 더하는 건 기록이 적을 때 0%나 100%로 딱 떨어지지 않게 하려는 거예요.</span>';
 }
 
 function drawHospTable() {
@@ -521,25 +949,112 @@ function drawHospTable() {
     const fresh = isFresh(h);
     const p = rp({ hpid: h.hpid, hvec: h.hvec ?? NaN, ageMin: h.ageMin ?? Infinity, leadMin: L, hourKST: obsHour }).p;
     const ex = fresh ? explainPoint(model, { hpid: h.hpid, b: bedBucket(h.hvec), L, hb: obsHb }) : explainBase(model, { hpid: h.hpid, hb: obsHb });
-    const w = ex.fallback ? ex.fallback.hospWeight : ex.hospWeight;
+    const w = ex.steps.at(-1)?.weight ?? 0;
     const n = Object.entries(model.hospitals[h.hpid]?.counts ?? {}).filter(([k]) => k.split('|')[1] === String(L)).reduce((s, [, c]) => s + c.n, 0);
     return { h, fresh, p, w, n };
   }).sort((a, b) => b.p - a.p || a.h.name.localeCompare(b.h.name, 'ko'));
-  $('hospProb').innerHTML = `<tr><th>병원</th><th class="num">지금 병상</th><th class="num">${L}분 뒤 거절 확률</th><th class="num">병원 기록 비중</th><th class="num">이 병원 짝(${L}분)</th></tr>` +
-    rows.map((r) => `<tr class="row" data-id="${esc(r.h.hpid)}"><td>${esc(r.h.name)}<br><span class="sub">${esc(r.h.si ?? '')}</span></td>` +
-      `<td class="num">${r.fresh ? r.h.hvec : '<span class="sub">모름</span>'}</td><td class="num"><b>${pc(r.p, 1)}</b></td>` +
-      `<td class="num">${pc(r.w)}</td><td class="num">${r.n.toLocaleString()}</td></tr>`).join('');
-  for (const tr of $('hospProb').querySelectorAll('tr.row')) tr.addEventListener('click', () => {
-    selId = tr.dataset.id;
-    drawExplain();
-    markRow();
-    $('hospSel').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  });
-  markRow();
+  $('hospProb').innerHTML = `<tr><th>병원</th><th class="num">지금 병상</th><th class="num">${L}분 뒤 거절 확률</th><th class="num hide-sm">병원 기록 비중</th><th class="num hide-sm">이 병원 짝(${L}분)</th></tr>` +
+    rows.map((r) => `<tr class="row-link" data-id="${esc(r.h.hpid)}"><td>${esc(r.h.name)}<br><span class="sub">${esc(r.h.si ?? '')}</span></td>` +
+      `<td class="num">${r.fresh ? r.h.hvec : '<span class="sub">모름</span>'}</td><td class="num"><b>${fmtP(r.p)}</b></td>` +
+      `<td class="num hide-sm">${fmtP(r.w)}</td><td class="num hide-sm">${r.n.toLocaleString()}</td></tr>`).join('');
+  $('hospProb').onclick = (e) => { const tr = e.target.closest('tr[data-id]'); if (tr) location.hash = `#/prob/hospital/${tr.dataset.id}`; };
 }
 
-function markRow() {
-  for (const tr of $('hospProb').querySelectorAll('tr.row')) tr.classList.toggle('sel', tr.dataset.id === selId);
+async function drawCheck() {
+  if (!validation) {
+    try { validation = await getJSON('validation.json'); }
+    catch (e) { $('checkBody').innerHTML = `<p class="sub">정확도 점검 파일을 아직 만들지 않았어요. 다음 수집 때 생겨요. (${esc(e.message)})</p>`; return; }
+  }
+  const v = validation;
+  $('checkLead').textContent = `${formatKST(v.range[0]).slice(5, 16)} ~ ${formatKST(v.cutoff).slice(5, 16)} 기록(앞 ${Math.round(v.split * 100)}%)으로 통계표를 만들고, 그 뒤 ${formatKST(v.range[1]).slice(5, 16)}까지의 실제 결과를 맞혀 봤어요. 미래를 미리 보지 않도록 시간 순서로 나눴어요.`;
+  const M = [['ours', '우리 방식', '지금 상태 + 도착까지 시간 + 시간대 + 병원 기록'], ['nowOnly', '지금 상태만', '일반 병상 앱처럼 지금 0 이하면 거절'], ['avgOnly', '평균만', '병원의 시간대 평균, 지금 상태는 안 봄']];
+  const leads = Object.keys(v.byLead);
+  const maxB = Math.max(...leads.flatMap((L) => M.map(([m]) => v.byLead[L].brier[m] ?? 0)));
+  let html = '<h3>Brier 점수 (0에 가까울수록 정확)</h3><div class="scrollx"><table><tr><th>도착까지</th>' + M.map(([, l, d]) => `<th class="num" title="${esc(d)}">${l}</th>`).join('') + '<th class="num">비교한 짝</th></tr>';
+  for (const L of leads) {
+    const R = v.byLead[L];
+    html += `<tr><td>${L}분 뒤</td>` + M.map(([m]) => `<td class="num"><span class="hbar ${m === 'ours' ? '' : 'ref'}" style="width:${Math.round((R.brier[m] / maxB) * 60)}px"></span>${R.brier[m] == null ? '-' : R.brier[m].toFixed(4)}</td>`).join('') + `<td class="num">${R.n.toLocaleString()}</td></tr>`;
+  }
+  html += '</table></div><p class="note">Brier 점수 = (예측 확률 − 실제 결과)²의 평균. 실제로 꽉 찼으면 결과 1, 아니면 0이에요. 막대가 짧을수록 정확해요.</p>';
+  const a20 = v.byLead[v.calibLead] ?? v.byLead[leads[0]];
+  if (a20?.appMiss?.n) html += `<p class="note">지금 병상이 1개 이상이라 일반 앱에서는 '가능'으로 보이는 경우 중, ${v.calibLead}분 뒤 실제로 꽉 차 있던 비율은 <b>${fmtP(a20.appMiss.k / a20.appMiss.n)}</b> (${a20.appMiss.k}/${a20.appMiss.n.toLocaleString()})이고, 우리 방식은 평균 <b>${fmtP(a20.appMiss.pSum / a20.appMiss.n)}</b>로 예측했어요.</p>`;
+  html += `<h3>예측이 실제와 맞나 (${v.calibLead}분 뒤, 예측 확률 구간별)</h3><div class="scrollx"><table><tr><th>예측 구간</th><th class="num">짝 수</th><th class="num">예측 평균</th><th class="num">실제 비율</th><th class="num">차이</th></tr>` +
+    v.calib.filter((c) => c.n).map((c) => `<tr><td>${Math.round(c.lo * 100)}~${Math.round(c.hi * 100)}%</td><td class="num">${c.n.toLocaleString()}</td><td class="num">${fmtP(c.pSum / c.n)}</td><td class="num">${fmtP(c.k / c.n)}</td><td class="num">${((c.pSum / c.n - c.k / c.n) * 100).toFixed(1)}%p</td></tr>`).join('') + '</table></div>';
+  html += `<h3>지금 남은 병상 구간별 (${v.calibLead}분 뒤)</h3><div class="scrollx"><table><tr><th>지금 남은 병상</th><th class="num">짝 수</th><th class="num">예측 평균</th><th class="num">실제 비율</th></tr>` +
+    BUCKETS.filter((b) => v.bucket[b]?.n).map((b) => { const c = v.bucket[b]; return `<tr><td>${BUCKET_LABEL[b]}</td><td class="num">${c.n.toLocaleString()}</td><td class="num">${fmtP(c.pSum / c.n)}</td><td class="num">${fmtP(c.k / c.n)}</td></tr>`; }).join('') + '</table></div>' +
+    '<p class="note">예측 평균과 실제 비율이 가까울수록 확률이 믿을 만해요. 짝 수가 적은 줄은 아직 흔들릴 수 있어요. 기록이 쌓이면 수집할 때마다 다시 계산돼요.</p>';
+  $('checkBody').innerHTML = html;
+}
+
+// =====================================================================
+// ④ 수집 상태
+// =====================================================================
+function showStatus() {
+  if (inited.status) return;
+  inited.status = true;
+  const c = status.collect;
+  if (!c) { $('stLine').innerHTML = '<span class="sub">자세한 수집 상태는 다음 수집 때부터 보여요.</span>'; return; }
+  const lr = c.lastRun;
+  const nextSlot = Math.ceil((Date.now() + 1) / 600e3) * 600e3;
+  $('stLine').innerHTML = lr
+    ? `<span>마지막 실행 <b>${esc(lr.at.slice(5, 16))}</b>${lr.redo ? ' <span class="pill info">새 실행</span>' : ''}</span>` +
+      lr.ops.map((o) => `<span>${OP_NAME[o.op] ?? o.op} ${o.ok ? '<span class="pill ok">성공</span>' : `<span class="pill full">${esc(causeText(o.cause)[0] || '실패')}</span>`}</span>`).join('') +
+      `<span class="sub">다음 수집 예정 약 ${formatKST(nextSlot).slice(11, 16)}</span>`
+    : '';
+
+  // 수집률 표
+  const W = c.windows, keys = Object.keys(W);
+  if (c.regularFrom && status.firstAt && c.regularFrom > status.firstAt) $('rateNote').textContent = `자동 수집은 ${c.regularFrom.slice(5, 16)}부터 자리 잡았어요. 그 전(${status.firstAt.slice(5, 16)}~)은 설정하며 손으로 돌린 시험 수집이라 수집률 계산에서 뺐어요.`;
+  const cell = (o) => (o ? `${o.ok}<span class="sub"> / 실패 ${o.fail}${o.skip ? ` / 건너뜀 ${o.skip}` : ''}</span>` : '-');
+  $('rateTable').innerHTML = '<tr><th>기간</th><th class="num">10분 칸 수집률</th>' + Object.values(OP_NAME).map((n) => `<th class="num">${n}<br><span class="sub">성공 / 실패</span></th>`).join('') + '</tr>' +
+    keys.map((k) => { const w = W[k]; return `<tr><td>${esc(w.label)}</td><td class="num"><b>${fmtP(w.slots.expected ? w.slots.got / w.slots.expected : null)}</b><br><span class="sub">${w.slots.got}/${w.slots.expected}칸</span></td>` +
+      Object.keys(OP_NAME).map((op) => `<td class="num">${cell(w.ops[op])}</td>`).join('') + '</tr>'; }).join('');
+
+  // 실패 기록
+  $('failTable').innerHTML = '<tr><th>시각</th><th>실패한 기능</th><th>원인</th><th class="hide-sm">자세히</th><th>뒤처리</th></tr>' +
+    c.failures.map((g) => {
+      const main = g.ops.find((o) => o.op === 'beds') ?? g.ops[0];
+      const [t] = causeText(main.cause);
+      const how = main.attempts ? attemptsText(main.attempts) : main.ms ? `걸린 시간 ${(main.ms / 1000).toFixed(1)}초` : '';
+      const rec = g.recovered ? (g.recovered.redo ? `<span class="pill info">${g.recovered.afterMin}분 뒤 새 실행으로 받음</span>` : `${g.recovered.afterMin}분 뒤 다음 수집에서 받음`) : '<span class="err">아직 못 받음</span>';
+      return `<tr><td>${esc(g.at.slice(5, 16))}${g.redo ? ' <span class="pill info">새 실행</span>' : ''}</td><td>${g.ops.map((o) => OP_NAME[o.op] ?? o.op).join(', ')}</td>` +
+        `<td class="err">${esc(t)}</td><td class="hide-sm sub">${esc(how)}</td><td>${rec}</td></tr>`;
+    }).join('') + (c.failures.length ? '' : '<tr><td colspan="5" class="sub">최근 7일 동안 실패가 없어요.</td></tr>');
+
+  // 원인 분석
+  const byCause = {};
+  for (const g of c.failures) { const m = g.ops.find((o) => o.op === 'beds') ?? g.ops[0]; (byCause[m.cause] ??= []).push(g); }
+  const connect = (k) => ['UND_ERR_CONNECT_TIMEOUT', 'LEGACY_CONNECT'].includes(k);
+  const total = c.failures.length;
+  let ana = '<div class="scrollx"><table><tr><th>원인</th><th class="num">횟수</th><th>뜻</th></tr>' +
+    Object.entries(byCause).sort((a, b) => b[1].length - a[1].length).map(([k, gs]) => { const [t, dd] = causeText(k); return `<tr><td>${esc(t)}</td><td class="num">${gs.length}</td><td class="sub">${esc(dd)}</td></tr>`; }).join('') + '</table></div>';
+  if (total && Object.keys(byCause).every(connect)) {
+    const together = c.failures.filter((g) => g.ops.length > 1).length;
+    const quick = c.failures.filter((g) => g.recovered && g.recovered.afterMin <= 12).length;
+    ana += `<p class="note">최근 7일 실패 ${total}번이 모두 '연결 시간 초과'였어요. ${together}번은 같은 실행의 다른 기능도 함께 실패했고, ${quick}번은 10분쯤 뒤 다음 수집에서 바로 받았어요. ` +
+      '실패한 실행에서는 몇 번을 다시 시도해도 연결이 안 되다가 다음 실행에서는 바로 된다는 뜻이라, 공공데이터 서버가 잠깐 멈춘 것보다는 그 실행에 쓰인 컴퓨터(GitHub가 빌려주는 실행 컴퓨터)의 연결을 받아 주지 않은 것으로 보여요.</p>';
+  } else if (!total) ana = '<p class="note">최근 7일 동안 실패가 없어요.</p>';
+  $('causeBody').innerHTML = ana;
+
+  // 수집 간격
+  const iv = c.intervals;
+  $('gapBody').innerHTML = `<p style="margin:0 0 8px">간격 중앙값 <b>${iv.median == null ? '-' : iv.median.toFixed(1)}분</b> · 90%는 <b>${iv.p90 == null ? '-' : iv.p90.toFixed(1)}분</b> 이내 · 가장 긴 간격 ${iv.max == null ? '-' : Math.round(iv.max)}분</p>` +
+    (c.gaps.length ? '<div class="scroll"><table><tr><th>사이</th><th class="num">간격</th><th>이유</th></tr>' + c.gaps.slice().reverse().map((g) => {
+      const t0 = parseKST(g.from), t1 = parseKST(g.to);
+      const f = c.failures.filter((x) => { const t = parseKST(x.at); return t > t0 && t < t1; }).length;
+      return `<tr><td>${esc(g.from.slice(5, 16))} → ${esc(g.to.slice(11, 16))}</td><td class="num">${g.min}분</td><td class="sub">${f ? `실패 ${f}번` : '실행 기록 없음(호출이 오지 않음)'}</td></tr>`;
+    }).join('') + '</table></div>' : '<p class="note">15분 넘게 비는 간격이 없어요.</p>');
+
+  // 빠진 기관
+  const ex = status.excluded ?? [];
+  $('exCount').textContent = `${ex.length}곳`;
+  $('exTable2').innerHTML = '<tr><th>기관</th><th>시군</th><th>분류</th></tr>' + ex.map((e) => `<tr><td>${esc(e.name)}</td><td>${esc(e.si)}</td><td class="sub">${esc(e.cls)}</td></tr>`).join('');
+
+  // 입력 신선도
+  const hs = [...status.hospitals].sort((a, b) => (b.staleRate ?? -1) - (a.staleRate ?? -1) || (b.ageMedian ?? 0) - (a.ageMedian ?? 0));
+  $('freshTable').innerHTML = '<tr><th>병원</th><th class="num">기록 수</th><th class="num">60분 넘은 비율</th><th class="num">입력 경과 중앙값</th><th class="num hide-sm">가장 늦었던 때</th></tr>' +
+    hs.map((h) => `<tr><td>${esc(h.name)}<br><span class="sub">${esc(h.si)} · ${esc(h.cls ?? '')}</span></td><td class="num">${h.records}</td>` +
+      `<td class="num">${h.staleRate > 0.1 ? `<span class="pill low">${fmtP(h.staleRate)}</span>` : fmtP(h.staleRate)}</td><td class="num">${h.ageMedian ?? '-'}분</td><td class="num hide-sm">${h.ageMax ?? '-'}분</td></tr>`).join('');
 }
 
 main();

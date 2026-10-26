@@ -131,13 +131,23 @@ export const rate = (cell) => (cell && cell.n ? (cell.k + 0.5) / (cell.n + 1) : 
 const weightOf = (cell, m) => (cell ? cell.n / (cell.n + m) : 0); // 그 칸 자신의 기록이 차지하는 비중
 
 // ---- 계산 과정을 단계별로 돌려주는 함수 (앱 계산과 현황판 설명이 같은 코드를 쓴다)
+// steps: 화면에 계산 과정을 그대로 보여 주기 위한 단계 목록. 각 단계는
+//   { scope, label, cell(k/n), how, prior(앞 단계 값), weight(이 칸의 비중), value }
+//   how = 'start'(맨 바깥: (k+0.5)÷(n+1)) | 'shrink'((k+m×앞 단계)÷(n+m)) | 'default'(기록이 없어 정해 둔 값)
 
 // 지금 상태를 모를 때: 병원의 시간대 평균 거절 비율을 전체 병원의 시간대 평균 쪽으로 당긴다
 export function explainBase(model, { hpid, hb, m = SHRINK_M }) {
   const allCell = model.pooled[`base|${hb}`] ?? null;
   const prior = rate(allCell) ?? 0.1;
   const hospCell = model.hospitals[hpid]?.base[String(hb)] ?? null;
-  return { allCell, prior, hospCell, hospWeight: weightOf(hospCell, m), p: shrink(hospCell, prior, m) };
+  const p = shrink(hospCell, prior, m);
+  const hospWeight = weightOf(hospCell, m);
+  const when = HOUR_BIN_LABEL[hb];
+  const steps = [
+    { scope: 'allBase', label: `전체 병원 ${when} 평균`, cell: allCell, how: allCell ? 'start' : 'default', value: prior },
+    { scope: 'hospBase', label: `이 병원 ${when}`, cell: hospCell, how: 'shrink', prior, weight: hospWeight, value: p },
+  ];
+  return { allCell, prior, hospCell, hospWeight, p, steps };
 }
 
 // 한 칸(지금 병상 구간 b, 도착까지 L분, 시간대 hb)의 확률: 전체 병원·전체 시간대 → 같은 시간대 → 이 병원 순으로 3단계
@@ -147,13 +157,20 @@ export function explainPoint(model, { hpid, b, L, hb, m = SHRINK_M }) {
   const all = rate(allCell);
   if (all == null) {
     const base = explainBase(model, { hpid, hb, m });
-    return { fallback: base, p: base.p }; // 이 병상 구간·도착 시간 기록이 아예 없으면 평균값을 쓴다
+    return { fallback: base, p: base.p, steps: base.steps }; // 이 병상 구간·도착 시간 기록이 아예 없으면 평균값을 쓴다
   }
   const hourCell = P[`${b}|${L}|${hb}`] ?? null;
   const hour = shrink(hourCell, all, m);
   const hospCell = model.hospitals[hpid]?.counts[`${b}|${L}|${hb}`] ?? null;
   const p = shrink(hospCell, hour, m);
-  return { allCell, all, hourCell, hourWeight: weightOf(hourCell, m), hour, hospCell, hospWeight: weightOf(hospCell, m), p };
+  const hourWeight = weightOf(hourCell, m);
+  const hospWeight = weightOf(hospCell, m);
+  const steps = [
+    { scope: 'all', label: '전체 병원·전체 시간대', cell: allCell, how: 'start', value: all },
+    { scope: 'hour', label: `같은 시간대(${HOUR_BIN_LABEL[hb]})`, cell: hourCell, how: 'shrink', prior: all, weight: hourWeight, value: hour },
+    { scope: 'hosp', label: '이 병원', cell: hospCell, how: 'shrink', prior: hour, weight: hospWeight, value: p },
+  ];
+  return { allCell, all, hourCell, hourWeight, hour, hospCell, hospWeight, p, steps };
 }
 
 /**
