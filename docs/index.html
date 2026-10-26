@@ -122,6 +122,25 @@
   .bar { fill: var(--full); } .bar.empty { fill: var(--line); }
   #tip { position: fixed; z-index: 2000; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12.5px; line-height: 1.5; padding: 6px 9px; border-radius: 6px; max-width: 280px; display: none; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
 
+  /* 접고 펴는 칸: 화살표를 누르면 아래로 펼쳐지고, 다시 누르면 접힌다 */
+  .fold { scroll-margin-top: 64px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 16px; box-shadow: 0 1px 0 var(--line); transition: box-shadow .25s ease, transform .25s ease; }
+  .fold.open { box-shadow: 0 10px 24px -12px rgba(0,0,0,.35), 0 2px 6px -2px rgba(0,0,0,.12); transform: translateY(-1px); }
+  .fold-btn { width: 100%; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font: inherit; color: var(--ink); background: linear-gradient(var(--surface), var(--bg)); border: 0; border-radius: 12px; padding: 12px 16px; cursor: pointer; text-align: left; }
+  .fold.open .fold-btn { border-bottom: 1px solid var(--line); border-radius: 12px 12px 0 0; }
+  .fold-btn .ft { font-size: 15px; font-weight: 700; }
+  .fold-btn .arrow { margin-left: auto; display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); font-size: 12px; transition: transform .3s ease; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .fold.open .fold-btn .arrow { transform: rotate(180deg); }
+  .fold-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s ease; }
+  .fold.open .fold-body { grid-template-rows: 1fr; }
+  .fold-inner { overflow: hidden; min-height: 0; }
+  .fold-pad { padding: 12px 16px 16px; }
+  @media (prefers-reduced-motion: reduce) { .fold, .fold-body, .fold-btn .arrow { transition: none; } }
+  #hmap { height: 460px; border-radius: 8px; border: 1px solid var(--line); }
+  @media (max-width: 600px) { #hmap { height: 340px; } }
+  a.kpi { display: block; text-decoration: none; color: inherit; }
+  a.kpi:hover { border-color: var(--accent); }
+  a.kpi .d::after { content: ' ›'; }
+
   /* 날짜별 기록 */
   .days { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
   .day { display: block; text-decoration: none; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
@@ -236,24 +255,38 @@
         <p class="note">날짜별로 자세히 보려면 '날짜별 기록' 탭을 쓰세요.</p>
       </section>
     </div>
-    <div class="grid2">
-      <section class="card">
-        <h2>시군별</h2>
-        <p class="lead">시군마다 응급실 수와 지금 꽉 찬 곳이에요.</p>
-        <div class="scroll"><table id="siTable"></table></div>
-        <p class="note" id="noEr"></p>
-      </section>
-      <section class="card">
-        <h2>지금 걸려 있는 수용 불가 메시지 <span class="sub" id="msgCount"></span></h2>
+    <section class="card">
+      <h2>시군별</h2>
+      <p class="lead">시군마다 응급실 수와 지금 꽉 찬 곳이에요.</p>
+      <div class="scroll"><table id="siTable"></table></div>
+      <p class="note" id="noEr"></p>
+    </section>
+    <section class="fold" id="msgFold">
+      <button type="button" class="fold-btn" aria-expanded="false" aria-controls="msgBody"><span class="ft">수용 불가 메시지</span><span class="sub" id="msgCount"></span><span class="arrow" aria-hidden="true">▼</span></button>
+      <div class="fold-body" id="msgBody"><div class="fold-inner"><div class="fold-pad">
         <p class="lead">병원이 직접 올린 '이런 환자는 받기 어려움' 안내예요. 확률 계산에는 쓰지 않아요.</p>
         <input type="search" id="msgSearch" placeholder="병원 이름이나 내용으로 찾기 (예: 소아, 전문의)">
         <div class="scroll"><table id="msgTable"></table></div>
-      </section>
-    </div>
+      </div></div></div>
+    </section>
   </section>
 
   <!-- ② 날짜별 기록 -->
   <section class="tab" id="tab-history" hidden>
+    <section class="fold" id="hMapFold">
+      <button type="button" class="fold-btn" aria-expanded="false" aria-controls="hMapBody"><span class="ft">지도로 보기</span><span class="sub" id="hMapWhen"></span><span class="arrow" aria-hidden="true">▼</span></button>
+      <div class="fold-body" id="hMapBody"><div class="fold-inner"><div class="fold-pad">
+        <div class="pick"><label for="hMapSel" class="sub">어느 때의 상태</label><select id="hMapSel"></select></div>
+        <div id="hmap" role="img" aria-label="고른 시각의 응급실 상태 지도"></div>
+        <div class="legend">
+          <span><span class="dot" style="background:var(--full)"></span>꽉 참 (0 이하)</span>
+          <span><span class="dot" style="background:var(--low)"></span>1~2개 남음</span>
+          <span><span class="dot" style="background:var(--ok)"></span>3개 이상</span>
+          <span><span class="dot" style="background:var(--stale)"></span>입력 60분 넘음 · 기록 없음</span>
+        </div>
+        <p class="note">처음에는 '지금 상태'를 보여 줘요. 날짜를 고르면 그날의 수집 시각을 골라 그때의 상태를 볼 수 있어요.</p>
+      </div></div></div>
+    </section>
     <div id="histList">
       <section class="card">
         <h2>날짜 고르기</h2>
@@ -497,7 +530,7 @@ function route() {
   const tab = ['now', 'history', 'prob', 'status'].includes(parts[0]) ? parts[0] : 'now';
   for (const a of document.querySelectorAll('nav.tabs a')) setCurrent(a, a.dataset.tab === tab);
   for (const s of document.querySelectorAll('section.tab')) s.hidden = s.id !== `tab-${tab}`;
-  if (tab === 'now') showNow();
+  if (tab === 'now') showNow(parts[1]);
   if (tab === 'history') showHistory(parts[1], parts[2]);
   if (tab === 'prob') showProb(parts[1] || 'method', parts[2]);
   if (tab === 'status') showStatus();
@@ -507,7 +540,7 @@ function route() {
 // ① 지금
 // =====================================================================
 let map;
-function showNow() {
+function showNow(sub) {
   if (!inited.now) {
     inited.now = true;
     const s = status, hs = s.hospitals;
@@ -523,8 +556,8 @@ function showNow() {
       ['1~2개 남음', k.lowNow, '곳', 'low', ''],
       ['3개 이상', k.okNow, '곳', 'ok', ''],
       ['입력 오래됨', staleN, '곳', 'stale', '병원 입력 60분 넘음'],
-      ['수용 불가 메시지', k.activeMessages, '건', '', '병원이 올린 안내'],
-    ].map(([label, v, unit, cls, d]) => `<div class="kpi ${cls}"><div class="k">${label}</div><div class="v">${v}<small>${unit}</small></div>${d ? `<div class="d">${d}</div>` : ''}</div>`).join('');
+      ['수용 불가 메시지', k.activeMessages, '건', '', '눌러서 보기', '#/now/messages'],
+    ].map(([label, v, unit, cls, d, href]) => `<${href ? `a href="${href}"` : 'div'} class="kpi ${cls}"><div class="k">${label}</div><div class="v">${v}<small>${unit}</small></div>${d ? `<div class="d">${d}</div>` : ''}</${href ? 'a' : 'div'}>`).join('');
     drawMap(hs);
     drawErTable(hs);
     drawHours(s.byHour);
@@ -533,6 +566,18 @@ function showNow() {
     drawMsgs(s.messages, s.messagesAt);
   }
   setTimeout(() => map && map.invalidateSize(), 50);
+  if (sub === 'messages') { setFold($('msgFold'), true); setTimeout(() => $('msgFold').scrollIntoView({ behavior: 'smooth', block: 'start' }), 400); } // 펼쳐진 뒤 스크롤
+}
+
+// 접는 칸 열기·닫기 (onOpen: 펼쳐진 뒤 할 일, 예: 지도 크기 다시 맞추기)
+function setFold(el, open) {
+  el.classList.toggle('open', open);
+  el.querySelector('.fold-btn').setAttribute('aria-expanded', String(open));
+  el.querySelector('.arrow').textContent = '▼'; // 회전으로 ▲ 모양이 된다
+  if (open && el._onOpen) setTimeout(el._onOpen, 380);
+}
+for (const el of document.querySelectorAll('.fold')) {
+  el.querySelector('.fold-btn').addEventListener('click', () => setFold(el, !el.classList.contains('open')));
 }
 
 function drawMap(hs) {
@@ -659,7 +704,52 @@ function drawMsgs(msgs, at) {
 // =====================================================================
 // ② 날짜별 기록
 // =====================================================================
-const hist = { day: null, data: null, range: 'all', hour: null, strip: 'busy' };
+const hist = { day: null, data: null, range: 'all', hour: null, strip: 'busy', mapAt: 'now', ti: null };
+
+// 날짜별 기록의 지도: 'now' = 지금 상태(status.json), 숫자 = 고른 날의 그 수집 시각
+let hmap, hLayer;
+function hMapStates(at) {
+  if (at === 'now' || !hist.data) return { when: `지금 상태 (${(status.latestAt ?? '').slice(5, 16)})`, list: status.hospitals.map((h) => ({ h, v: h.hvec, a: h.ageMin })) };
+  const d = hist.data, i = Number(at);
+  const byHp = Object.fromEntries(status.hospitals.map((h) => [h.hpid, h]));
+  return { when: `${d.day.slice(5)} ${d.times[i].slice(0, 5)} 상태`, list: d.hospitals.map((x, j) => ({ h: { ...x, ...(byHp[x.hpid] ? { lat: byHp[x.hpid].lat, lon: byHp[x.hpid].lon, cls: byHp[x.hpid].cls } : {}) }, v: d.hvec[i][j], a: d.age[i][j] })) };
+}
+function drawHistMap() {
+  const fold = $('hMapFold');
+  // 고를 수 있는 때: 지금 + (날짜를 골랐으면) 그날 고른 시간대의 수집 시각
+  const ti = hist.day && hist.data ? hist.ti ?? [] : [];
+  const opts = [['now', `지금 상태 (${(status.latestAt ?? '').slice(5, 16)})`]].concat(ti.slice().reverse().map((i) => [String(i), `${hist.data.day.slice(5)} ${hist.data.times[i]}`]));
+  if (!opts.some(([v]) => v === hist.mapAt)) hist.mapAt = 'now';
+  $('hMapSel').innerHTML = opts.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('');
+  $('hMapSel').value = hist.mapAt;
+  $('hMapSel').onchange = () => { hist.mapAt = $('hMapSel').value; if (hist.mapAt !== 'now' && $('snapSel').querySelector(`option[value="${hist.mapAt}"]`)) { $('snapSel').value = hist.mapAt; $('snapSel').onchange?.(); } else paintHistMap(); };
+  fold._onOpen = () => { ensureHistMap(); paintHistMap(); };
+  $('hMapWhen').textContent = hMapStates(hist.mapAt).when;
+  if (fold.classList.contains('open')) { ensureHistMap(); paintHistMap(); }
+}
+function ensureHistMap() {
+  if (hmap) { hmap.invalidateSize(); return; }
+  hmap = L.map('hmap', { scrollWheelZoom: false }).setView([37.45, 127.1], 9);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap contributors' }).addTo(hmap);
+  hLayer = L.layerGroup().addTo(hmap);
+  const pts = status.hospitals.filter((h) => Number.isFinite(h.lat)).map((h) => [h.lat, h.lon]);
+  hmap.invalidateSize();
+  if (pts.length) hmap.fitBounds(pts, { padding: [20, 20], maxZoom: 12 });
+}
+function paintHistMap() {
+  const { when, list } = hMapStates(hist.mapAt);
+  $('hMapWhen').textContent = when;
+  if (!hmap) return;
+  hLayer.clearLayers();
+  const color = { full: css('--full'), low: css('--low'), ok: css('--ok'), stale: css('--stale'), none: css('--stale') };
+  const order = { ok: 0, none: 1, stale: 1, low: 2, full: 3 };
+  list.filter((r) => Number.isFinite(r.h.lat) && Number.isFinite(r.h.lon))
+    .map((r) => ({ ...r, st: stateOf(r.v, r.a) }))
+    .sort((a, b) => order[a.st] - order[b.st])
+    .forEach((r) => L.circleMarker([r.h.lat, r.h.lon], { radius: r.h.cls === '권역응급의료센터' ? 9 : 7, color: '#fff', weight: 1.5, fillColor: color[r.st], fillOpacity: 0.95 })
+      .bindPopup(`<b>${esc(r.h.name)}</b><br>${esc(when)}<br>${pillOf(r.st)} 남은 병상 <b>${r.v ?? '-'}</b>${r.a != null ? `<br>병원 입력 ${r.a}분 전` : ''}`)
+      .addTo(hLayer));
+}
 
 async function showHistory(day, sub) {
   if (!histIndex) {
@@ -668,7 +758,7 @@ async function showHistory(day, sub) {
   }
   $('histList').hidden = !!day;
   $('histDay').hidden = !day;
-  if (!day) return drawDayList();
+  if (!day) { hist.day = null; hist.data = null; hist.ti = null; drawHistMap(); return drawDayList(); }
   if (!histCache[day]) {
     try { histCache[day] = await getJSON(`history/${day}.json`); }
     catch (e) { $('dayTitle').textContent = `${day} 기록을 불러오지 못했어요`; return; }
@@ -725,6 +815,7 @@ function drawDay() {
   const [lo, hi, rl] = histRange();
   const ti = d.times.map((t, i) => i).filter((i) => { const m = minOf(d.times[i]); return m >= lo && m < hi; });
   $('rangeInfo').textContent = `${rl} · 수집 ${ti.length}번`;
+  hist.ti = ti;
 
   drawSlots(d, lo, hi);
   // 꽉 찬 응급실 수 변화
@@ -735,6 +826,7 @@ function drawDay() {
   drawStrip(d, ti);
   drawSnap(d, ti);
   drawRuns(d, lo, hi);
+  drawHistMap();
 }
 
 function drawSlots(d, lo, hi) {
@@ -814,7 +906,7 @@ function drawSnap(d, ti) {
     $('snapTable').innerHTML = '<tr><th>병원</th><th class="num">남은 병상</th><th>상태</th><th class="num">입력 경과</th></tr>' +
       rows.map((r) => `<tr><td>${esc(r.h.name)}<br><span class="sub">${esc(r.h.si)}</span></td><td class="num"><b>${r.v ?? '-'}</b></td><td>${pillOf(stateOf(r.v, r.a))}</td><td class="num">${r.a ?? '-'}분</td></tr>`).join('');
   };
-  $('snapSel').onchange = render;
+  $('snapSel').onchange = () => { render(); hist.mapAt = $('snapSel').value; drawHistMap(); };
   render();
 }
 
