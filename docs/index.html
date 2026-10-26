@@ -135,8 +135,6 @@
   .fold-inner { overflow: hidden; min-height: 0; }
   .fold-pad { padding: 12px 16px 16px; }
   @media (prefers-reduced-motion: reduce) { .fold, .fold-body, .fold-btn .arrow { transition: none; } }
-  #hmap { height: 460px; border-radius: 8px; border: 1px solid var(--line); }
-  @media (max-width: 600px) { #hmap { height: 340px; } }
   a.kpi { display: block; text-decoration: none; color: inherit; }
   a.kpi:hover { border-color: var(--accent); }
   a.kpi .d::after { content: ' ›'; }
@@ -222,16 +220,18 @@
   <section class="tab" id="tab-now" hidden>
     <div class="statusline" id="nowLine"></div>
     <div class="kpis" id="kpis"></div>
-    <section class="card">
-      <h2>지도</h2>
-      <p class="lead">응급실 위치와 지금 남은 병상 상태예요. 점을 누르면 자세한 값이 나와요.</p>
-      <div id="map" role="img" aria-label="경기도 응급실 위치와 남은 병상 상태 지도"></div>
-      <div class="legend">
-        <span><span class="dot" style="background:var(--full)"></span>꽉 참 (남은 병상 0 이하)</span>
-        <span><span class="dot" style="background:var(--low)"></span>1~2개 남음</span>
-        <span><span class="dot" style="background:var(--ok)"></span>3개 이상</span>
-        <span><span class="dot" style="background:var(--stale)"></span>입력 60분 넘게 지남</span>
-      </div>
+    <section class="fold" id="mapFold">
+      <button type="button" class="fold-btn" aria-expanded="false" aria-controls="mapBody"><span class="ft">지도</span><span class="sub" id="mapSummary"></span><span class="arrow" aria-hidden="true">▼</span></button>
+      <div class="fold-body" id="mapBody"><div class="fold-inner"><div class="fold-pad">
+        <p class="lead">응급실 위치와 지금 남은 병상 상태예요. 점을 누르면 자세한 값이 나와요.</p>
+        <div id="map" role="img" aria-label="경기도 응급실 위치와 남은 병상 상태 지도"></div>
+        <div class="legend">
+          <span><span class="dot" style="background:var(--full)"></span>꽉 참 (남은 병상 0 이하)</span>
+          <span><span class="dot" style="background:var(--low)"></span>1~2개 남음</span>
+          <span><span class="dot" style="background:var(--ok)"></span>3개 이상</span>
+          <span><span class="dot" style="background:var(--stale)"></span>입력 60분 넘게 지남</span>
+        </div>
+      </div></div></div>
     </section>
     <section class="card">
       <h2>수집 중인 응급실 <span class="sub" id="erCount"></span></h2>
@@ -273,20 +273,6 @@
 
   <!-- ② 날짜별 기록 -->
   <section class="tab" id="tab-history" hidden>
-    <section class="fold" id="hMapFold">
-      <button type="button" class="fold-btn" aria-expanded="false" aria-controls="hMapBody"><span class="ft">지도로 보기</span><span class="sub" id="hMapWhen"></span><span class="arrow" aria-hidden="true">▼</span></button>
-      <div class="fold-body" id="hMapBody"><div class="fold-inner"><div class="fold-pad">
-        <div class="pick"><label for="hMapSel" class="sub">어느 때의 상태</label><select id="hMapSel"></select></div>
-        <div id="hmap" role="img" aria-label="고른 시각의 응급실 상태 지도"></div>
-        <div class="legend">
-          <span><span class="dot" style="background:var(--full)"></span>꽉 참 (0 이하)</span>
-          <span><span class="dot" style="background:var(--low)"></span>1~2개 남음</span>
-          <span><span class="dot" style="background:var(--ok)"></span>3개 이상</span>
-          <span><span class="dot" style="background:var(--stale)"></span>입력 60분 넘음 · 기록 없음</span>
-        </div>
-        <p class="note">처음에는 '지금 상태'를 보여 줘요. 날짜를 고르면 그날의 수집 시각을 골라 그때의 상태를 볼 수 있어요.</p>
-      </div></div></div>
-    </section>
     <div id="histList">
       <section class="card">
         <h2>날짜 고르기</h2>
@@ -361,36 +347,80 @@
 
     <section class="card sub-panel" id="p-method" hidden>
       <h2>① 계산 방법</h2>
-      <p class="lead">"지금 남은 병상이 k개인 응급실에 n분 뒤 도착하면 꽉 차 있을 확률"을 지금까지의 기록으로 셉니다.</p>
+      <p class="lead">"지금 남은 병상이 몇 개인 응급실에 몇 분 뒤 도착하면 꽉 차 있을까"를, 지금까지 실제로 일어난 일을 세어서 계산해요.</p>
       <ol class="steps">
         <li><b>1. 10분마다 기록</b>응급실마다 남은 병상(hvec)을 저장해요. 0 이하이면 '거절(수용 곤란) 상태'로 봐요.<span class="live" id="stepRows"></span></li>
         <li><b>2. 짝짓기</b>같은 병원의 "지금 남은 병상"과 "10·20·30·40·50·60분 뒤 남은 병상"(±3분)을 한 쌍으로 묶어요. 병원 입력이 60분 넘게 지난 기록은 '지금 상태'로 쓰지 않아요.<span class="live" id="stepPairs"></span></li>
-        <li><b>3. 칸별로 세기</b>지금 병상 구간 6개 × 도착까지 시간 6개 × 시간대 6개 = 216칸. 칸마다 "뒤 기록이 0 이하였던 횟수 k ÷ 전체 횟수 n"을 세요.<span class="live" id="stepCells"></span></li>
-        <li id="step4"><b>4. 기록이 적은 칸 보정</b>p = (k + 30 × 기준값) ÷ (n + 30). 전체 병원 → 같은 시간대 → 이 병원 순으로 적용해요. 사이 시간(예: 14분)은 10분과 20분 값을 직선으로 이어요.<span class="live">기록이 많을수록 그 병원 자신의 비율에 가까워져요.</span></li>
+        <li><b>3. 칸별로 세기</b>지금 병상 구간 6개 × 도착까지 시간 6개 × 시간대 6개 = 216칸. 칸마다 k ÷ n을 세요. <span class="sub">(k: 그 칸에서 도착 시점에 0 이하였던 횟수, n: 그 칸의 전체 짝 수)</span><span class="live" id="stepCells"></span></li>
+        <li><b>4. 기록이 적은 칸 보정</b>기록이 적은 칸은 비율을 그대로 믿지 않고, 비슷한 병원(같은 등급)의 비율 쪽으로 당겨서 써요. 사이 시간(예: 14분)은 10분과 20분 값을 직선으로 이어요.<span class="live">아래 '기준값'과 '등급'에서 자세히 설명해요.</span></li>
       </ol>
-      <div id="classInfo"></div>
+
+      <h3>기록이 적은 칸은 어떻게 하나요 — 기준값</h3>
+      <p>한 칸은 <b>이 병원 × 지금 남은 병상 구간 × 도착까지 시간 × 시간대</b>가 모두 같은 경우만 모아요. <span id="sparseNow">아직 기록이 짧아</span> 병원 하나의 기록이 216칸으로 잘게 나뉘면, 칸마다 짝이 몇 개밖에 안 남아요.</p>
+      <p>예를 들어 짝이 3개인데 꽉 찬 적이 0번이면, 그대로 쓸 경우 거절 확률이 0%가 돼요. 세 번 봤을 뿐인데 "절대 안 막힌다"고 말하는 셈이죠. 반대로 1개 중 1번이면 100%가 돼요. 기록이 적을수록 우연에 크게 흔들려요. 그래서 기준값 쪽으로 당겨서 써요.</p>
+      <div class="calc">p = (k + 30 × q) ÷ (n + 30)<br>
+        <span class="sub">(p: 이 병원의 거절 확률 · k: 이 병원 그 칸에서 0 이하였던 횟수 · n: 이 병원 그 칸의 짝 수 · q: 기준값(같은 등급 병원들의 비율) · 30: 기준값을 '가상의 짝 30개'만큼 믿는다는 뜻)</span></div>
+      <p style="margin-top:10px">짝이 많을수록 병원 자신의 비율을 더 믿어요. 병원 자신의 비중은 n ÷ (n + 30)이에요 <span class="sub">(n: 그 칸의 짝 수)</span>.</p>
+      <div class="scrollx"><table style="max-width:420px"><tr><th class="num">그 칸의 짝 수 n</th><th class="num">병원 자신의 비중</th><th class="num">기준값의 비중</th></tr>
+        <tr><td class="num">3</td><td class="num">9%</td><td class="num">91%</td></tr>
+        <tr><td class="num">30</td><td class="num">50%</td><td class="num">50%</td></tr>
+        <tr><td class="num">300</td><td class="num">91%</td><td class="num">9%</td></tr>
+        <tr><td class="num">3,000</td><td class="num">99%</td><td class="num">1%</td></tr></table></div>
+      <p style="margin-top:10px">기준값 q는 같은 등급 병원들의 같은 칸(같은 병상 구간·같은 도착 시간)을 모두 합쳐서 구해요.</p>
+      <div class="calc">q = (K + 0.5) ÷ (N + 1)<br>
+        <span class="sub">(q: 기준값 · K: 같은 등급 병원들의 그 칸에서 0 이하였던 횟수를 모두 더한 값 · N: 같은 등급 병원들의 그 칸 짝 수를 모두 더한 값 · 0.5와 1: 기록이 적어도 0%나 100%로 딱 떨어지지 않게 더하는 수)</span></div>
+
+      <h3>비슷한 병원 = 같은 등급</h3>
+      <p>병원마다 지금까지 모든 수집 기록 중 남은 병상이 0 이하였던 비율(꽉 찬 비율)을 계산해서 세 등급으로 나눠요.</p>
+      <div id="classTable"></div>
+      <ul class="why">
+        <li>기록이 36번(약 6시간분)보다 적은 병원은 등급을 매기지 않고, 예전 방식(전체 병원 → 같은 시간대 → 이 병원)으로 계산해요.</li>
+        <li>등급은 수집할 때마다 다시 매겨요. A 병원이 한 번이라도 꽉 차면 다음 계산부터 B로 옮겨가요.</li>
+        <li><b>꽉 찬 비율로 나누는 이유</b>: 맞히려는 것이 "도착했을 때 꽉 차 있을까"라서, 평소에 얼마나 자주 꽉 차는지가 결과와 가장 직접 이어져요. 같은 "1개 남음"이라도 평소 꽉 찬 적 없는 병원은 다시 여유가 생기는 경우가 많고, 늘 꽉 차는 병원은 곧 0이 되는 경우가 많아요. 그래서 둘의 기록을 섞지 않아요.</li>
+        <li><b>경계를 0%와 50%로 정한 이유</b>: 0%는 "한 번도 꽉 찬 적 없는 병원"과 "가끔이라도 꽉 차는 병원"을 가르는 가장 분명한 선이에요. 50%는 "대부분의 시간 꽉 차 있는 병원"을 따로 떼어 다른 병원 계산에 섞이지 않게 하려는 선이에요. 50% 대신 30%나 70%로 바꿔 시험해도 정확도가 거의 같았고, A와 나머지 두 등급으로만 나누면 정확도가 떨어졌어요.</li>
+        <li><b>지금은 보지 않는 것</b>: 병원 규모(응급실 기준 병상 수), 종류(권역·지역센터 등), 위치, 하루 중 붐비는 시간대. 기록이 더 쌓이면 하나씩 넣어 보고 ⑤ 정확도 점검으로 실제로 나아지는지 확인할 다음 후보예요.</li>
+      </ul>
+
+      <h3>왜 이렇게 바꿨나요 (2026-10-26)</h3>
+      <ul class="why">
+        <li>예전에는 기준값을 <b>전체 병원 합계</b>에서 가져왔어요. 그런데 "지금 꽉 참" 기록의 약 39%가 늘 꽉 차 있는 분당서울대 한 곳에서 나와서, 거의 꽉 차지 않는 병원의 확률까지 끌어올렸어요(남은 병상 1개일 때 예측 52%, 실제 24%).</li>
+        <li>같은 등급끼리만 묶자 같은 기록으로 시점을 바꿔 4번 검증했을 때 Brier 점수가 약 9%, 보정 오차가 약 38% 줄었어요 <span class="sub">(Brier 점수: (예측 확률 − 실제 결과)²의 평균, 실제 결과는 꽉 찼으면 1·아니면 0 · 보정 오차: 예측 확률과 실제로 일어난 비율의 차이)</span>.</li>
+        <li>예 (10-26 20:40 기준, 20분 뒤 거절 확률): 현대병원(A등급, 1개 남음) 29.0% → 4.2%, 참조은병원(B등급, 0개) 79.3% → 70.7%, 분당서울대(C등급) 88.1% → 99.8%.</li>
+        <li>통계를 내는 개념은 그대로예요. "같은 조건에서 실제로 일어난 비율을 센다"는 점은 같고, 기록이 부족할 때 누구를 참고하느냐만 바뀌었어요.</li>
+      </ul>
+
+      <h3>기록이 쌓이면 기준값과 등급은 필요 없어지나요?</h3>
+      <ul class="why">
+        <li><b>흔한 상황에서는 저절로 작아져요</b>: 위 표처럼 짝이 수백 개가 되면 병원 자신의 비율이 90% 넘게 반영돼요. 따로 끌 필요 없이 공식이 알아서 넘어가요.</li>
+        <li><b>드문 상황에서는 계속 필요해요</b>: 꽉 찬 적 없는 병원이 "남은 병상 1개"가 되는 일은 몇 달이 지나도 몇 번 안 될 수 있어요. 그런데 그런 순간의 확률이 가장 중요해요.</li>
+        <li><b>기록끼리 많이 닮아 있어요</b>: 10분 간격 기록은 앞뒤가 거의 같은 상태라, 실제 정보량은 기록 수의 약 14%예요. n이 커 보여도 생각보다 천천히 믿을 만해져요.</li>
+        <li><b>나중에 더 잘게 나누면 칸이 다시 비어요</b>: 요일별, 정원 대비 비율 구간 등으로 나누면 칸 하나의 기록이 다시 줄어요. 새로 수집되는 병원이나 계절 변화(독감 유행 등)가 있을 때도 처음에는 기준값에 기대야 해요.</li>
+        <li>등급 나누기 자체는 기록이 많이 쌓이면 더 정교한 방법(예: 꽉 찬 비율이 비슷할수록 더 많이 참고)으로 바뀔 수 있어요.</li>
+      </ul>
+
       <h3>왜 이렇게 계산하나요 (근거)</h3>
       <ul class="why">
-        <li><b>조건부 상대도수</b>: 같은 조건(지금 병상 구간·도착까지 시간·시간대)에서 실제로 일어난 비율 k/n을 확률로 써요. 기록이 쌓일수록 실제 확률에 가까워져요(큰 수의 법칙).</li>
-        <li><b>(k + 0.5) ÷ (n + 1)</b>: 맨 바깥 단계에 쓰는 베이즈 추정값(제프리스 사전분포)이에요. 기록이 적을 때 0%나 100%로 딱 떨어지는 것을 막아요.</li>
-        <li><b>(k + 30 × 기준값) ÷ (n + 30)</b>: 베타-이항 모형의 '수축' 추정(경험적 베이즈)이에요. 기록 n이 30보다 훨씬 많으면 그 칸 자신의 비율, 적으면 위 단계 평균에 가까워져요.</li>
-        <li><b>직선 보간</b>: 10분 간격 사이 도착 시간은 양옆 값을 시간 비율대로 섞어요.</li>
+        <li><b>조건부 상대도수 k ÷ n</b>: 같은 조건(지금 병상 구간·도착까지 시간·시간대)에서 실제로 일어난 비율을 확률로 써요. 기록이 쌓일수록 실제 확률에 가까워져요(큰 수의 법칙). <span class="sub">(k: 그 조건에서 0 이하였던 횟수, n: 그 조건의 전체 짝 수)</span></li>
+        <li><b>(K + 0.5) ÷ (N + 1)</b>: 베이즈 추정값(제프리스 사전분포)이에요. 기록이 적을 때 0%나 100%로 딱 떨어지는 것을 막아요. <span class="sub">(K: 0 이하였던 횟수 합, N: 짝 수 합)</span></li>
+        <li><b>(k + 30 × q) ÷ (n + 30)</b>: 베타-이항 모형의 '수축' 추정(경험적 베이즈)이에요. 짝 수 n이 30보다 훨씬 많으면 병원 자신의 비율, 적으면 기준값 q에 가까워져요. <span class="sub">(k: 0 이하였던 횟수, n: 짝 수, q: 기준값)</span></li>
+        <li><b>직선 보간</b>: 10분 간격 사이 도착 시간은 양옆 값을 시간 비율대로 섞어요. 예: 14분 = 10분 값 × 0.6 + 20분 값 × 0.4.</li>
       </ul>
       <h3>알고 써야 할 한계</h3>
       <ul class="why" id="limits">
-        <li>10분 간격 기록은 서로 많이 닮아 있어요(앞뒤 기록이 같은 상태일 때가 많음). 그래서 실제 정보량은 기록 수 n보다 적어요. 표의 n은 '독립된 관측 수'가 아니라 '짝 수'로 읽어 주세요.</li>
+        <li>10분 간격 기록은 서로 많이 닮아 있어서, 실제 정보량은 짝 수 n보다 적어요. 표의 n은 '독립된 관측 수'가 아니라 '짝 수'로 읽어 주세요.</li>
         <li>거절 상태 = 남은 병상 0 이하로만 정했어요. 전문의 부재 같은 다른 거절 사유는 들어 있지 않아요.</li>
         <li>병원이 직접 입력한 값이라, 입력이 늦거나 틀리면 계산도 그만큼 틀려요(입력이 자주 늦는 병원은 '수집 상태' 탭에서 볼 수 있어요).</li>
+        <li>C등급은 아직 2곳뿐이고, 그중 세종여주병원은 입력이 자주 늦어 꽉 찬 비율이 정확하지 않을 수 있어요. 1주일 기록으로 다시 확인할 예정이에요.</li>
       </ul>
     </section>
 
     <section class="card sub-panel" id="p-table" hidden>
-      <h2>② 결과표: 지금 남은 병상이 k개일 때, n분 뒤 0 이하였던 비율</h2>
+      <h2>② 결과표: 지금 남은 병상별로, 몇 분 뒤 0 이하였던 비율</h2>
       <p class="lead">경기도 응급실 전체를 합친 실제 비율(보정 전 k/n)이에요. 시간대를 골라 볼 수 있어요.</p>
       <div class="seg" id="heatSeg" role="group" aria-label="시간대 고르기"></div>
       <div class="scrollx"><table class="heat" id="heat"></table></div>
       <div class="heat-legend" id="heatLegend"></div>
-      <p class="note">칸의 큰 숫자는 비율, 작은 숫자는 k/n(0 이하였던 횟수 / 전체 횟수)이에요. 0%는 '지금까지 한 번도 없었다'는 뜻이지 '절대 없다'는 뜻이 아니에요. 칸에 마우스를 올리면 95% 신뢰 상한(대략 3 ÷ n)을 보여 줘요.</p>
+      <p class="note">칸의 큰 숫자는 비율, 작은 숫자는 k/n(0 이하였던 횟수 / 전체 횟수)이에요. 0%는 '지금까지 한 번도 없었다'는 뜻이지 '절대 없다'는 뜻이 아니에요. 칸에 마우스를 올리면 95% 신뢰 상한(대략 3 ÷ n, n: 그 칸의 전체 짝 수)을 보여 줘요. 이 표는 보정 전 값이라 기준값·등급이 들어가지 않아요.</p>
     </section>
 
     <section class="card sub-panel" id="p-hospital" hidden>
@@ -407,7 +437,7 @@
       <h2>④ 병원별 결과: 지금 상태에서 20분 뒤 도착하면</h2>
       <p class="lead">모든 응급실의 20분 뒤 거절 확률이에요. 줄을 누르면 ③에서 계산 과정을 볼 수 있어요.</p>
       <div class="scroll"><table id="hospProb"></table></div>
-      <p class="note">'0.1% 미만'은 그 병상 구간에서 지금까지 거의(또는 한 번도) 꽉 찬 적이 없는 병원이에요. 확률이 정확히 0이라는 뜻은 아니에요. '병원 기록 비중'은 마지막 보정에서 이 병원 자신의 기록이 차지한 몫(n ÷ (n + 30))이에요.</p>
+      <p class="note">'0.1% 미만'은 그 병상 구간에서 지금까지 거의(또는 한 번도) 꽉 찬 적이 없는 병원이에요. 확률이 정확히 0이라는 뜻은 아니에요. '병원 기록 비중'은 마지막 보정에서 이 병원 자신의 기록이 차지한 몫 n ÷ (n + 30)이에요 (n: 이 병원 그 칸의 짝 수).</p>
     </section>
 
     <section class="card sub-panel" id="p-check" hidden>
@@ -453,6 +483,27 @@
       <p class="lead">병원이 값을 얼마나 제때 입력하는지예요. '60분 넘은 비율'이 높을수록 그 병원 기록은 '지금 상태'로 덜 쓰여요.</p>
       <div class="scroll"><table id="freshTable"></table></div>
     </section>
+  </section>
+
+  <section class="card" id="glossary">
+    <h2>기호 풀이</h2>
+    <p class="lead">이 현황판의 식에 나오는 문자와 숫자가 뜻하는 것이에요.</p>
+    <div class="scrollx"><table>
+      <tr><th>기호</th><th>뜻</th></tr>
+      <tr><td><b>p</b></td><td>거절 확률: 그 병원에 도착했을 때 남은 병상이 0 이하일 확률</td></tr>
+      <tr><td><b>k</b></td><td>그 칸(같은 병원·같은 지금 병상 구간·같은 도착까지 시간·같은 시간대)에서 도착 시점에 남은 병상이 0 이하였던 횟수</td></tr>
+      <tr><td><b>n</b></td><td>그 칸의 전체 짝 수 ('지금 기록'과 '몇 분 뒤 기록'을 한 쌍으로 묶은 것의 개수)</td></tr>
+      <tr><td><b>K, N</b></td><td>같은 등급 병원들의 같은 칸을 모두 더한 k와 n</td></tr>
+      <tr><td><b>q</b></td><td>기준값: 같은 등급 병원들의 비율 (K + 0.5) ÷ (N + 1)</td></tr>
+      <tr><td><b>30</b></td><td>기준값을 '가상의 짝 30개'만큼 믿는다는 뜻의 수 (기록이 30개보다 많으면 병원 자신의 비율이 더 크게 반영됨)</td></tr>
+      <tr><td><b>n ÷ (n + 30)</b></td><td>병원 기록 비중: 마지막 확률에서 병원 자신의 기록이 차지하는 몫</td></tr>
+      <tr><td><b>0.5, 1</b></td><td>(K + 0.5) ÷ (N + 1)에서 기록이 적어도 0%나 100%로 딱 떨어지지 않게 더하는 수</td></tr>
+      <tr><td><b>3 ÷ n</b></td><td>한 번도 일어나지 않았을 때(k = 0) 실제 확률의 95% 신뢰 상한 (3의 법칙)</td></tr>
+      <tr><td><b>hvec</b></td><td>공공데이터의 응급실 일반병상 가용 수(남은 병상). 0 이하이면 꽉 참</td></tr>
+      <tr><td><b>±3분</b></td><td>짝짓기 허용 오차: '20분 뒤 기록'은 17~23분 뒤 기록 중 가장 가까운 것</td></tr>
+      <tr><td><b>Brier 점수</b></td><td>(예측 확률 − 실제 결과)²의 평균. 실제 결과는 꽉 찼으면 1, 아니면 0. 0에 가까울수록 정확</td></tr>
+      <tr><td><b>%p</b></td><td>퍼센트포인트: 두 퍼센트 값의 차이 (예: 25%와 20%의 차이 = 5%p)</td></tr>
+    </table></div>
   </section>
 
   <footer>
@@ -558,20 +609,23 @@ function showNow(sub) {
       ['입력 오래됨', staleN, '곳', 'stale', '병원 입력 60분 넘음'],
       ['수용 불가 메시지', k.activeMessages, '건', '', '눌러서 보기', '#/now/messages'],
     ].map(([label, v, unit, cls, d, href]) => `<${href ? `a href="${href}"` : 'div'} class="kpi ${cls}"><div class="k">${label}</div><div class="v">${v}<small>${unit}</small></div>${d ? `<div class="d">${d}</div>` : ''}</${href ? 'a' : 'div'}>`).join('');
-    drawMap(hs);
+    // 지도는 처음 펼칠 때 만든다 (접힌 0높이 칸에서 만들면 지도 크기가 틀어진다)
+    $('mapSummary').textContent = `꽉 참 ${k.fullNow} · 1~2개 ${k.lowNow} · 3개 이상 ${k.okNow} · 화살표를 눌러 펼치기`;
+    $('mapFold')._onOpen = () => (map ? map.invalidateSize() : drawMap(hs));
     drawErTable(hs);
     drawHours(s.byHour);
     drawLine(s.timeline);
     drawSi(s.bySi, s.noEr, s.noErOther ?? {}, s.notReporting);
     drawMsgs(s.messages, s.messagesAt);
   }
-  setTimeout(() => map && map.invalidateSize(), 50);
+  if (map && $('mapFold').classList.contains('open')) setTimeout(() => map.invalidateSize(), 50);
   if (sub === 'messages') { setFold($('msgFold'), true); setTimeout(() => $('msgFold').scrollIntoView({ behavior: 'smooth', block: 'start' }), 400); } // 펼쳐진 뒤 스크롤
 }
 
 // 접는 칸 열기·닫기 (onOpen: 펼쳐진 뒤 할 일, 예: 지도 크기 다시 맞추기)
 function setFold(el, open) {
   el.classList.toggle('open', open);
+  if (el.id === 'mapFold') $('mapSummary').textContent = $('mapSummary').textContent.replace(/ · 화살표를 눌러 (펼치기|접기)$/, ` · 화살표를 눌러 ${open ? '접기' : '펼치기'}`);
   el.querySelector('.fold-btn').setAttribute('aria-expanded', String(open));
   el.querySelector('.arrow').textContent = '▼'; // 회전으로 ▲ 모양이 된다
   if (open && el._onOpen) setTimeout(el._onOpen, 380);
@@ -704,52 +758,7 @@ function drawMsgs(msgs, at) {
 // =====================================================================
 // ② 날짜별 기록
 // =====================================================================
-const hist = { day: null, data: null, range: 'all', hour: null, strip: 'busy', mapAt: 'now', ti: null };
-
-// 날짜별 기록의 지도: 'now' = 지금 상태(status.json), 숫자 = 고른 날의 그 수집 시각
-let hmap, hLayer;
-function hMapStates(at) {
-  if (at === 'now' || !hist.data) return { when: `지금 상태 (${(status.latestAt ?? '').slice(5, 16)})`, list: status.hospitals.map((h) => ({ h, v: h.hvec, a: h.ageMin })) };
-  const d = hist.data, i = Number(at);
-  const byHp = Object.fromEntries(status.hospitals.map((h) => [h.hpid, h]));
-  return { when: `${d.day.slice(5)} ${d.times[i].slice(0, 5)} 상태`, list: d.hospitals.map((x, j) => ({ h: { ...x, ...(byHp[x.hpid] ? { lat: byHp[x.hpid].lat, lon: byHp[x.hpid].lon, cls: byHp[x.hpid].cls } : {}) }, v: d.hvec[i][j], a: d.age[i][j] })) };
-}
-function drawHistMap() {
-  const fold = $('hMapFold');
-  // 고를 수 있는 때: 지금 + (날짜를 골랐으면) 그날 고른 시간대의 수집 시각
-  const ti = hist.day && hist.data ? hist.ti ?? [] : [];
-  const opts = [['now', `지금 상태 (${(status.latestAt ?? '').slice(5, 16)})`]].concat(ti.slice().reverse().map((i) => [String(i), `${hist.data.day.slice(5)} ${hist.data.times[i]}`]));
-  if (!opts.some(([v]) => v === hist.mapAt)) hist.mapAt = 'now';
-  $('hMapSel').innerHTML = opts.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('');
-  $('hMapSel').value = hist.mapAt;
-  $('hMapSel').onchange = () => { hist.mapAt = $('hMapSel').value; if (hist.mapAt !== 'now' && $('snapSel').querySelector(`option[value="${hist.mapAt}"]`)) { $('snapSel').value = hist.mapAt; $('snapSel').onchange?.(); } else paintHistMap(); };
-  fold._onOpen = () => { ensureHistMap(); paintHistMap(); };
-  $('hMapWhen').textContent = hMapStates(hist.mapAt).when;
-  if (fold.classList.contains('open')) { ensureHistMap(); paintHistMap(); }
-}
-function ensureHistMap() {
-  if (hmap) { hmap.invalidateSize(); return; }
-  hmap = L.map('hmap', { scrollWheelZoom: false }).setView([37.45, 127.1], 9);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap contributors' }).addTo(hmap);
-  hLayer = L.layerGroup().addTo(hmap);
-  const pts = status.hospitals.filter((h) => Number.isFinite(h.lat)).map((h) => [h.lat, h.lon]);
-  hmap.invalidateSize();
-  if (pts.length) hmap.fitBounds(pts, { padding: [20, 20], maxZoom: 12 });
-}
-function paintHistMap() {
-  const { when, list } = hMapStates(hist.mapAt);
-  $('hMapWhen').textContent = when;
-  if (!hmap) return;
-  hLayer.clearLayers();
-  const color = { full: css('--full'), low: css('--low'), ok: css('--ok'), stale: css('--stale'), none: css('--stale') };
-  const order = { ok: 0, none: 1, stale: 1, low: 2, full: 3 };
-  list.filter((r) => Number.isFinite(r.h.lat) && Number.isFinite(r.h.lon))
-    .map((r) => ({ ...r, st: stateOf(r.v, r.a) }))
-    .sort((a, b) => order[a.st] - order[b.st])
-    .forEach((r) => L.circleMarker([r.h.lat, r.h.lon], { radius: r.h.cls === '권역응급의료센터' ? 9 : 7, color: '#fff', weight: 1.5, fillColor: color[r.st], fillOpacity: 0.95 })
-      .bindPopup(`<b>${esc(r.h.name)}</b><br>${esc(when)}<br>${pillOf(r.st)} 남은 병상 <b>${r.v ?? '-'}</b>${r.a != null ? `<br>병원 입력 ${r.a}분 전` : ''}`)
-      .addTo(hLayer));
-}
+const hist = { day: null, data: null, range: 'all', hour: null, strip: 'busy' };
 
 async function showHistory(day, sub) {
   if (!histIndex) {
@@ -758,7 +767,7 @@ async function showHistory(day, sub) {
   }
   $('histList').hidden = !!day;
   $('histDay').hidden = !day;
-  if (!day) { hist.day = null; hist.data = null; hist.ti = null; drawHistMap(); return drawDayList(); }
+  if (!day) return drawDayList();
   if (!histCache[day]) {
     try { histCache[day] = await getJSON(`history/${day}.json`); }
     catch (e) { $('dayTitle').textContent = `${day} 기록을 불러오지 못했어요`; return; }
@@ -815,7 +824,6 @@ function drawDay() {
   const [lo, hi, rl] = histRange();
   const ti = d.times.map((t, i) => i).filter((i) => { const m = minOf(d.times[i]); return m >= lo && m < hi; });
   $('rangeInfo').textContent = `${rl} · 수집 ${ti.length}번`;
-  hist.ti = ti;
 
   drawSlots(d, lo, hi);
   // 꽉 찬 응급실 수 변화
@@ -826,7 +834,6 @@ function drawDay() {
   drawStrip(d, ti);
   drawSnap(d, ti);
   drawRuns(d, lo, hi);
-  drawHistMap();
 }
 
 function drawSlots(d, lo, hi) {
@@ -906,7 +913,7 @@ function drawSnap(d, ti) {
     $('snapTable').innerHTML = '<tr><th>병원</th><th class="num">남은 병상</th><th>상태</th><th class="num">입력 경과</th></tr>' +
       rows.map((r) => `<tr><td>${esc(r.h.name)}<br><span class="sub">${esc(r.h.si)}</span></td><td class="num"><b>${r.v ?? '-'}</b></td><td>${pillOf(stateOf(r.v, r.a))}</td><td class="num">${r.a ?? '-'}분</td></tr>`).join('');
   };
-  $('snapSel').onchange = () => { render(); hist.mapAt = $('snapSel').value; drawHistMap(); };
+  $('snapSel').onchange = render;
   render();
 }
 
@@ -955,18 +962,17 @@ function drawMethod() {
   $('stepPairs').textContent = `짝 ${model.pairs.toLocaleString()}쌍` + (model.staleRows ? ` · 오래된 입력 ${model.staleRows.toLocaleString()}개 제외` : '');
   const cells = Object.keys(model.pooled).filter((k) => /^[^|]+\|\d+\|\d$/.test(k)).length;
   $('stepCells').textContent = `216칸 중 ${cells}칸에 기록 있음 (${fmtP(cells / 216)})`;
-  if (model.classPooled) {
-    // v2: 병원 등급별 기준값
-    $('step4').innerHTML = '<b>4. 기록이 적은 칸 보정</b>p = (k + 30 × 기준값) ÷ (n + 30). 기준값은 <span style="font-weight:700">같은 등급 병원들</span>의 비율이에요. 사이 시간(예: 14분)은 10분과 20분 값을 직선으로 이어요.' +
-      '<span class="live">기록이 많을수록 그 병원 자신의 비율에 가까워져요.</span>';
-    const hs = Object.entries(model.hospitals);
-    const cnt = (c) => hs.filter(([, h]) => h.cls === c).length;
-    const names = (c) => hs.filter(([, h]) => h.cls === c).map(([id, h]) => byId[id]?.name ?? h.name).sort((a, b) => a.localeCompare(b, 'ko'));
-    $('classInfo').innerHTML = '<h3>병원 등급 (기준값을 나누는 기준)</h3><p class="note" style="margin-top:0">지금까지 꽉 찼던 비율로 병원을 세 등급으로 나눠요. 늘 꽉 찬 큰 병원의 기록이 거의 꽉 차지 않는 병원의 확률을 끌어올리지 않게 하려는 거예요. 기록이 6시간 분량(36번)보다 적은 병원은 등급 없이 전체 병원 → 같은 시간대 → 이 병원 순으로 계산해요.</p>' +
-      '<div class="scrollx"><table><tr><th>등급</th><th class="num">병원 수</th><th>병원</th></tr>' +
-      ['A', 'B', 'C'].map((c) => `<tr><td>${{ A: 'A 꽉 찬 적 없음', B: 'B 꽉 찬 비율 50% 미만', C: 'C 꽉 찬 비율 50% 이상' }[c]}</td><td class="num">${cnt(c)}</td><td class="sub">${esc(names(c).slice(0, c === 'A' ? 8 : 30).join(', '))}${c === 'A' && cnt(c) > 8 ? ` 외 ${cnt(c) - 8}곳` : ''}</td></tr>`).join('') +
-      (hs.some(([, h]) => !h.cls) ? `<tr><td>등급 없음</td><td class="num">${hs.filter(([, h]) => !h.cls).length}</td><td class="sub">기록이 모자람</td></tr>` : '') + '</table></div>';
-  }
+  const days = (model.range[1] - model.range[0]) / 86400e3;
+  const perHosp = Math.round(model.rows / Math.max(1, Object.keys(model.hospitals).length));
+  $('sparseNow').textContent = `지금은 기록이 ${days.toFixed(1)}일치라 병원 하나에 수집이 약 ${perHosp.toLocaleString()}번 있어요. 이게`;
+  const hs = Object.entries(model.hospitals);
+  const cnt = (c) => hs.filter(([, h]) => h.cls === c).length;
+  const names = (c) => hs.filter(([, h]) => h.cls === c).map(([id, h]) => byId[id]?.name ?? h.name).sort((a, b) => a.localeCompare(b, 'ko'));
+  const none = hs.filter(([, h]) => !h.cls).length;
+  $('classTable').innerHTML = '<div class="scrollx"><table><tr><th>등급</th><th>기준 (꽉 찬 비율)</th><th class="num">병원 수</th><th>병원</th></tr>' +
+    [['A', '0% (한 번도 꽉 찬 적 없음)'], ['B', '0%보다 크고 50% 미만'], ['C', '50% 이상']].map(([c, d]) =>
+      `<tr><td><b>${c}</b></td><td>${d}</td><td class="num">${cnt(c)}</td><td class="sub">${esc(names(c).slice(0, c === 'A' ? 8 : 30).join(', '))}${c === 'A' && cnt(c) > 8 ? ` 외 ${cnt(c) - 8}곳` : ''}</td></tr>`).join('') +
+    (none ? `<tr><td>없음</td><td>기록 36번 미만</td><td class="num">${none}</td><td class="sub">예전 방식으로 계산</td></tr>` : '') + '</table></div>';
 }
 
 function drawHeatPanel() {
@@ -981,7 +987,7 @@ function drawHeatPanel() {
       const c = model.pooled[`${b}|${L}|${heatKey}`];
       if (!c) { html += `<td class="empty" data-tip="${when} · 지금 ${BUCKET_LABEL[b]} → ${L}분 뒤: 기록 없음">–</td>`; continue; }
       const p = c.k / c.n, few = c.n < FEW_N ? ' few' : '';
-      const upper = c.k === 0 && c.n >= 30 ? `<br>0번이어도 실제 확률의 95% 신뢰 상한은 약 ${fmtP(3 / c.n)} (3 ÷ n)` : '';
+      const upper = c.k === 0 && c.n >= 30 ? `<br>0번이어도 실제 확률의 95% 신뢰 상한은 약 ${fmtP(3 / c.n)} (3 ÷ n, n: 이 칸의 전체 짝 수)` : '';
       html += `<td class="h${heatStep(p)}${few}" data-tip="${when} · 지금 ${BUCKET_LABEL[b]} → ${L}분 뒤 0 이하<br>${kn(c)} = ${fmtP(p)}${few ? '<br>기록이 적어 아직 믿기 어려움' : ''}${upper}"><b>${fmtP0(p)}</b><small>${kn(c)}</small></td>`;
     }
     html += '</tr>';
@@ -1022,7 +1028,8 @@ function drawHospPanel(arg) {
     $('exTable').innerHTML = '<tr><th>단계</th><th class="num">기록 k/n</th><th class="num">값</th></tr>' +
       ex.steps.map((st, i) => `<tr><td>${i + 1}. ${esc(st.label)}${st.weight != null ? ` <span class="sub">(비중 ${fmtP(st.weight)})</span>` : ''}</td><td class="num">${kn(st.cell)}</td><td class="num${i === ex.steps.length - 1 ? ' p' : ''}">${fmtP(st.value)}</td></tr>`).join('');
     $('calcSeg').hidden = true;
-    $('calc').innerHTML = ex.steps.map((st, i) => stepFormula(st, i + 1)).join('<br>') + `<br>→ 거절 확률 <b>${fmtP(ex.p)}</b>`;
+    $('calc').innerHTML = ex.steps.map((st, i) => stepFormula(st, i + 1)).join('<br>') + `<br>→ 거절 확률 <b>${fmtP(ex.p)}</b>` +
+      '<br><span class="sub">기호: k = 그 시간대에 0 이하였던 횟수 · n = 그 시간대 기록 수 · 30 = 앞 단계 값을 \'가상의 기록 30개\'만큼 믿는다는 뜻</span>';
     return;
   }
   $('calcSeg').hidden = false;
@@ -1045,7 +1052,7 @@ function drawHospPanel(arg) {
   const ex = explainPoint(model, { hpid: selId, b, L: calcL, hb: obsHb });
   $('calc').innerHTML = `<b>${calcL}분 뒤 도착</b><br>` + ex.steps.map((st, i) => stepFormula(st, i + 1)).join('<br>') +
     `<br>→ 거절 확률 <b>${fmtP(ex.p)}</b>` + (ex.fallback ? '<br><span class="sub">이 병상 구간·도착 시간 기록이 없어 병원 평균을 썼어요.</span>' : '') +
-    '<br><span class="sub">1단계에 0.5와 1을 더하는 건 기록이 적을 때 0%나 100%로 딱 떨어지지 않게 하려는 거예요.</span>';
+    '<br><span class="sub">기호: k = 그 칸에서 0 이하였던 횟수 · n = 그 칸의 짝 수 · 30 = 앞 단계 값을 \'가상의 짝 30개\'만큼 믿는다는 뜻 · 비중 = n ÷ (n + 30). 1단계에 0.5와 1을 더하는 건 기록이 적을 때 0%나 100%로 딱 떨어지지 않게 하려는 거예요.</span>';
 }
 
 function drawHospTable() {
@@ -1080,7 +1087,7 @@ async function drawCheck() {
     const R = v.byLead[L];
     html += `<tr><td>${L}분 뒤</td>` + M.map(([m]) => `<td class="num"><span class="hbar ${m === 'ours' ? '' : 'ref'}" style="width:${Math.round((R.brier[m] / maxB) * 60)}px"></span>${R.brier[m] == null ? '-' : R.brier[m].toFixed(4)}</td>`).join('') + `<td class="num">${R.n.toLocaleString()}</td></tr>`;
   }
-  html += '</table></div><p class="note">Brier 점수 = (예측 확률 − 실제 결과)²의 평균. 실제로 꽉 찼으면 결과 1, 아니면 0이에요. 막대가 짧을수록 정확해요.</p>';
+  html += '</table></div><p class="note">Brier 점수 = (예측 확률 − 실제 결과)²의 평균 (예측 확률: 0~1 사이 계산값 · 실제 결과: 실제로 꽉 찼으면 1, 아니면 0). 막대가 짧을수록 정확해요.</p>';
   const a20 = v.byLead[v.calibLead] ?? v.byLead[leads[0]];
   if (a20?.appMiss?.n) html += `<p class="note">지금 병상이 1개 이상이라 일반 앱에서는 '가능'으로 보이는 경우 중, ${v.calibLead}분 뒤 실제로 꽉 차 있던 비율은 <b>${fmtP(a20.appMiss.k / a20.appMiss.n)}</b> (${a20.appMiss.k}/${a20.appMiss.n.toLocaleString()})이고, 우리 방식은 평균 <b>${fmtP(a20.appMiss.pSum / a20.appMiss.n)}</b>로 예측했어요.</p>`;
   html += `<h3>예측이 실제와 맞나 (${v.calibLead}분 뒤, 예측 확률 구간별)</h3><div class="scrollx"><table><tr><th>예측 구간</th><th class="num">짝 수</th><th class="num">예측 평균</th><th class="num">실제 비율</th><th class="num">차이</th></tr>` +
