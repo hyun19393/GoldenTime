@@ -26,7 +26,7 @@
 | `scripts/build-model.mjs` | 웹앱용 통계표 `model.json` 만들기 |
 | `scripts/build-web.mjs` | 웹앱용 파일 만들기: `docs/model.json`(거절 통계표), `docs/validation.json`(정확도 점검), `docs/engine/`(계산 코드 복사) |
 | `docs/app.html` | 응급실 추천 웹앱 (카카오 지도, 출발지 → 실효 도착 시간 순위·경로) |
-| `proxy/worker.js` | 중계 서버 (Cloudflare Workers): 카카오 키를 숨기고 웹앱의 길찾기 요청만 대신 호출 |
+| `proxy/worker.js` | 중계 서버 (Cloudflare Workers): 카카오 키를 숨기고 웹앱의 길찾기 요청만 대신 호출. 카카오 호출 횟수를 D1에 날짜·종류별로 세어 `/usage`로 알려 줌(웹앱 상단 '오늘 길찾기 사용량' 바) |
 | `data/` | 수집 데이터 (날짜별 CSV) |
 | `tests/` | 자동 검사 (`npm test`) |
 

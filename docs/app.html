@@ -34,6 +34,16 @@
   h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
   .sub { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
   .warn { background: var(--full-bg); color: var(--ink); border-radius: 8px; padding: 8px 12px; font-size: 13px; margin: 10px 0 0; }
+  .quota { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 13px; margin: 6px 0 0; }
+  .quota .q-top { display: flex; align-items: center; gap: 10px; }
+  .quota .q-label { font-weight: 700; white-space: nowrap; }
+  .quota .q-bar { flex: 1; height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; }
+  .quota .q-fill { display: block; height: 100%; width: 0; background: var(--ok); border-radius: 999px; transition: width .4s ease; }
+  .quota.mid .q-fill { background: var(--low); }
+  .quota.high .q-fill { background: var(--full); }
+  .quota .q-pct { min-width: 4.5em; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .quota .q-sub { color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .quota.unknown .q-pct, .quota.unknown .q-sub { color: var(--stale); }
   .layout { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 16px; align-items: start; }
   @media (max-width: 880px) { .layout { grid-template-columns: minmax(0, 1fr); } .mapcol { order: -1; } }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; min-width: 0; }
@@ -115,6 +125,14 @@
     <h1>골든타임 경로</h1>
     <p class="sub">도착했을 때 받아줄 가능성까지 계산해 경기도 응급실을 추천해요 · <a href="./">수집 현황판</a></p>
     <p class="warn"><b>교육·탐구용이에요.</b> 실제 응급 상황에서는 바로 119에 신고하세요.</p>
+    <div class="quota" id="quota">
+      <div class="q-top">
+        <span class="q-label">오늘 길찾기 사용량</span>
+        <span class="q-bar" id="quotaBar" role="progressbar" aria-label="오늘 카카오 길찾기 하루 한도 사용량" aria-valuemin="0" aria-valuemax="100"><span class="q-fill" id="quotaFill"></span></span>
+        <span class="q-pct" id="quotaPct">–</span>
+      </div>
+      <div class="q-sub" id="quotaText">사용량 불러오는 중…</div>
+    </div>
   </header>
 
   <div class="layout">
@@ -388,6 +406,38 @@ async function proxy(path, init) {
   if (!r.ok) throw Object.assign(new Error(body.error || body.msg || `길찾기 오류 ${r.status}`), { status: r.status });
   return body;
 }
+// ---------- 오늘 길찾기 사용량 (모든 사용자가 같은 카카오 한도를 나눠 쓰므로 중계 서버가 센 값을 보여 준다)
+// 두 한도 중 더 많이 찬 쪽으로 바를 채운다. 읽지 못하면 추정하지 않고 '확인 불가'로 둔다
+const QUOTA_MID = 0.7, QUOTA_HIGH = 0.9;
+let quotaSeq = 0, quotaDay = null;
+const todayKST = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+async function refreshQuota() {
+  const my = ++quotaSeq;
+  const n = (v) => v.toLocaleString('ko-KR');
+  try {
+    const { day, used, limits } = await proxy('/usage');
+    if (my !== quotaSeq) return;
+    quotaDay = day;
+    const ratio = Math.max(used.multi / limits.multi, used.single / limits.single);
+    const shown = Math.min(1, ratio);
+    $('quota').className = 'quota' + (ratio >= QUOTA_HIGH ? ' high' : ratio >= QUOTA_MID ? ' mid' : '');
+    $('quotaFill').style.width = `${(shown * 100).toFixed(1)}%`;
+    $('quotaBar').setAttribute('aria-valuenow', String(Math.floor(shown * 100)));
+    $('quotaPct').textContent = ratio > 0 && ratio < 0.01 ? '1% 미만' : `${Math.floor(shown * 100)}%`;
+    $('quotaText').textContent = `다중 목적지 ${n(used.multi)}/${n(limits.multi)} · 자동차 ${n(used.single)}/${n(limits.single)} · 매일 0시(한국 시간) 초기화`;
+  } catch {
+    if (my !== quotaSeq) return;
+    $('quota').className = 'quota unknown';
+    $('quotaFill').style.width = '0';
+    $('quotaBar').removeAttribute('aria-valuenow');
+    $('quotaPct').textContent = '확인 불가';
+    $('quotaText').textContent = '지금은 사용량을 읽지 못했어요. 검색은 그대로 할 수 있어요.';
+  }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshQuota(); });
+// 페이지를 켜 둔 채 한국 시간 0시가 지나면 새 날짜의 사용량(0부터)으로 바꾼다
+setInterval(() => { if (quotaDay && todayKST() !== quotaDay) refreshQuota(); }, 60e3);
+
 // summary: 시간·거리만 받기(경로 선 없이 가볍게). 지도에 경로를 그릴 때만 summary 없이 부른다
 const routeTo = (o, h, summary = false) => proxy(`/route?origin=${o.lon},${o.lat}&destination=${h.lon},${h.lat}${summary ? '&summary=true' : ''}`);
 
@@ -559,6 +609,9 @@ async function setOrigin(o) {
     $('resultCard').hidden = true;
     $('distCard').hidden = true;
     failed(e);
+  } finally {
+    // 성공하면 이어지는 경로 선 그리기(select)가 끝난 뒤 읽으므로, 여기서는 순위를 못 낸 경우에만 읽는다
+    if (my === runId && !results) refreshQuota();
   }
 }
 
@@ -667,7 +720,9 @@ async function select(id) {
     const bounds = new kakao.maps.LatLngBounds();
     path.forEach((p) => bounds.extend(p));
     map.setBounds(bounds, 40, 40, 40, 40);
-  } catch { /* 경로 선은 없어도 계산 결과는 그대로 */ }
+  } catch { /* 경로 선은 없어도 계산 결과는 그대로 */ } finally {
+    refreshQuota(); // 경로 선 그리기도 자동차 길찾기 1번
+  }
 }
 
 // ---------- 출발지 입력
@@ -711,6 +766,7 @@ $('gps').addEventListener('click', () => {
 });
 
 // ---------- 시작
+refreshQuota();
 try {
   if (typeof kakao === 'undefined' || !kakao.maps) throw new Error('카카오 지도를 불러오지 못했어요 (JavaScript 키·도메인 설정 확인)');
   await Promise.all([new Promise((ok) => kakao.maps.load(ok)), loadData()]);
