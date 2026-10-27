@@ -96,6 +96,16 @@
   .dsum b { font-variant-numeric: tabular-nums; }
   .ln { display: inline-block; width: 22px; height: 0; margin-right: 4px; vertical-align: 3px; }
   a { color: var(--accent); }
+  /* 계산 실패 창: 닫기 전까지 그대로, 닫으면 오른쪽 아래 작은 표시로 남는다 */
+  .fail-dlg { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .4); }
+  .fail-box { width: 100%; max-width: 480px; max-height: 85vh; overflow: auto; background: var(--surface); color: var(--ink); border: 2px solid var(--full); border-radius: 12px; padding: 16px 18px; box-shadow: 0 12px 32px rgba(0, 0, 0, .3); }
+  .fail-box h3 { margin: 0 0 8px; font-size: 16px; color: var(--full); }
+  .fail-box p { margin: 6px 0; font-size: 13.5px; }
+  .fail-box ul { margin: 6px 0; padding-left: 18px; font-size: 13.5px; }
+  .fail-box li { margin: 3px 0; overflow-wrap: anywhere; }
+  .fail-box .btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+  .fail-badge { position: fixed; right: 16px; bottom: 16px; z-index: 40; background: var(--full); border-color: var(--full); color: #fff; border-radius: 999px; padding: 6px 14px; font-size: 13px; box-shadow: 0 2px 10px rgba(0, 0, 0, .25); }
+  .fail-dlg[hidden], .fail-badge[hidden] { display: none; }
 </style>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=42a491bd43887127ca6b4bf69b731aaf&libraries=services&autoload=false"></script>
 </head>
@@ -173,11 +183,10 @@
           <h3>3. 이동 시간은 어떻게 구하나요</h3>
           <ul>
             <li><b>계산하는 병원</b>: 출발지에서 직선 9.5km 안의 가까운 응급실(최대 30곳). 6곳보다 적으면 더 먼 곳을 채워 최소 6곳. 거절된 뒤 갈 다음 병원도 이 안에서 골라요.</li>
-            <li><b>출발지 → 응급실</b>: 카카오 실시간 길찾기(가까운 곳은 다중 목적지 길찾기 1번, 더 먼 곳은 하나씩). 길찾기가 실패한 곳은 직선 거리로 추정해요.</li>
-            <li><b>응급실 → 응급실</b>(거절된 뒤 다음 병원으로 갈 때): 검색할 때마다 카카오 길찾기로 실시간 계산해요. 서로 직선 9.5km 안의 병원끼리는 병원마다 다중 목적지 길찾기 1번으로 한꺼번에 받아요. 그보다 먼 병원끼리는 가까운 짝부터 최대 40쌍까지 자동차 길찾기로 하나씩 받아요(한 방향만 받아 반대 방향에도 같이 써요).</li>
-            <li><b>길찾기가 실패하면</b>: 그 짝은 예전에 만들어 둔 응급실 사이 표(2026-10-25~26)의 값을 쓰고, 그것도 없으면 직선 거리로 추정해요. 몇 쌍을 그렇게 했는지는 위쪽 안내 줄에 나와요.</li>
+            <li><b>출발지 → 응급실</b>: 카카오 실시간 길찾기(가까운 곳은 다중 목적지 길찾기 1번, 더 먼 곳은 하나씩).</li>
+            <li><b>응급실 → 응급실</b>(거절된 뒤 다음 병원으로 갈 때): 검색할 때마다 카카오 길찾기로 실시간 계산해요. 서로 직선 9.5km 안의 병원끼리는 병원마다 다중 목적지 길찾기 1번으로 한꺼번에 받아요. 그보다 먼 병원끼리는 필요한 짝을 모두 자동차 길찾기로 하나씩 받아요(한 방향만 받아 반대 방향에도 같이 써요).</li>
+            <li><b>길찾기가 하나라도 실패하면</b>: 순위를 보여 주지 않고, 몇 곳·몇 쌍이 왜 실패했는지 오류 창으로 알려요. 실패한 시간을 직선 거리 등으로 추정해 넣으면 실제와 다른 순위가 나올 수 있기 때문이에요. 오류 창을 닫으면 화면 오른쪽 아래에 작은 '계산 실패' 표시로 남고, 누르면 다시 열려요.</li>
             <li><b>같은 곳 다시 검색</b>: 같은 출발지를 5분 안에 다시 검색하면 앞에서 받은 길찾기 결과를 다시 써요(길찾기 횟수 아끼기).</li>
-            <li><b>직선 거리 추정</b>: 직선 거리에, 예전에 만든 응급실 사이 표에서 구한 '도로 시간 ÷ 직선 거리'의 중앙값을 곱해요<span id="estInfo"></span>.</li>
           </ul>
 
           <h3>4. 한계</h3>
@@ -186,7 +195,7 @@
             <li><b>병원이 입력한 값</b>: 입력이 늦거나 틀리면 계산도 그만큼 틀려요.</li>
             <li><b>병원끼리 독립이라고 가정</b>: 실제로는 주변 병원이 함께 붐빌 때가 있어, 그럴 때는 실효 도착 시간이 실제보다 짧게 나올 수 있어요.</li>
             <li><b>정해 둔 값</b>: 확인 지연 3분, 세 번째 병원까지만 계산하는 것은 정해 둔 가정이에요.</li>
-            <li><b>하루 검색 횟수에 한도가 있어요 (카카오 길찾기 하루 사용 한도)</b>: 한 출발지에서 여러 곳까지 한 번에 찾는 '다중 목적지 길찾기'는 하루 1,000번까지 무료예요. 검색 한 번에 보통 6~7번, 많아야 12번(출발지에서 1번 + 다른 후보가 9.5km 안에 있는 후보 병원마다 1번) 써서, <b>하루에 약 140번 검색</b>할 수 있어요(가장 많이 쓰는 곳에서만 검색해도 약 80번). 하나씩 찾는 '자동차 길찾기'는 하루 10,000번이라 검색 한 번에 보통 15~20번을 써도 넉넉해요. 한도를 넘으면 그날 남은 검색은 길찾기가 실패해 예전 표 값이나 직선 거리 추정으로 계산돼요. <span class="def">(2026년 10월 카카오 개발자 문서 기준, 한도는 바뀔 수 있어요)</span></li>
+            <li><b>하루 검색 횟수에 한도가 있어요 (카카오 길찾기 하루 사용 한도)</b>: 한 출발지에서 여러 곳까지 한 번에 찾는 '다중 목적지 길찾기'는 하루 1,000번까지 무료예요. 검색 한 번에 보통 6~7번, 많아야 12번(출발지에서 1번 + 다른 후보가 9.5km 안에 있는 후보 병원마다 1번) 써서, <b>하루에 약 140번 검색</b>할 수 있어요(가장 많이 쓰는 곳에서만 검색해도 약 80번). 하나씩 찾는 '자동차 길찾기'는 하루 10,000번이라 검색 한 번에 보통 15~20번을 써도 넉넉해요. 한도를 넘으면 그날 남은 검색은 길찾기가 실패해 순위를 보여 주지 않아요(다음 날 다시 쓸 수 있어요). <span class="def">(2026년 10월 카카오 개발자 문서 기준, 한도는 바뀔 수 있어요)</span></li>
             <li><b>'실시간'은 지금 출발할 때의 교통이에요</b>: 거절된 병원에서 다음 병원으로 실제로 다시 출발하는 건 보통 10~20분 뒤라, 그때의 교통과는 조금 다를 수 있어요.</li>
             <li><b>먼 병원끼리는 한 방향만</b>: 9.5km보다 먼 병원 짝은 한 방향 시간만 받아 반대 방향에도 써요. 일방통행 등으로 실제와 조금 다를 수 있어요.</li>
             <li><b>결과가 나오기까지 몇 초 더 걸려요</b>: 병원 사이 길찾기를 여러 번 부르기 때문이에요.</li>
@@ -212,6 +221,15 @@
   </div>
 </div>
 
+<div class="fail-dlg" id="failDlg" role="alertdialog" aria-modal="true" aria-labelledby="failTitle" hidden>
+  <div class="fail-box">
+    <h3 id="failTitle">계산 실패</h3>
+    <div id="failBody"></div>
+    <div class="btns"><button type="button" id="failRetry">다시 시도</button><button type="button" class="primary" id="failClose">닫기</button></div>
+  </div>
+</div>
+<button type="button" class="fail-badge" id="failBadge" hidden aria-label="계산 실패 내용 다시 보기">⚠ 계산 실패</button>
+
 <script type="module">
 import { makeRejectProb, STALE_MIN } from './engine/model.mjs';
 import { evaluate } from './engine/effective.mjs';
@@ -225,7 +243,6 @@ const MIN_CANDIDATES = 6;  // 가까운 곳이 이보다 적으면 더 먼 곳�
 const DELAY_MIN = 3;
 const DEPTH = 3;
 const LIVE_CONC = 6;         // 응급실 사이 실시간 길찾기를 동시에 몇 개씩 부를지
-const MAX_SINGLE = 40;       // 검색 한 번에 하나씩 부르는 자동차 길찾기 최대 수 (10km 넘는 응급실 짝)
 const CACHE_MS = 5 * 60e3;   // 같은 출발지를 5분 안에 다시 검색하면 앞 결과를 다시 쓴다(길찾기 횟수 아끼기)
 
 const $ = (id) => document.getElementById(id);
@@ -243,13 +260,13 @@ const bedClass = (h, sinceObs) => {
 const bedText = (h) => (h.hvec == null ? '정보 없음' : `남은 병상 ${h.hvec}`);
 
 // ---------- 데이터
-let status, model, travel, rejectProb, ers, byId, obsMs;
+let status, model, rejectProb, ers, byId, obsMs;
 
 const sinceObsMin = () => Math.max(0, (Date.now() - obsMs) / 60e3);
 
 async function loadData() {
   const get = (f) => fetch(`${f}?t=${Date.now()}`, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(`${f} ${r.status}`); return r.json(); });
-  [status, model, travel] = await Promise.all([get('status.json'), get('model.json'), get('travel.json')]);
+  [status, model] = await Promise.all([get('status.json'), get('model.json')]);
   rejectProb = makeRejectProb(model);
   obsMs = parseKST(status.latestAt);
   ers = status.hospitals
@@ -260,61 +277,69 @@ async function loadData() {
   $('dataInfo').textContent =
     `병상 정보 ${status.latestAt.slice(5, 16)} 수집 기준 · 거절 확률 기록 기간 ${days < 1 ? '하루 미만' : `${days.toFixed(1)}일`}` +
     `(짝: '지금 기록'과 '몇 분 뒤 기록'을 묶은 것 ${model.pairs.toLocaleString()}개) · 응급실 사이 이동 시간: 검색할 때 실시간 길찾기`;
-  $('estInfo').textContent = ` (1km당 약 ${(travel.estimate.secPerM * 1000 / 60).toFixed(1)}분)`;
 }
 
-// 응급실 → 응급실 시간(분)
-//   1) 이번 검색에서 실시간 길찾기로 받은 값 (liveT)
-//   2) 실패한 짝은 예전에 만들어 둔 표(2026-10-25~26, 지금은 더 만들지 않음)의 같은 짝 → 반대 방향
-//   3) 그래도 없으면 직선 거리 × (도로 시간 ÷ 직선 거리 중앙값)
+// 응급실 → 응급실 시간(분): 이번 검색에서 실시간 길찾기로 받은 값만 쓴다.
+// 실패한 짝이 하나라도 있으면 계산 전에 멈추므로(setOrigin), 여기서 값이 없으면 오류다.
 let liveT = {};
-let slotOrder = [];
-let pairStat = { live: new Set(), table: new Set(), est: new Set() }; // 어떤 방법으로 시간을 구한 짝인지 (같은 짝은 한 번만 셈)
-function prepareBetween() {
-  const h = kstHour(Date.now());
-  const d = (s) => Math.min(Math.abs(s - h), 24 - Math.abs(s - h));
-  slotOrder = Object.keys(travel.slots).map(Number).sort((a, b) => d(a) - d(b)).map((s) => travel.slots[s].t);
-  pairStat = { live: new Set(), table: new Set(), est: new Set() };
-}
 function between(a, b) {
   const v = liveT[a]?.[b];
-  const k = `${a}>${b}`;
-  if (v != null) { pairStat.live.add(k); return v; }
-  for (const t of slotOrder) { const x = t[a]?.[b] ?? t[b]?.[a]; if (x != null) { pairStat.table.add(k); return x / 60; } }
-  if (!byId[a] || !byId[b]) return NaN;
-  pairStat.est.add(k);
-  return (haversineM(byId[a], byId[b]) * travel.estimate.secPerM) / 60;
+  if (!Number.isFinite(v)) throw new Error('응급실 사이 시간이 비어 있어요');
+  return v;
+}
+
+// 길찾기 결과 하나 → 시간(분)·거리(m). 실패면 null
+//   104: 출발지와 도착지가 5m 안이라 카카오가 경로를 찾지 않음 → 0분·0m (같은 자리)
+const okTime = (r) => (r?.result_code === 0 && r.summary ? { min: r.summary.duration / 60, m: r.summary.distance }
+  : r?.result_code === 104 ? { min: 0, m: 0 } : null);
+const whyRoute = (r) => (r ? `카카오 길찾기 결과 없음 (코드 ${r.result_code}${r.result_msg ? `: ${r.result_msg}` : ''})` : '카카오 응답에 이 병원 결과가 없음');
+function whyErr(e) {
+  const m = String(e?.message ?? e ?? '');
+  if (e?.status === 429 || /limit|exceed|한도/i.test(m)) return '카카오 길찾기 하루 사용 한도 초과';
+  if (e?.status === 401 || e?.status === 403) return `중계 서버가 요청을 거절함 (${m})`;
+  if (e?.status >= 500) return `중계 서버·카카오 서버 오류 (${m})`;
+  if (e instanceof TypeError) return '인터넷 연결이 끊겼거나 중계 서버가 응답하지 않음';
+  return m || '알 수 없는 오류';
 }
 
 // 길찾기 사용량 (이번 검색): 다중 목적지 / 자동차 길찾기
 let usage = { multi: 0, single: 0, failed: 0 };
 
-// 일을 n개씩 동시에 돌린다 (onDone: 하나 끝날 때마다)
-async function pool(tasks, n, onDone) {
+// 일을 n개씩 동시에 돌린다 (onDone: 하나 끝날 때마다, onError: 하나가 예상 못 한 오류로 끝날 때)
+async function pool(tasks, n, onDone, onError) {
   let next = 0;
   await Promise.all(Array.from({ length: Math.min(n, tasks.length) }, async () => {
-    while (next < tasks.length) { const t = tasks[next++]; await t().catch(() => { usage.failed++; }); onDone?.(); }
+    while (next < tasks.length) { const t = tasks[next++]; await t().catch((e) => { usage.failed++; onError?.(e); }); onDone?.(); }
   }));
 }
 
 // 후보 응급실끼리의 도로 시간을 실시간으로 받는다
 //   직선 9.5km 안의 짝: 후보마다 다중 목적지 길찾기 1번 (카카오 반경 10km 제한)
-//   그보다 먼 짝: 가까운 짝부터 MAX_SINGLE개까지 자동차 길찾기로 하나씩 (한 방향만 받아 양쪽에 쓴다)
-async function liveBetween(candidates, onProgress) {
+//   그보다 먼 짝: 필요한 짝을 모두 자동차 길찾기로 하나씩 (한 방향만 받아 양쪽에 쓴다)
+//   실패한 짝은 fails.pairs에 [출발 병원, 도착 병원, 원인]으로 모은다 (추정하지 않는다)
+async function liveBetween(candidates, fails, onProgress) {
   const T = {};
   const ids = candidates.map((c) => c.id).filter((id) => byId[id]);
+  const fail = (a, b, why) => fails.pairs.push([a, b, why]);
   const tasks = [];
   const far = [];
   for (const a of ids) {
     const near = ids.filter((b) => b !== a && haversineM(byId[a], byId[b]) <= NEAR_M).slice(0, 30);
     if (near.length) tasks.push(async () => {
       usage.multi++;
-      const body = await proxy('/matrix', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ origin: { x: byId[a].lon, y: byId[a].lat }, destinations: near.map((b) => ({ key: b, x: byId[b].lon, y: byId[b].lat })) }),
-      });
-      for (const r of body.routes ?? []) if (r.result_code === 0 && r.summary) (T[a] ??= {})[r.key] = r.summary.duration / 60;
+      let body;
+      try {
+        body = await proxy('/matrix', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ origin: { x: byId[a].lon, y: byId[a].lat }, destinations: near.map((b) => ({ key: b, x: byId[b].lon, y: byId[b].lat })) }),
+        });
+      } catch (e) { usage.failed++; for (const b of near) fail(a, b, whyErr(e)); return; }
+      const got = Object.fromEntries((body.routes ?? []).map((r) => [r.key, r]));
+      for (const b of near) {
+        const t = okTime(got[b]);
+        if (t) (T[a] ??= {})[b] = t.min; else fail(a, b, whyRoute(got[b]));
+      }
     });
   }
   for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
@@ -322,14 +347,21 @@ async function liveBetween(candidates, onProgress) {
     if (m > NEAR_M) far.push([ids[i], ids[j], m]);
   }
   far.sort((x, y) => x[2] - y[2]);
-  for (const [a, b] of far.slice(0, MAX_SINGLE)) tasks.push(async () => {
+  for (const [a, b] of far) tasks.push(async () => {
     usage.single++;
-    const r = (await proxy(`/route?origin=${byId[a].lon},${byId[a].lat}&destination=${byId[b].lon},${byId[b].lat}&summary=true`)).routes?.[0];
-    if (r?.result_code === 0 && r.summary) { const v = r.summary.duration / 60; (T[a] ??= {})[b] = v; (T[b] ??= {})[a] = v; }
+    let r;
+    try { r = (await proxy(`/route?origin=${byId[a].lon},${byId[a].lat}&destination=${byId[b].lon},${byId[b].lat}&summary=true`)).routes?.[0]; }
+    catch (e) { usage.failed++; fail(a, b, whyErr(e)); return; }
+    const t = okTime(r);
+    if (t) { (T[a] ??= {})[b] = t.min; (T[b] ??= {})[a] = t.min; } else fail(a, b, whyRoute(r));
   });
   let done = 0;
-  await pool(tasks, LIVE_CONC, () => onProgress?.(++done, tasks.length));
-  return { T, farSkipped: Math.max(0, far.length - MAX_SINGLE) };
+  await pool(tasks, LIVE_CONC, () => onProgress?.(++done, tasks.length), (e) => fail('', '', whyErr(e)));
+  // 빠진 짝이 없는지 마지막으로 확인 (계산에 쓰는 모든 짝 = 후보끼리 모든 방향)
+  if (!fails.pairs.length) {
+    for (const a of ids) for (const b of ids) if (a !== b && !Number.isFinite(T[a]?.[b])) fail(a, b, '길찾기 결과가 비어 있음');
+  }
+  return { T };
 }
 
 // 같은 출발지(약 10m 안)를 5분 안에 다시 검색하면 앞에서 받은 길찾기 결과를 다시 쓴다
@@ -353,49 +385,44 @@ function probAt(id, leadMin) {
 async function proxy(path, init) {
   const r = await fetch(PROXY + path, init);
   const body = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(body.error || body.msg || `길찾기 오류 ${r.status}`);
+  if (!r.ok) throw Object.assign(new Error(body.error || body.msg || `길찾기 오류 ${r.status}`), { status: r.status });
   return body;
 }
 // summary: 시간·거리만 받기(경로 선 없이 가볍게). 지도에 경로를 그릴 때만 summary 없이 부른다
 const routeTo = (o, h, summary = false) => proxy(`/route?origin=${o.lon},${o.lat}&destination=${h.lon},${h.lat}${summary ? '&summary=true' : ''}`);
 
-// 출발지 → 응급실 도로 시간 (직선·도로 거리도 함께)
-async function roadTimes(origin) {
+// 출발지 → 응급실 도로 시간 (직선·도로 거리도 함께). 실패한 병원은 fails.origin에 [병원, 원인]으로 모은다 (추정하지 않는다)
+async function roadTimes(origin, fails) {
   const sorted = ers.map((h) => ({ h, m: haversineM(origin, h) })).sort((a, b) => a.m - b.m);
-  const cand = (x, travelMin, roadM, est = false) => ({
-    id: x.h.id, name: x.h.name, travelMin, est,
-    straightM: x.m, roadM: Number.isFinite(roadM) ? roadM : null,
-  });
+  const cand = (x, t) => ({ id: x.h.id, name: x.h.name, travelMin: t.min, straightM: x.m, roadM: t.m });
   const near = sorted.filter((x) => x.m <= NEAR_M).slice(0, 30);
   const far = sorted.filter((x) => x.m > NEAR_M).slice(0, Math.max(0, MIN_CANDIDATES - near.length));
   const out = [];
-  let estimated = 0;
 
   if (near.length) {
     usage.multi++;
-    // 실패하면(하루 한도 초과 등) 멈추지 않고 아래에서 모두 직선 거리로 추정한다
-    const body = await proxy('/matrix', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ origin: { x: origin.lon, y: origin.lat }, destinations: near.map((x) => ({ key: x.h.id, x: x.h.lon, y: x.h.lat })) }),
-    }).catch(() => { usage.failed++; return {}; });
-    const got = Object.fromEntries((body.routes ?? []).filter((r) => r.result_code === 0 && r.summary).map((r) => [r.key, r.summary]));
-    for (const x of near) {
-      const g = got[x.h.id];
-      if (g) out.push(cand(x, g.duration / 60, g.distance));
-      else { estimated++; out.push(cand(x, (x.m * travel.estimate.secPerM) / 60, null, true)); }
-    }
+    try {
+      const body = await proxy('/matrix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ origin: { x: origin.lon, y: origin.lat }, destinations: near.map((x) => ({ key: x.h.id, x: x.h.lon, y: x.h.lat })) }),
+      });
+      const got = Object.fromEntries((body.routes ?? []).map((r) => [r.key, r]));
+      for (const x of near) {
+        const t = okTime(got[x.h.id]);
+        if (t) out.push(cand(x, t)); else fails.origin.push([x.h.id, whyRoute(got[x.h.id])]);
+      }
+    } catch (e) { usage.failed++; for (const x of near) fails.origin.push([x.h.id, whyErr(e)]); }
   }
   await Promise.all(far.map(async (x) => {
+    usage.single++;
     try {
-      usage.single++;
       const r = (await routeTo(origin, x.h, true)).routes?.[0];
-      if (r?.result_code === 0) { out.push(cand(x, r.summary.duration / 60, r.summary.distance)); return; }
-    } catch { /* 아래에서 추정 */ }
-    estimated++;
-    out.push(cand(x, (x.m * travel.estimate.secPerM) / 60, null, true));
+      const t = okTime(r);
+      if (t) out.push(cand(x, t)); else fails.origin.push([x.h.id, whyRoute(r)]);
+    } catch (e) { usage.failed++; fails.origin.push([x.h.id, whyErr(e)]); }
   }));
-  return { candidates: out, estimated, nearestM: sorted[0]?.m ?? Infinity };
+  return { candidates: out, nearestM: sorted[0]?.m ?? Infinity };
 }
 
 // ---------- 지도
@@ -438,18 +465,59 @@ function initMap() {
 // ---------- 계산
 let results = null, origin = null, runId = 0, selectedId = null;
 
+// 실패 창: 닫기 전까지 그대로 → 닫으면 오른쪽 아래 작은 표시 → 누르면 다시 열림
+function showFail(html) {
+  $('failBody').innerHTML = html;
+  $('failBadge').hidden = true;
+  $('failDlg').hidden = false;
+  $('failClose').focus();
+}
+function closeFail() { $('failDlg').hidden = true; $('failBadge').hidden = false; }
+function clearFail() { $('failDlg').hidden = true; $('failBadge').hidden = true; }
+$('failClose').addEventListener('click', closeFail);
+$('failBadge').addEventListener('click', () => { $('failBadge').hidden = true; $('failDlg').hidden = false; $('failClose').focus(); });
+$('failRetry').addEventListener('click', () => { clearFail(); if (origin) setOrigin(origin); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('failDlg').hidden) closeFail(); });
+
+function failHtml(o, fails, err) {
+  const items = [];
+  if (fails.origin.length) items.push(`계산에 실패한 출발지 → 응급실: <b>${fails.origin.length}곳</b>`);
+  const pairKeys = new Set(fails.pairs.filter(([a, b]) => a && b).map(([a, b]) => [a, b].sort().join('|'))); // 같은 짝(방향 무관)은 한 번만 센다
+  if (pairKeys.size) items.push(`계산에 실패한 응급실 쌍: <b>${pairKeys.size}쌍</b>`);
+  if (fails.origin.length && !fails.pairs.length) items.push('출발지 길찾기가 실패해 응급실 사이 길찾기는 하지 않았어요.');
+  const why = {};
+  for (const [, w] of fails.origin) why[w] = (why[w] ?? 0) + 1;
+  const seen = new Set(); // 같은 짝(방향 무관)은 한 번만 센다
+  for (const [a, b, w] of fails.pairs) { const k = [a, b].sort().join('|') + w; if (a && b && seen.has(k)) continue; seen.add(k); why[w] = (why[w] ?? 0) + 1; }
+  if (err) why[whyErr(err)] = (why[whyErr(err)] ?? 0) + 1;
+  const whyList = Object.entries(why).sort((x, y) => y[1] - x[1]).map(([w, n]) => `<li>${esc(w)} <span class="meta">(${n}건)</span></li>`).join('');
+  return `<p><b>${esc(o.label)}</b> 출발 계산에서 실시간 길찾기가 실패했어요. 실패한 시간을 추정해 넣으면 실제와 다른 결과가 나올 수 있어서 계산을 멈췄어요.</p>` +
+    (items.length ? `<ul>${items.map((t) => `<li>${t}</li>`).join('')}</ul>` : '') +
+    `<p><b>원인</b></p><ul>${whyList}</ul>` +
+    '<p class="meta">잠시 뒤 \'다시 시도\'를 눌러 보세요. 하루 사용 한도를 넘었다면 다음 날 다시 쓸 수 있어요. 실제 응급 상황이면 바로 119에 신고하세요.</p>';
+}
+
 async function setOrigin(o) {
   origin = o;
   const my = ++runId;
+  results = null;
+  clearFail();
   if (originMarker) originMarker.setMap(null);
   originMarker = new kakao.maps.Marker({ position: LL(o), map, zIndex: 5 });
   if (routeLine) routeLine.setMap(null);
   clearGeoLines();
+  for (const el of Object.values(pins)) el.classList.remove('sel');
   $('places').innerHTML = '';
   setStatus(`${o.label}에서 응급실까지 도로 시간 계산 중…`);
   $('list').innerHTML = '';
   $('resultCard').hidden = true;
   $('distCard').hidden = true;
+  const fails = { origin: [], pairs: [] };
+  const failed = (err) => {
+    if (my !== runId) return;
+    setStatus('계산 실패: 실시간 길찾기가 실패해 순위를 보여 주지 않아요. 오른쪽 아래 \'계산 실패\'를 누르면 내용을 다시 볼 수 있어요.', true);
+    showFail(failHtml(o, fails, err));
+  };
   try {
     usage = { multi: 0, single: 0, failed: 0 };
     const key = cacheKey(o);
@@ -458,39 +526,39 @@ async function setOrigin(o) {
     let road, live;
     if (reused) ({ road, live } = hit);
     else {
-      road = await roadTimes(o);
+      road = await roadTimes(o, fails);
       if (my !== runId) return;
-      if (road.candidates.length) {
-        setStatus(`${o.label}: 응급실 사이 도로 시간 실시간 계산 중…`);
-        live = await liveBetween(road.candidates, (d, n) => { if (my === runId) setStatus(`${o.label}: 응급실 사이 도로 시간 실시간 계산 중… (${d}/${n})`); });
-        searchCache.set(key, { at: Date.now(), road, live });
-      }
+      if (fails.origin.length) return failed();
+      if (!road.candidates.length) { setStatus('계산할 응급실이 없어요.', true); return; }
+      setStatus(`${o.label}: 응급실 사이 도로 시간 실시간 계산 중…`);
+      live = await liveBetween(road.candidates, fails, (d, n) => { if (my === runId) setStatus(`${o.label}: 응급실 사이 도로 시간 실시간 계산 중… (${d}/${n})`); });
+      if (my !== runId) return;
+      if (fails.pairs.length) return failed();
+      searchCache.set(key, { at: Date.now(), road, live }); // 모두 성공한 검색만 다시 쓴다
     }
-    if (my !== runId) return;
-    const { candidates, estimated, nearestM } = road;
-    if (!candidates.length) { setStatus('계산할 응급실이 없어요.', true); return; }
+    const { candidates, nearestM } = road;
     liveT = live.T;
-    prepareBetween();
     results = evaluate(candidates, between, probAt, { delayMin: DELAY_MIN, depth: DEPTH });
     const candById = Object.fromEntries(candidates.map((c) => [c.id, c]));
     results.forEach((r) => {
       const c = candById[r.id];
-      Object.assign(r, { est: c.est, straightM: c.straightM, roadM: c.roadM });
+      Object.assign(r, { straightM: c.straightM, roadM: c.roadM });
     });
     const notes = [];
     if (nearestM > 20000) notes.push('가장 가까운 경기도 응급실도 직선 20km 넘게 떨어져 있어요(경기도 밖이면 결과가 맞지 않아요).');
-    if (estimated) notes.push(`출발지 길찾기 ${estimated}곳은 직선 거리로 추정했어요.`);
-    if (pairStat.table.size) notes.push(`응급실 사이 ${pairStat.table.size}쌍은 실시간 길찾기를 못 해 예전 표 값을 썼어요.`);
-    if (pairStat.est.size) notes.push(`응급실 사이 ${pairStat.est.size}쌍은 직선 거리로 추정했어요.`);
     notes.push(reused ? '5분 안에 같은 곳을 다시 검색해 앞의 길찾기 결과를 다시 썼어요(이번 길찾기 0번).'
-      : `이번 검색 길찾기 요청: 다중 목적지 ${usage.multi}번 · 자동차 ${usage.single}번${usage.failed ? ` (그중 실패 ${usage.failed}번)` : ''}.`);
+      : `이번 검색 길찾기 요청: 다중 목적지 ${usage.multi}번 · 자동차 ${usage.single}번.`);
     if (sinceObsMin() > 30) notes.push(`병상 정보가 ${Math.round(sinceObsMin())}분 전 것이에요.`);
     if (model.pairs < 5000) notes.push('거절 통계 기록이 아직 적어 확률이 거칠어요.');
     setStatus(`${o.label} 출발 · 응급실 ${results.length}곳 계산${notes.length ? ' · ' + notes.join(' ') : ''}`);
     render();
     select(results[0].id);
   } catch (e) {
-    if (my === runId) setStatus(`계산 실패: ${e.message}`, true);
+    results = null;
+    $('list').innerHTML = '';
+    $('resultCard').hidden = true;
+    $('distCard').hidden = true;
+    failed(e);
   }
 }
 
@@ -516,12 +584,11 @@ function render() {
     const cls = bedClass(h, since);
     const tags = [
       `<span class="tag ${cls === 'stale' ? 'gray' : cls}">${esc(bedText(h))}${cls === 'stale' && h.hvec != null ? '(오래됨)' : ''}</span>`,
-      r.est ? '<span class="tag gray">시간 추정</span>' : '',
     ].join('');
     return `<li data-id="${esc(r.id)}">
       <div class="top"><span class="name">${i + 1}. ${esc(r.name)}</span><span class="eff">${min1(r.effectiveMin)}분</span></div>
       <div class="meta">이동 ${min1(r.travelMin)}분 + 거절 대비 ${min1(r.extraMin)}분 · 도착 시 거절 확률 ${pct(r.pReject)}</div>
-      <div class="meta">직선 ${km(r.straightM)} · 도로 ${r.roadM != null ? km(r.roadM) : '추정'}</div>
+      <div class="meta">직선 ${km(r.straightM)} · 도로 ${km(r.roadM)}</div>
       <div>${tags}</div>
       <div class="chain" hidden></div>
     </li>`;
@@ -533,13 +600,13 @@ function render() {
 // 거리 비교: 직선 · 도로 거리 · 도로 시간
 function renderDist() {
   const rows = [...results].sort((a, b) => a.straightM - b.straightM);
-  const real = rows.filter((r) => r.roadM != null && !r.est && r.straightM > 50);
+  const real = rows.filter((r) => r.roadM != null && r.straightM > 50);
   const rankOf = (key, list) => { const rr = ranks(list.map((r) => r[key])); return Object.fromEntries(list.map((r, i) => [r.id, rr[i]])); };
   const rS = rankOf('straightM', rows), rR = rankOf('roadM', real), rM = rankOf('travelMin', rows);
   const rk = (x) => (x == null ? '' : `<small>${Number.isInteger(x) ? x : x.toFixed(1)}</small>`);
   $('distTable').innerHTML = '<tr><th>응급실</th><th>직선</th><th>도로 거리</th><th>도로 시간</th></tr>' +
     rows.map((r) => `<tr data-id="${esc(r.id)}"><td>${esc(r.name)}</td><td>${km(r.straightM)}${rk(rS[r.id])}</td>` +
-      `<td>${r.roadM != null ? km(r.roadM) + rk(rR[r.id]) : '<small>추정</small>'}</td><td>${min1(r.travelMin)}분${r.est ? '<small>추정</small>' : rk(rM[r.id])}</td></tr>`).join('');
+      `<td>${km(r.roadM)}${rk(rR[r.id])}</td><td>${min1(r.travelMin)}분${rk(rM[r.id])}</td></tr>`).join('');
   for (const tr of $('distTable').querySelectorAll('tr[data-id]')) tr.addEventListener('click', () => select(tr.dataset.id));
 
   const lines = [];

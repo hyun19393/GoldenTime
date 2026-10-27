@@ -24,8 +24,7 @@
 | `engine/severe.mjs` | 질환별 거절 확률 초안 (병상 0 이하 또는 그 질환 '불가능'). 데이터가 충분히 모인 뒤 다듬어 켤 예정, 지금은 실행하지 않음 |
 | `scripts/validate.mjs` | 앞 기간으로 만든 통계가 뒤 기간을 얼마나 맞히는지 검증 |
 | `scripts/build-model.mjs` | 웹앱용 통계표 `model.json` 만들기 |
-| `scripts/travel-matrix.mjs` | 응급실 사이 도로 이동 시간 표 (카카오 길찾기, 하루 4번 → `data/travel/`) |
-| `scripts/build-web.mjs` | 웹앱용 파일 만들기: `docs/model.json`(거절 통계표), `docs/travel.json`(이동 시간표), `docs/engine/`(계산 코드 복사) |
+| `scripts/build-web.mjs` | 웹앱용 파일 만들기: `docs/model.json`(거절 통계표), `docs/validation.json`(정확도 점검), `docs/engine/`(계산 코드 복사) |
 | `docs/app.html` | 응급실 추천 웹앱 (카카오 지도, 출발지 → 실효 도착 시간 순위·경로) |
 | `proxy/worker.js` | 중계 서버 (Cloudflare Workers): 카카오 키를 숨기고 웹앱의 길찾기 요청만 대신 호출 |
 | `data/` | 수집 데이터 (날짜별 CSV) |
