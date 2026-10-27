@@ -161,26 +161,15 @@ test('계산 과정 설명(explainPoint)의 최종값이 앱이 쓰는 확률과
   }
 });
 
-test('거리: 직선(하버사인)과 택시거리(동서+남북)', async () => {
-  const { haversineM, taxiM, planeDeltaM } = await import('../engine/geo.mjs');
+test('거리: 직선(하버사인)', async () => {
+  const { haversineM } = await import('../engine/geo.mjs');
   const a = { lat: 37.3248, lon: 127.1076 };
-  // 남북으로만 1km: 택시거리 = 직선 거리
-  const north = { lat: a.lat + 1000 / 111195, lon: a.lon };
+  const north = { lat: a.lat + 1000 / 111195, lon: a.lon }; // 남북으로 1km
   assert.ok(Math.abs(haversineM(a, north) - 1000) < 2);
-  assert.ok(Math.abs(taxiM(a, north) - haversineM(a, north)) < 1);
-  // 동서 1km + 남북 1km 대각선: 직선 √2 km, 택시 2 km
   const kmLon = 1000 / (111195 * Math.cos((a.lat * Math.PI) / 180));
-  const diag = { lat: a.lat + 1000 / 111195, lon: a.lon + kmLon };
+  const diag = { lat: a.lat + 1000 / 111195, lon: a.lon + kmLon }; // 동서 1km + 남북 1km
   assert.ok(Math.abs(haversineM(a, diag) - Math.SQRT2 * 1000) < 3);
-  assert.ok(Math.abs(taxiM(a, diag) - 2000) < 3);
-  const { dx, dy } = planeDeltaM(a, diag);
-  assert.ok(dx > 0 && dy > 0);
-  // 택시거리는 항상 직선 이상, 직선의 √2배 이하
-  for (let k = 0; k < 50; k++) {
-    const b = { lat: a.lat + (Math.sin(k) * 0.2), lon: a.lon + (Math.cos(k * 1.7) * 0.2) };
-    const s = haversineM(a, b), t = taxiM(a, b);
-    assert.ok(t >= s - 1 && t <= s * Math.SQRT2 + 1, `${s} ${t}`);
-  }
+  assert.equal(haversineM(a, a), 0);
 });
 
 test('순위와 스피어먼 순위 상관', async () => {
@@ -240,4 +229,21 @@ test('병원 등급(v2): 꽉 찬 적 없는 병원은 늘 꽉 찬 병원에 끌�
   assert.ok(ex.p < 0.05, `CALM 20분 뒤 ${ex.p}`);
   const big = explainPoint(model, { hpid: 'BIG', b: bedBucket(1), L: 20, hb: hourBin(12) });
   assert.ok(big.p > 0.5, `BIG 20분 뒤 ${big.p}`);
+});
+
+test('빠른 열 읽기(readColumns)는 parseCSV로 읽고 열을 고른 것과 같다 (쉼표·따옴표·칸 안 줄바꿈·\\r·빈 줄)', async () => {
+  const { parseCSV, readColumns, toCSVLine } = await import('../engine/csv.mjs');
+  const head = ['collected_at', 'hpid', 'dutyName', 'hvec', '_extra'];
+  const rows = [
+    ['2026-10-28 01:00:00', 'A1', '가병원', '3', ''],
+    ['2026-10-28 01:00:00', 'A2', '나, 다 병원', '-2', '{"x":"1,2"}'],
+    ['2026-10-28 01:00:00', 'A3', '줄\n바꿈 "병원"', '0', ''],
+    ['2026-10-28 01:00:00', 'A4', '', '', ''],
+  ];
+  const text = '﻿' + [head, ...rows].map(toCSVLine).join('\r\n') + '\r\n\n';
+  const cols = ['collected_at', 'hpid', 'dutyName', 'hvec', 'missing'];
+  const want = parseCSV(text).map((r) => Object.fromEntries(cols.map((c) => [c, r[c] ?? ''])));
+  assert.deepEqual(readColumns(text, cols), want);
+  assert.equal(want.length, 4);
+  assert.equal(want[2].dutyName, '줄\n바꿈 "병원"');
 });

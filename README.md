@@ -23,7 +23,6 @@
 | `engine/geo.mjs` · `engine/stats.mjs` | 직선 거리 계산, 순위 상관 (웹앱 거리 비교) |
 | `engine/severe.mjs` | 질환별 거절 확률 초안 (병상 0 이하 또는 그 질환 '불가능'). 데이터가 충분히 모인 뒤 다듬어 켤 예정, 지금은 실행하지 않음 |
 | `scripts/validate.mjs` | 앞 기간으로 만든 통계가 뒤 기간을 얼마나 맞히는지 검증 |
-| `scripts/build-model.mjs` | 웹앱용 통계표 `model.json` 만들기 |
 | `scripts/build-web.mjs` | 웹앱용 파일 만들기: `docs/model.json`(거절 통계표), `docs/validation.json`(정확도 점검), `docs/engine/`(계산 코드 복사) |
 | `docs/app.html` | 응급실 추천 웹앱 (카카오 지도, 출발지 → 실효 도착 시간 순위·경로) |
 | `proxy/worker.js` | 중계 서버 (Cloudflare Workers): 카카오 키를 숨기고 웹앱의 길찾기 요청만 대신 호출. 카카오 호출 횟수를 D1에 날짜·종류별로 세어 `/usage`로 알려 줌(웹앱 상단 '오늘 길찾기 사용량' 바) |
@@ -38,7 +37,7 @@ https://hyun19393.github.io/GoldenTime/ (GitHub Pages, `docs/` 폴더)
 
 수집할 때마다 `scripts/build-status.mjs`가 `docs/status.json`을 새로 만들고, 현황판이 그 파일을 읽어 지도·그래프·표로 보여준다.
 
-현황판의 '거절 확률은 이렇게 계산해요'는 `docs/model.json`(거절 통계표)을 웹앱과 같은 계산 코드로 읽어, 병상×도착 시간 표, 병원 하나의 단계별 계산식, 병원별 결과를 보여준다.
+현황판은 네 칸이다: **지금**(지도·응급실 목록·그래프·수용 불가 메시지), **날짜별 기록**(`docs/history/`), **거절 확률**(① 계산 방법 ② 결과표 ③ 병원 하나 따라가기 ④ 병원별 결과 ⑤ 정확도 점검 `docs/validation.json`), **수집 상태**(수집률·실패 원인·뒤처리·입력 신선도). 거절 확률 칸은 `docs/model.json`(거절 통계표)을 웹앱과 같은 계산 코드로 읽는다.
 
 ## 수집 데이터
 

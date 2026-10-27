@@ -11,7 +11,8 @@ import { buildDiseaseModels } from '../engine/severe.mjs';
 import { buildModel } from '../engine/model.mjs';
 import { evaluateSplit } from '../engine/validate.mjs';
 
-export const ENGINE_FILES = ['model.mjs', 'effective.mjs', 'time.mjs', 'geo.mjs', 'stats.mjs', 'severe.mjs', 'codes.mjs', 'validate.mjs', 'causes.mjs'];
+// 웹앱(app.html)·현황판(index.html)이 실제로 불러오는 계산 코드만 복사한다. 질환별 계산을 켤 때 severe.mjs·codes.mjs를 다시 넣는다.
+export const ENGINE_FILES = ['model.mjs', 'effective.mjs', 'time.mjs', 'geo.mjs', 'stats.mjs', 'causes.mjs'];
 
 export function main(args = {}) {
   const DATA = args.data ?? 'data';

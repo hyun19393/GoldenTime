@@ -6,10 +6,10 @@
 import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { parseCSV } from '../engine/csv.mjs';
+import { parseCSV, readColumns } from '../engine/csv.mjs';
 import { parseKST, parseHvidate, formatKST } from '../engine/time.mjs';
 import { causeCode } from '../engine/causes.mjs';
-import { regularStart } from './load.mjs';
+import { regularStart, BED_COLS } from './load.mjs';
 
 export const SLOT_MIN = 10;
 const SLOTS = (24 * 60) / SLOT_MIN; // 144칸
@@ -100,9 +100,9 @@ export function main(args = {}) {
   const prev = existsSync(idxFile) ? JSON.parse(readFileSync(idxFile, 'utf8')) : { days: [] };
   const prevBy = Object.fromEntries((prev.days ?? []).map((d) => [d.day, d]));
   // 자동 수집이 자리 잡은 시각 (첫 이틀의 수집 시각으로 찾는다). 그 전은 시험 수집 기간
-  const firstRows = parseCSV(readFileSync(join(bedDir, `${days[0]}.csv`), 'utf8'));
+  const firstRows = readColumns(readFileSync(join(bedDir, `${days[0]}.csv`), 'utf8'), BED_COLS);
   const early = new Set(firstRows.map((r) => r.collected_at));
-  if (days[1]) for (const r of parseCSV(readFileSync(join(bedDir, `${days[1]}.csv`), 'utf8'))) early.add(r.collected_at);
+  if (days[1]) for (const r of readColumns(readFileSync(join(bedDir, `${days[1]}.csv`), 'utf8'), BED_COLS)) early.add(r.collected_at);
   const firstAt = regularStart([...early].sort().map(parseKST)) ?? parseKST(`${days[0]} 00:00:00`);
   let nowAt = Date.now();
   if (args.now) nowAt = parseKST(args.now);
@@ -114,7 +114,7 @@ export function main(args = {}) {
     const old = prevBy[day];
     // 오늘은 시간이 흐르면 '아직 안 온 칸'이 줄어드므로, 원본이 같아도 마지막 날은 늘 다시 만든다
     if (old && old.sig === sig && day !== days.at(-1) && existsSync(join(OUT, `${day}.json`))) { out.push(old); continue; }
-    const rows = day === days[0] ? firstRows : parseCSV(readFileSync(join(bedDir, `${day}.csv`), 'utf8'));
+    const rows = day === days[0] ? firstRows : readColumns(readFileSync(join(bedDir, `${day}.csv`), 'utf8'), BED_COLS);
     const { summary, data } = buildDay(day, rows, runsByDay[day] ?? [], info, { firstAt, nowAt });
     writeFileSync(join(OUT, `${day}.json`), JSON.stringify(data));
     out.push({ ...summary, sig });

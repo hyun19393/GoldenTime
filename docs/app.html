@@ -279,10 +279,13 @@ const bedText = (h) => (h.hvec == null ? '정보 없음' : `남은 병상 ${h.hv
 
 // ---------- 데이터
 let status, model, rejectProb, ers, byId, obsMs;
+const REFRESH_AFTER_MIN = 12; // 병상 정보가 이보다 오래되면 검색 전에 새로 받는다 (10분마다 수집 + 반영 1~2분)
+let lastLoadTry = 0;
 
 const sinceObsMin = () => Math.max(0, (Date.now() - obsMs) / 60e3);
 
 async function loadData() {
+  lastLoadTry = Date.now();
   const get = (f) => fetch(`${f}?t=${Date.now()}`, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(`${f} ${r.status}`); return r.json(); });
   [status, model] = await Promise.all([get('status.json'), get('model.json')]);
   rejectProb = makeRejectProb(model);
@@ -295,6 +298,18 @@ async function loadData() {
   $('dataInfo').textContent =
     `병상 정보 ${status.latestAt.slice(5, 16)} 수집 기준 · 거절 확률 기록 기간 ${days < 1 ? '하루 미만' : `${days.toFixed(1)}일`}` +
     `(짝: '지금 기록'과 '몇 분 뒤 기록'을 묶은 것 ${model.pairs.toLocaleString()}개) · 응급실 사이 이동 시간: 검색할 때 실시간 길찾기`;
+}
+
+// 페이지를 열어 둔 채 시간이 지나면 병상 정보·통계표를 새로 받는다 (실패하면 갖고 있던 것으로 계산하고 상태 줄에 알린다)
+async function refreshIfOld() {
+  if (sinceObsMin() <= REFRESH_AFTER_MIN || Date.now() - lastLoadTry < 60e3) return true;
+  try {
+    await loadData();
+    drawPins();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // 응급실 → 응급실 시간(분): 이번 검색에서 실시간 길찾기로 받은 값만 쓴다.
@@ -386,14 +401,15 @@ async function liveBetween(candidates, fails, onProgress) {
 const searchCache = new Map();
 const cacheKey = (o) => `${o.lat.toFixed(4)},${o.lon.toFixed(4)}`;
 
-// 출발 후 leadMin분에 도착할 때 거절 확률. 병상 정보는 obsMs에 확인한 것이므로 그 뒤 지난 시간도 더한다.
+// 출발 후 leadMin분에 도착할 때 거절 확률. 병상 정보는 obsMs에 확인한 것이므로 그 뒤 지난 시간도 도착까지 시간에 더한다.
+// 입력 경과(ageMin)는 통계표를 만들 때처럼 '병상 정보를 확인한 시각' 기준이다(지난 시간은 도착까지 시간에 이미 들어 있음).
 function probAt(id, leadMin) {
   const h = byId[id];
   const since = sinceObsMin();
   return rejectProb({
     hpid: id,
     hvec: h.hvec ?? NaN,
-    ageMin: h.ageMin == null ? Infinity : h.ageMin + since,
+    ageMin: h.ageMin == null ? Infinity : h.ageMin,
     leadMin: leadMin + since,
     hourKST: kstHour(obsMs),
   }).p;
@@ -476,7 +492,7 @@ async function roadTimes(origin, fails) {
 }
 
 // ---------- 지도
-let map, originMarker, routeLine, straightLine, pins = {};
+let map, originMarker, routeLine, straightLine, pins = {}, pinOverlays = [];
 const LL = (p) => new kakao.maps.LatLng(p.lat, p.lon);
 
 // 직선(점선)을 지도에 그린다
@@ -492,6 +508,9 @@ function drawGeoLines(o, h) {
 
 function drawPins() {
   const since = sinceObsMin();
+  for (const ov of pinOverlays) ov.setMap(null); // 새로 받은 병상 정보로 다시 그릴 때
+  pinOverlays = [];
+  pins = {};
   for (const h of ers) {
     const el = document.createElement('div');
     el.className = `pin ${bedClass(h, since)}`;
@@ -499,6 +518,7 @@ function drawPins() {
     el.addEventListener('click', (e) => { e.stopPropagation(); if (results) select(h.id); });
     const ov = new kakao.maps.CustomOverlay({ position: LL(h), content: el, yAnchor: 0.5, xAnchor: 0.5, zIndex: 2, clickable: true });
     ov.setMap(map);
+    pinOverlays.push(ov);
     pins[h.id] = el;
   }
 }
@@ -569,6 +589,8 @@ async function setOrigin(o) {
     showFail(failHtml(o, fails, err));
   };
   try {
+    const fresh = await refreshIfOld();
+    if (my !== runId) return;
     usage = { multi: 0, single: 0, failed: 0 };
     const key = cacheKey(o);
     const hit = searchCache.get(key);
@@ -586,7 +608,8 @@ async function setOrigin(o) {
       if (fails.pairs.length) return failed();
       searchCache.set(key, { at: Date.now(), road, live }); // 모두 성공한 검색만 다시 쓴다
     }
-    const { candidates, nearestM } = road;
+    const candidates = road.candidates.filter((c) => byId[c.id]); // 병상 정보를 새로 받았을 때 목록에서 빠진 곳은 제외
+    const { nearestM } = road;
     liveT = live.T;
     results = evaluate(candidates, between, probAt, { delayMin: DELAY_MIN, depth: DEPTH });
     const candById = Object.fromEntries(candidates.map((c) => [c.id, c]));
@@ -598,6 +621,7 @@ async function setOrigin(o) {
     if (nearestM > 20000) notes.push('가장 가까운 경기도 응급실도 직선 20km 넘게 떨어져 있어요(경기도 밖이면 결과가 맞지 않아요).');
     notes.push(reused ? '5분 안에 같은 곳을 다시 검색해 앞의 길찾기 결과를 다시 썼어요(이번 길찾기 0번).'
       : `이번 검색 길찾기 요청: 다중 목적지 ${usage.multi}번 · 자동차 ${usage.single}번.`);
+    if (!fresh) notes.push('병상 정보를 새로 받지 못해 갖고 있던 정보로 계산했어요.');
     if (sinceObsMin() > 30) notes.push(`병상 정보가 ${Math.round(sinceObsMin())}분 전 것이에요.`);
     if (model.pairs < 5000) notes.push('거절 통계 기록이 아직 적어 확률이 거칠어요.');
     setStatus(`${o.label} 출발 · 응급실 ${results.length}곳 계산${notes.length ? ' · ' + notes.join(' ') : ''}`);
@@ -619,7 +643,8 @@ function render() {
   const since = sinceObsMin();
   const best = results[0];
   const nearest = [...results].sort((a, b) => a.travelMin - b.travelMin)[0];
-  const nearestOpen = [...results].filter((r) => (byId[r.id].hvec ?? 0) > 0).sort((a, b) => a.travelMin - b.travelMin)[0];
+  // 병상 있는 곳 = 지금 표시가 '3개 이상'이나 '1~2개'인 곳 (입력이 60분 넘게 지나 오래된 정보는 빼고)
+  const nearestOpen = [...results].filter((r) => ['ok', 'low'].includes(bedClass(byId[r.id], since))).sort((a, b) => a.travelMin - b.travelMin)[0];
   const box = (k, r, cls = '') => r
     ? `<div class="cmp ${cls}"><div class="k">${k}</div><div class="v">${min1(r.effectiveMin)}<small>분</small></div><div class="n">${esc(r.name)}</div><div class="meta">이동 ${min1(r.travelMin)}분 · 거절 ${pct(r.pReject)}</div></div>`
     : `<div class="cmp"><div class="k">${k}</div><div class="n">해당 없음</div></div>`;

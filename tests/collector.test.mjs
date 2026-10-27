@@ -114,7 +114,7 @@ test('메시지: 이미 저장한 메시지는 다시 쌓지 않음', async () =
   process.exitCode = 0;
 });
 
-test('공공데이터포털 일시 오류는 다시 시도해서 받아온다', async () => {
+test('공공데이터포털 일시 오류: 정시 실행은 다시 시도하지 않고 새 실행 대상으로 표시한다', async () => {
   let n = 0;
   const saved = globalThis.fetch;
   globalThis.fetch = async (url) => {
@@ -123,10 +123,13 @@ test('공공데이터포털 일시 오류는 다시 시도해서 받아온다', 
       return new Response('<OpenAPI_ServiceResponse><cmmMsgHeader><errMsg>SERVICE ERROR</errMsg><returnAuthMsg>SERVICETIMEOUT_ERROR</returnAuthMsg><returnReasonCode>05</returnReasonCode></cmmMsgHeader></OpenAPI_ServiceResponse>');
     return saved(url);
   };
-  const ok = await runOp(OPS[0], Date.now());
+  const ctx = {};
+  const ok = await runOp(OPS[0], Date.now(), ctx);
   globalThis.fetch = saved;
-  assert.equal(ok, true);
-  assert.equal(n, 2); // 한 번 실패 후 다시 시도
+  assert.equal(ok, false);
+  assert.equal(n, 1); // 같은 실행 안에서는 다시 부르지 않음
+  assert.equal(ctx.redo, true); // 새 실행(다른 실행 컴퓨터, 약 1분 뒤)이 다시 받는다
+  assert.equal(ctx.hostDown, undefined); // 연결 문제가 아니므로 다른 기능은 그대로 부른다
   process.exitCode = 0;
 });
 

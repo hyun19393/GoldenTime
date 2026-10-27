@@ -1,14 +1,15 @@
 // 수집 현황판(docs/)에서 읽을 요약 파일 docs/status.json을 만든다.
 // 수집할 때마다 GitHub Actions에서 실행된다.
-// 사용법: node scripts/build-status.mjs [--data data] [--out docs/status.json] [--days 7] [--window 14]
-// 수집 기록이 계속 쌓여도 빨리 끝나도록 병상 기록은 최근 --window일(기본 14일)만 읽는다.
+// 사용법: node scripts/build-status.mjs [--data data] [--out docs/status.json] [--days 7] [--window 일수]
+// 병상 기록은 전체 기간을 읽는다('전체' 수집률·첫 수집·지금까지 꽉 찬 비율이 이름 그대로 전체 기록 기준이 되게).
+// 필요한 열만 빠르게 읽어(readColumns) 기록이 쌓여도 빨리 끝난다. --window를 주면 최근 그 일수만 읽는다(시험용).
 import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { parseCSV } from '../engine/csv.mjs';
+import { parseCSV, readColumns } from '../engine/csv.mjs';
 import { parseKST, parseHvidate, formatKST, kstHour } from '../engine/time.mjs';
 import { normFlag, SEVERE } from '../engine/codes.mjs';
 import { causeCode } from '../engine/causes.mjs';
-import { regularStart } from './load.mjs';
+import { regularStart, BED_COLS } from './load.mjs';
 
 const args = Object.fromEntries(
   process.argv.slice(2).reduce((acc, a, i, arr) => (a.startsWith('--') ? [...acc, [a.slice(2), arr[i + 1]]] : acc), []),
@@ -16,16 +17,16 @@ const args = Object.fromEntries(
 const DATA = args.data ?? 'data';
 const OUT = args.out ?? 'docs/status.json';
 const DAYS = Number(args.days ?? 7);
-const WINDOW = Number(args.window ?? 14);
+const WINDOW = args.window ? Number(args.window) : Infinity; // 2026-10-28까지는 14일이었다
 
-const readDir = (sub, lastN = Infinity) => {
+const readDir = (sub, lastN = Infinity, cols = null) => {
   const dir = join(DATA, sub);
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter((f) => /^\d{4}-\d{2}-\d{2}\.csv$/.test(f))
     .sort()
     .slice(-lastN)
-    .map((f) => ({ day: f.slice(0, 10), rows: parseCSV(readFileSync(join(dir, f), 'utf8')) }));
+    .map((f) => { const text = readFileSync(join(dir, f), 'utf8'); return { day: f.slice(0, 10), rows: cols ? readColumns(text, cols) : parseCSV(text) }; });
 };
 const readTable = (f) => (existsSync(join(DATA, f)) ? parseCSV(readFileSync(join(DATA, f), 'utf8')) : []);
 
@@ -51,7 +52,7 @@ const hosp = Object.fromEntries(
 );
 
 // ---- 가용병상 기록
-const bedDays = readDir('beds', WINDOW);
+const bedDays = readDir('beds', WINDOW, BED_COLS); // 필요한 열만 빠르게 읽는다
 const snaps = new Map(); // collected_at -> rows
 let totalRows = 0;
 for (const { rows } of bedDays) {
@@ -170,7 +171,7 @@ const hospitalsNow = latest.map((r) => {
     // 입력 신선도: 병원 입력이 60분 넘게 지난 기록의 비율, 입력 경과 중앙값·최대(분)
     staleRate: p && p.ages.length ? p.ages.filter((a) => a > 60).length / p.ages.length : null,
     ageMedian: p && p.ages.length ? Math.round(median(p.ages)) : null,
-    ageMax: p && p.ages.length ? Math.round(Math.max(...p.ages)) : null,
+    ageMax: p && p.ages.length ? Math.round(p.ages.reduce((m, a) => (a > m ? a : m), -Infinity)) : null, // 기록이 많아도 안전하게
     severeNo: sevBy[r.hpid]?.no ?? [],
     erClosed: sevBy[r.hpid]?.erClosed ?? false,
     messages: activeMsgs.filter((m) => m.hpid === r.hpid).length,

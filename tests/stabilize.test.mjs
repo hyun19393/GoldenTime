@@ -35,22 +35,20 @@ async function fresh({ redo = false, runsCsv } = {}) {
 }
 const opOf = (url) => new URL(url).pathname.split('/').pop();
 
-test('연결 시간 초과(실제 실패 재현): 3번 시도 뒤 같은 서버 기능은 건너뛰고, 원인을 남기고, 새 실행을 요청', async () => {
+test('연결 시간 초과(실제 실패 재현): https로 한 번만 시도하고, 같은 서버 기능은 건너뛰고, 원인을 남기고, 새 실행을 요청', async () => {
   const { mod, runs, flag } = await fresh();
   const calls = [];
   globalThis.fetch = async (url) => { calls.push(new URL(url)); throw connectTimeout(); };
   const res = await mod.main();
   assert.deepEqual(res, [['beds', false], ['severe', false], ['messages', false]]);
-  // 가용병상만 3번(https → http → https) 시도, 나머지 기능과 하루 1번 기능은 부르지 않음
-  assert.deepEqual(calls.map((u) => [opOf(u), u.protocol]), [
-    ['getEmrrmRltmUsefulSckbdInfoInqire', 'https:'], ['getEmrrmRltmUsefulSckbdInfoInqire', 'http:'], ['getEmrrmRltmUsefulSckbdInfoInqire', 'https:'],
-  ]);
+  // 가용병상만 https로 1번 시도(같은 실행 안 재시도는 살아난 적이 없어 바로 새 실행에 맡김), 나머지 기능과 하루 1번 기능은 부르지 않음
+  assert.deepEqual(calls.map((u) => [opOf(u), u.protocol]), [['getEmrrmRltmUsefulSckbdInfoInqire', 'https:']]);
   const r = runs();
   const beds = r.find((x) => x.op === 'beds');
   assert.equal(beds.ok, '0');
   assert.equal(beds.cause, 'UND_ERR_CONNECT_TIMEOUT');
-  assert.equal(beds.attempts.split('|').length, 3);
-  assert.match(beds.attempts, /^https:UND_ERR_CONNECT_TIMEOUT:10\.0\|http:UND_ERR_CONNECT_TIMEOUT:10\.0\|https:/);
+  assert.equal(beds.attempts, 'https:UND_ERR_CONNECT_TIMEOUT:10.0');
+  assert.equal(Number(beds.ms) < 15000, true); // 예전에는 약 40초
   assert.match(beds.error, /fetch failed \(UND_ERR_CONNECT_TIMEOUT\)/);
   assert.deepEqual(r.filter((x) => x.op !== 'beds').map((x) => [x.op, x.cause]), [['severe', 'SKIPPED'], ['messages', 'SKIPPED']]);
   assert.equal(flag(), true);
@@ -83,8 +81,8 @@ test('예전 머리글의 runs.csv는 머리글만 새로 쓰고 예전 줄은 �
   process.exitCode = 0;
 });
 
-test('세 번째 시도에서 받으면: 기록 시각 = 실제로 받은 시각, 중증질환도 같은 시각으로 저장', async () => {
-  const { mod, runs, dir } = await fresh();
+test('새 실행에서 세 번째 시도에 받으면: 기록 시각 = 실제로 받은 시각, 중증질환도 같은 시각으로 저장', async () => {
+  const { mod, runs, dir } = await fresh({ redo: true });
   let bedTries = 0;
   const start = Date.now();
   globalThis.fetch = async (url) => {
@@ -124,9 +122,10 @@ test('새 실행(REDO=1): 4번까지 끈기 있게 시도하고, 기록에 redo 
   const { mod, runs, flag } = await fresh({ redo: true });
   assert.deepEqual(mod.WAIT_PLAN, [5, 15, 30]);
   const calls = [];
-  globalThis.fetch = async (url) => { calls.push(opOf(url)); throw connectTimeout(); };
+  globalThis.fetch = async (url) => { calls.push(new URL(url)); throw connectTimeout(); };
   await mod.main();
   assert.equal(calls.length, 4);
+  assert.ok(calls.every((u) => u.protocol === 'https:')); // http로는 부르지 않음
   const b = runs().find((x) => x.op === 'beds');
   assert.equal(b.run, 'redo');
   assert.equal(flag(), false);

@@ -1140,9 +1140,15 @@ function showStatus() {
     Object.entries(byCause).sort((a, b) => b[1].length - a[1].length).map(([k, gs]) => { const [t, dd] = causeText(k); return `<tr><td>${esc(t)}</td><td class="num">${gs.length}</td><td class="sub">${esc(dd)}</td></tr>`; }).join('') + '</table></div>';
   if (total && Object.keys(byCause).every(connect)) {
     const together = c.failures.filter((g) => g.ops.length > 1).length;
-    const quick = c.failures.filter((g) => g.recovered && g.recovered.afterMin <= 12).length;
-    ana += `<p class="note">최근 7일 실패 ${total}번이 모두 '연결 시간 초과'였어요. ${together}번은 같은 실행의 다른 기능도 함께 실패했고, ${quick}번은 10분쯤 뒤 다음 수집에서 바로 받았어요. ` +
-      '실패한 실행에서는 몇 번을 다시 시도해도 연결이 안 되다가 다음 실행에서는 바로 된다는 뜻이라, 공공데이터 서버가 잠깐 멈춘 것보다는 그 실행에 쓰인 컴퓨터(GitHub가 빌려주는 실행 컴퓨터)의 연결을 받아 주지 않은 것으로 보여요.</p>';
+    const byRedo = c.failures.filter((g) => g.recovered?.redo);
+    const byNext = c.failures.filter((g) => g.recovered && !g.recovered.redo && g.recovered.afterMin <= 12).length;
+    const mins = byRedo.map((g) => g.recovered.afterMin).sort((x, y) => x - y);
+    const fast = mins.filter((m) => m <= 2).length;
+    const when = !mins.length ? '' : fast === mins.length ? '모두 약 1분 뒤' : `${fast}번은 약 1분 뒤, 가장 늦게 ${mins.at(-1)}분 뒤`;
+    const got = [byRedo.length ? `${byRedo.length}번은 새 실행(다른 실행 컴퓨터)으로 다시 받았고(${when})` : '',
+      byNext ? `${byNext}번은 10분쯤 뒤 다음 정시 수집에서 받았어요` : ''].filter(Boolean).join(', ').replace(/받았고\(([^)]*)\)$/, '받았어요($1)');
+    ana += `<p class="note">최근 7일 실패 ${total}번이 모두 '연결 시간 초과'였어요. ${together}번은 같은 실행의 다른 기능도 함께 실패했어요.${got ? ` ${got}.` : ''} ` +
+      '실패한 실행 컴퓨터에서는 다시 시도해도 연결이 안 되다가, 다른 실행 컴퓨터에서는 곧바로 된다는 뜻이에요. 그래서 공공데이터 서버가 잠깐 멈춘 것보다는 그 실행에 쓰인 컴퓨터(GitHub가 빌려주는 실행 컴퓨터)의 연결을 받아 주지 않은 것으로 보여요.</p>';
   } else if (!total) ana = '<p class="note">최근 7일 동안 실패가 없어요.</p>';
   $('causeBody').innerHTML = ana;
 

@@ -5,7 +5,7 @@
 //   SERVICE_KEY  공공데이터포털 인증키 (저장소 Secrets에만 보관, 코드에 쓰지 않음)
 //   STAGES       수집할 시도, 쉼표로 구분 (기본: 경기도). 예: 서울특별시,경기도,인천광역시
 //   DATA_DIR     저장 폴더 (기본: data)
-//   REDO         1이면 '새 실행'(앞 실행이 연결 문제로 실패해서 워크플로가 한 번 더 부른 실행): 더 끈기 있게 다시 시도한다
+//   REDO         1이면 '새 실행'(앞 실행이 연결 문제로 실패해서 워크플로가 한 번 더 부른 실행): 끈기 있게 다시 시도한다
 //   REDO_FLAG_FILE  가용병상이 연결 문제로 실패해 새 실행이 필요하면 이 파일을 만든다 (워크플로가 읽음)
 //
 // 실패 대책 (2026-10-26 분석·시뮬레이션 결과, 결재 후 도입)
@@ -13,6 +13,9 @@
 //   2) 빨리 판단: 가용병상이 '서버에 연결조차 못 함'으로 실패하면 같은 서버의 나머지 기능은 이번 실행에서 건너뛴다
 //   3) 새 실행 한 번: 실패한 실행 컴퓨터 대신 새 실행 컴퓨터에서 약 1분 뒤 다시 받는다(워크플로의 redo 일)
 //   4) 기록 시각 = 가용병상을 실제로 받은 시각 (다시 시도해서 받았을 때 시각이 어긋나지 않게)
+//   5) (2026-10-28 점검 후) 정시 실행은 https로 한 번만 부른다. 실패 18번 중 같은 실행 안 재시도로 살아난 것은 0번,
+//      새 실행은 11번 모두 성공했다. 재시도로 약 30초를 버리지 않고 바로 새 실행에 맡긴다.
+//      http로는 부르지 않는다(인증키가 암호화 없이 주소에 실려 가지 않도록).
 //
 // 저장 위치                          기능(오퍼레이션)                              주기
 //   data/beds/날짜.csv              ① 응급실 실시간 가용병상정보 조회              10분
@@ -36,8 +39,8 @@ export const STAGES = (process.env.STAGES || process.env.STAGE1 || '경기도').
 const DATA = process.env.DATA_DIR || 'data';
 const BASE = 'apis.data.go.kr/B552657/ErmctInfoInqireService/';
 export const REDO = ['1', 'true'].includes(process.env.REDO ?? '');
-// 다시 시도하기 전에 기다리는 시간(초). 정시 실행은 빨리 판단하고, 새 실행은 마지막 기회라 끈기 있게 기다린다.
-export const WAIT_PLAN = REDO ? [5, 15, 30] : [3, 6];
+// 다시 시도하기 전에 기다리는 시간(초). 정시 실행은 다시 시도하지 않고(실패하면 새 실행), 새 실행은 마지막 기회라 끈기 있게 기다린다.
+export const WAIT_PLAN = REDO ? [5, 15, 30] : [];
 const UNIT_MS = Number(process.env.RETRY_UNIT_MS ?? 1000); // 시험할 때는 1(=1초를 1밀리초로)
 // 서버에 연결조차 못 한 오류 (같은 서버의 다른 기능도 실패할 것이 거의 확실)
 export const NETWORK = new Set(['UND_ERR_CONNECT_TIMEOUT', 'ECONNREFUSED', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN', 'EHOSTUNREACH', 'ENETUNREACH', 'ETIMEDOUT', 'UND_ERR_SOCKET']);
@@ -93,12 +96,12 @@ export function parseItems(xml) {
   return { code, msg, total, items };
 }
 
-// 한 번 부르기. 실패하면 WAIT_PLAN대로 기다렸다가 https와 http를 번갈아 다시 시도한다.
+// 한 번 부르기. 실패하면 WAIT_PLAN대로 기다렸다가 다시 시도한다(https만).
 // 돌려주는 값: { text, at(성공한 시도를 시작한 시각), trail(실패한 시도 기록) }
 async function call(op, params) {
   const trail = [];
   for (let attempt = 0; ; attempt++) {
-    const proto = attempt % 2 === 0 ? 'https://' : 'http://'; // 연결이 가끔 끊겨서 번갈아 시도
+    const proto = 'https://'; // 인증키가 주소에 들어가므로 암호화된 연결로만 부른다
     const url = new URL(proto + BASE + op);
     url.search = new URLSearchParams({ serviceKey: KEY, ...params }).toString();
     const at = Date.now();
