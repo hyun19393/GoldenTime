@@ -1086,3 +1086,6 @@
 2026-10-29 04:20:27,beds,0,,,10550,경기도: fetch failed (UND_ERR_CONNECT_TIMEOUT),UND_ERR_CONNECT_TIMEOUT,https:UND_ERR_CONNECT_TIMEOUT:10.5,
 2026-10-29 04:20:27,severe,0,,,0,건너뜀: 같은 서버에 연결하지 못함,SKIPPED,,
 2026-10-29 04:20:27,messages,0,,,0,건너뜀: 같은 서버에 연결하지 못함,SKIPPED,,
+2026-10-29 04:21:02,beds,1,73,73,1112,,,,redo
+2026-10-29 04:21:02,severe,1,76,76,1467,,,,redo
+2026-10-29 04:21:02,messages,1,113,0,491,,,,redo
