@@ -120,6 +120,9 @@
   svg text { fill: var(--muted); font-family: inherit; font-size: 11px; }
   svg .lbl { fill: var(--ink); font-size: 11.5px; font-weight: 500; }
   .bar { fill: var(--full); } .bar.empty { fill: var(--line); }
+  .bar.today { fill: var(--accent); } .bar.now { stroke: var(--ink); stroke-width: 1.5; }
+  .sw-avg, .sw-today { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
+  .sw-avg { background: var(--full); } .sw-today { background: var(--accent); }
   #tip { position: fixed; z-index: 2000; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12.5px; line-height: 1.5; padding: 6px 9px; border-radius: 6px; max-width: 280px; display: none; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
 
   /* 접고 펴는 칸: 화살표를 누르면 아래로 펼쳐지고, 다시 누르면 접힌다 */
@@ -243,18 +246,24 @@
     </section>
     <div class="grid2">
       <section class="card">
-        <h2>시간대별 꽉 찬 비율</h2>
-        <p class="lead">지금까지 모은 기록에서 시각마다 남은 병상이 0 이하였던 비율이에요.</p>
+        <h2><span class="sw-today" aria-hidden="true"></span>오늘의 시간대별 꽉 차는 비율</h2>
+        <p class="lead" id="hourTodayLead">오늘(한국 시간 0시부터) 기록에서 시각마다 남은 병상이 0 이하였던 비율이에요.</p>
+        <div id="hourTodayChart"></div>
+        <p class="note" id="hourTodayNote"></p>
+      </section>
+      <section class="card">
+        <h2><span class="sw-avg" aria-hidden="true"></span>평균적으로 시간대별 꽉 차는 비율</h2>
+        <p class="lead">지금까지 모은 모든 기록(오늘 포함)에서 시각마다 남은 병상이 0 이하였던 비율이에요.</p>
         <div id="hourChart"></div>
         <p class="note" id="hourNote"></p>
       </section>
-      <section class="card">
-        <h2>최근 7일 꽉 찬 응급실 수</h2>
-        <p class="lead">수집할 때마다 남은 병상이 0 이하인 응급실이 몇 곳이었는지예요.</p>
-        <div id="lineChart"></div>
-        <p class="note">날짜별로 자세히 보려면 '날짜별 기록' 탭을 쓰세요.</p>
-      </section>
     </div>
+    <section class="card">
+      <h2>최근 7일 꽉 찬 응급실 수</h2>
+      <p class="lead">수집할 때마다 남은 병상이 0 이하인 응급실이 몇 곳이었는지예요.</p>
+      <div id="lineChart"></div>
+      <p class="note">날짜별로 자세히 보려면 '날짜별 기록' 탭을 쓰세요.</p>
+    </section>
     <section class="card">
       <h2>시군별</h2>
       <p class="lead">시군마다 응급실 수와 지금 꽉 찬 곳이에요.</p>
@@ -611,7 +620,7 @@ function showNow(sub) {
     $('mapSummary').textContent = `꽉 참 ${k.fullNow} · 1~2개 ${k.lowNow} · 3개 이상 ${k.okNow} · 화살표를 눌러 펼치기`;
     $('mapFold')._onOpen = () => (map ? map.invalidateSize() : drawMap(hs));
     drawErTable(hs);
-    drawHours(s.byHour);
+    drawHourCharts(s.byHour, s.byHourToday, s.latestAt);
     drawLine(s.timeline);
     drawSi(s.bySi, s.noEr, s.noErOther ?? {}, s.notReporting);
     drawMsgs(s.messages, s.messagesAt);
@@ -679,24 +688,39 @@ function drawErTable(hs) {
   render();
 }
 
-function drawHours(byHour) {
+// 오늘(파랑)과 평균(빨강) 두 그래프. 비교하기 쉽게 세로 눈금을 같게 맞춘다
+function drawHourCharts(avg, today, latestAt) {
+  const hrs = today?.hours ?? [];
+  const max = Math.max(0.05, ...avg.map((h) => h.rate ?? 0), ...hrs.map((h) => h.rate ?? 0));
+  drawHours(avg, { el: 'hourChart', max, label: '평균적으로 시간대별 꽉 차는 비율 막대그래프' });
+  const filled = avg.filter((h) => h.n).length;
+  $('hourNote').textContent = (filled < 24 ? `아직 ${filled}개 시간대만 기록이 있어요. ` : '') + '응급실·수집 시각마다 남은 병상이 0 이하였던 비율이에요. 두 그래프는 세로 눈금이 같아요.';
+  if (!today) { $('hourTodayChart').innerHTML = '<p class="note">오늘 기록이 아직 없어요.</p>'; return; }
+  const nowHour = Number((latestAt ?? '').slice(11, 13));
+  drawHours(hrs, { el: 'hourTodayChart', max, cls: 'today', nowHour, label: '오늘의 시간대별 꽉 차는 비율 막대그래프', future: (i) => i > nowHour });
+  let n = 0, full = 0;
+  for (const h of hrs) { n += h.n; full += h.full ?? 0; }
+  $('hourTodayLead').textContent = `오늘(${dayLabel(today.day)} 0시부터) 기록에서 시각마다 남은 병상이 0 이하였던 비율이에요.`;
+  $('hourTodayNote').textContent = `${nowHour ? `0시~${nowHour}시` : '0시'} 기록 ${n.toLocaleString()}건 중 ${full.toLocaleString()}건이 0 이하였어요(오늘 전체 ${fmtP(n ? full / n : null)}). ` +
+    `테두리 막대는 지금 시간대(아직 진행 중)${nowHour < 23 ? ', 회색은 아직 기록이 없는 시간' : ''}이에요.`;
+}
+
+function drawHours(byHour, { el, max, cls = '', nowHour = null, label, future = () => false }) {
   const W = 480, H = 170, P = { l: 34, r: 6, t: 8, b: 22 };
-  const max = Math.max(0.05, ...byHour.map((h) => h.rate ?? 0));
   const bw = (W - P.l - P.r) / 24;
-  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="시간대별 꽉 찬 비율 막대그래프">`;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(label)}">`;
   for (const f of [0, 0.5, 1]) {
     const y = P.t + (1 - f) * (H - P.t - P.b);
     svg += `<line x1="${P.l}" x2="${W - P.r}" y1="${y}" y2="${y}" stroke="${css('--line')}" /><text x="${P.l - 4}" y="${y + 4}" text-anchor="end">${(max * f * 100).toFixed(0)}%</text>`;
   }
   byHour.forEach((h, i) => {
     const v = h.rate ?? 0, bh = Math.max((v / max) * (H - P.t - P.b), h.n ? 0 : 2), x = P.l + i * bw + 1;
-    svg += `<rect class="bar ${h.n ? '' : 'empty'}" x="${x}" y="${H - P.b - bh}" width="${bw - 2}" height="${bh}" rx="2"/>`;
-    svg += `<rect x="${P.l + i * bw}" y="${P.t}" width="${bw}" height="${H - P.t - P.b}" fill="transparent" data-tip="${i}시: 꽉 찬 비율 ${fmtP(h.rate)} (${h.n.toLocaleString()}건)"/>`;
+    svg += `<rect class="bar ${h.n ? cls : 'empty'}${i === nowHour && h.n ? ' now' : ''}" x="${x}" y="${H - P.b - bh}" width="${bw - 2}" height="${bh}" rx="2"/>`;
+    const tip = future(i) ? `${i}시: 아직 오지 않은 시간이에요` : `${i}시${i === nowHour ? '(진행 중)' : ''}: 꽉 찬 비율 ${fmtP(h.rate)} (${h.n.toLocaleString()}건)`;
+    svg += `<rect x="${P.l + i * bw}" y="${P.t}" width="${bw}" height="${H - P.t - P.b}" fill="transparent" data-tip="${esc(tip)}"/>`;
     if (i % 3 === 0) svg += `<text x="${x + (bw - 2) / 2}" y="${H - 6}" text-anchor="middle">${i}시</text>`;
   });
-  $('hourChart').innerHTML = svg + '</svg>';
-  const filled = byHour.filter((h) => h.n).length;
-  $('hourNote').textContent = filled < 24 ? `아직 ${filled}개 시간대만 기록이 있어요.` : '응급실·수집 시각마다 남은 병상이 0 이하였던 비율이에요.';
+  $(el).innerHTML = svg + '</svg>';
 }
 
 // 선 그래프 (꽉 참·1~2개 두 줄). pts: [{ label, full, low }]

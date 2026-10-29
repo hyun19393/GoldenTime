@@ -6,7 +6,7 @@
 import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { parseCSV, readColumns } from '../engine/csv.mjs';
-import { parseKST, parseHvidate, formatKST, kstHour } from '../engine/time.mjs';
+import { parseKST, parseHvidate, formatKST } from '../engine/time.mjs';
 import { normFlag, SEVERE } from '../engine/codes.mjs';
 import { causeCode } from '../engine/causes.mjs';
 import { regularStart, BED_COLS } from './load.mjs';
@@ -67,33 +67,33 @@ const latestAt = times.at(-1);
 const latest = latestAt ? snaps.get(latestAt) : [];
 const num = (v) => (v === '' || v == null ? null : Number(v));
 
-// 병원별 누적: 기록 수, 꽉 찬 횟수, 입력 경과(수집 시각 - 병원 입력 시각)
+// 한 번 훑으면서 함께 센다 (기록이 쌓여도 전체 기록을 한 번만 읽도록)
+//   병원별 누적: 기록 수, 꽉 찬 횟수, 입력 경과(수집 시각 - 병원 입력 시각)
+//   시간대별(0~23시) 꽉 찬 비율: 전체 기간(평균) / 오늘(마지막 수집 날짜, 한국 시간)
 const perHosp = {};
+const today = latestAt ? latestAt.slice(0, 10) : null;
+const byHour = Array.from({ length: 24 }, () => ({ n: 0, full: 0 }));
+const byHourToday = Array.from({ length: 24 }, () => ({ n: 0, full: 0 }));
 for (const t of times) {
   const tm = parseKST(t);
+  const h = Number(t.slice(11, 13)); // 수집 시각 글자가 한국 시간이라 시(時)를 바로 읽는다
+  const hourAll = byHour[h];
+  const hourToday = t.slice(0, 10) === today ? byHourToday[h] : null;
   for (const r of snaps.get(t)) {
     const v = num(r.hvec);
     if (v == null) continue;
+    const full = v <= 0;
     const p = (perHosp[r.hpid] ??= { n: 0, full: 0, name: r.dutyName, ages: [] });
     p.n++;
-    if (v <= 0) p.full++;
+    hourAll.n++;
+    if (hourToday) hourToday.n++;
+    if (full) { p.full++; hourAll.full++; if (hourToday) hourToday.full++; }
     const hv = parseHvidate(r.hvidate);
     if (hv != null) p.ages.push((tm - hv) / 60e3);
   }
 }
 const median = (a) => { if (!a.length) return null; const b = [...a].sort((x, y) => x - y); const m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
-
-// 시간대별(0~23시) 꽉 찬 비율 (전체 기간)
-const byHour = Array.from({ length: 24 }, () => ({ n: 0, full: 0 }));
-for (const t of times) {
-  const h = kstHour(parseKST(t));
-  for (const r of snaps.get(t)) {
-    const v = num(r.hvec);
-    if (v == null) continue;
-    byHour[h].n++;
-    if (v <= 0) byHour[h].full++;
-  }
-}
+const hourRates = (a) => a.map((h, i) => ({ hour: i, n: h.n, full: h.full, rate: h.n ? h.full / h.n : null }));
 
 // 최근 DAYS일 시계열: 수집 시각마다 꽉 찬 곳 / 1~2개 남은 곳
 const since = latestAt ? parseKST(latestAt) - DAYS * 86400e3 : 0;
@@ -291,7 +291,8 @@ const status = {
     activeMessages: activeMsgs.length,
   },
   hospitals: hospitalsNow,
-  byHour: byHour.map((h, i) => ({ hour: i, n: h.n, rate: h.n ? h.full / h.n : null })),
+  byHour: hourRates(byHour),
+  byHourToday: today ? { day: today, hours: hourRates(byHourToday) } : null,
   timeline,
   bySi: siList,
   noEr,
