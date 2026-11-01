@@ -85,6 +85,8 @@
   .seg button, .seg a { font: inherit; font-size: 12.5px; padding: 3px 11px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; text-decoration: none; }
   .seg button[aria-pressed="true"], .seg a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: #fff; }
   .seg.sub2 button { font-size: 12px; padding: 2px 9px; }
+  .region-seg { margin: 0 0 12px; align-items: center; }
+  .region-seg::before { content: '지역'; font-size: 12.5px; color: var(--muted); margin-right: 2px; }
   .row-link { cursor: pointer; }
   #msgTable { table-layout: fixed; }
   #msgTable td { overflow-wrap: anywhere; }
@@ -244,6 +246,7 @@
       <div class="scroll"><table id="erTable"></table></div>
       <p class="note">입력 경과 = 수집 시각 − 병원이 마지막으로 값을 입력한 시각. 60분이 넘으면 '지금 상태'로 믿기 어려워 계산에서 빼요.</p>
     </section>
+    <div class="seg region-seg" id="hourRegionSeg" role="group" aria-label="시간대 그래프의 지역"></div>
     <div class="grid2">
       <section class="card">
         <h2><span class="sw-today" aria-hidden="true"></span>오늘의 시간대별 꽉 차는 비율</h2>
@@ -319,7 +322,8 @@
       <section class="card">
         <h2>응급실별 상태 띠</h2>
         <p class="lead">한 줄이 응급실 하나, 한 칸이 수집 한 번이에요. 어느 병원이 언제 꽉 찼는지 한눈에 보여요.</p>
-        <div class="seg" id="stripSeg" role="group" aria-label="보여 줄 응급실"></div>
+        <div class="seg region-seg" id="stripRegionSeg" role="group" aria-label="상태 띠의 지역"></div>
+        <div class="seg sub2" id="stripSeg" role="group" aria-label="보여 줄 응급실"></div>
         <div class="strip-wrap" id="strip"></div>
         <div class="legend">
           <span><span class="sw" style="background:var(--full)"></span>꽉 참 (0 이하)</span>
@@ -620,7 +624,7 @@ function showNow(sub) {
     $('mapSummary').textContent = `꽉 참 ${k.fullNow} · 1~2개 ${k.lowNow} · 3개 이상 ${k.okNow} · 화살표를 눌러 펼치기`;
     $('mapFold')._onOpen = () => (map ? map.invalidateSize() : drawMap(hs));
     drawErTable(hs);
-    drawHourCharts(s.byHour, s.byHourToday, s.latestAt);
+    drawHourRegion(s);
     drawLine(s.timeline);
     drawSi(s.bySi, s.noEr, s.noErOther ?? {}, s.notReporting);
     drawMsgs(s.messages, s.messagesAt);
@@ -686,6 +690,23 @@ function drawErTable(hs) {
   $('erSearch').addEventListener('input', (e) => { q = e.target.value.trim(); render(); });
   $('erTable').addEventListener('click', (e) => { const tr = e.target.closest('tr[data-id]'); if (tr) location.hash = `#/prob/hospital/${tr.dataset.id}`; });
   render();
+}
+
+// 지역 고르기 (전체 + 기록에 있는 시도만). 시도를 모르는 기관은 '전체'에만 들어간다
+const REGIONS = [['서울특별시', '서울'], ['인천광역시', '인천'], ['경기도', '경기']];
+function regionSeg(el, have, cur, onPick) {
+  const opts = [['all', '전체'], ...REGIONS.filter(([k]) => have.has(k))];
+  if (!opts.some(([k]) => k === cur)) cur = 'all';
+  $(el).innerHTML = opts.length > 2 ? opts.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${v === cur}">${l}</button>`).join('') : '';
+  $(el).onclick = (e) => { const b = e.target.closest('button'); if (b) onPick(b.dataset.v); };
+  return cur;
+}
+let hourRegion = 'all';
+function drawHourRegion(s) {
+  hourRegion = regionSeg('hourRegionSeg', new Set(Object.keys(s.byHourSido ?? {})), hourRegion, (v) => { hourRegion = v; drawHourRegion(s); });
+  if (hourRegion === 'all') return drawHourCharts(s.byHour, s.byHourToday, s.latestAt);
+  const td = s.byHourTodaySido?.[hourRegion];
+  drawHourCharts(s.byHourSido[hourRegion], td && s.byHourToday ? { day: s.byHourToday.day, hours: td } : null, s.latestAt);
 }
 
 // 오늘(파랑)과 평균(빨강) 두 그래프. 비교하기 쉽게 세로 눈금을 같게 맞춘다
@@ -780,7 +801,7 @@ function drawMsgs(msgs, at) {
 // =====================================================================
 // ② 날짜별 기록
 // =====================================================================
-const hist = { day: null, data: null, range: 'all', hour: null, strip: 'busy' };
+const hist = { day: null, data: null, range: 'all', hour: null, strip: 'busy', region: 'all' };
 
 async function showHistory(day, sub) {
   if (!histIndex) {
@@ -893,10 +914,14 @@ function drawSlots(d, lo, hi) {
 }
 
 function drawStrip(d, ti) {
-  const opts = [['busy', '붐빈 응급실만'], ['all', `${d.hospitals.length}곳 모두`]];
+  // 11-01 12:20 확대 전 기록에는 시도 칸이 없고, 그때는 경기도만 받았다
+  const sidoOf = (h) => h.sido ?? '경기도';
+  hist.region = regionSeg('stripRegionSeg', new Set(d.hospitals.map(sidoOf)), hist.region, (v) => { hist.region = v; drawStrip(d, ti); });
+  const inRegion = d.hospitals.map((h) => hist.region === 'all' || sidoOf(h) === hist.region);
+  const opts = [['busy', '붐빈 응급실만'], ['all', `${inRegion.filter(Boolean).length}곳 모두`]];
   $('stripSeg').innerHTML = opts.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${v === hist.strip}">${l}</button>`).join('');
   $('stripSeg').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; hist.strip = b.dataset.v; drawStrip(d, ti); };
-  let rows = d.hospitals.map((h, j) => ({ h, j, full: ti.filter((i) => d.hvec[i][j] != null && d.hvec[i][j] <= 0).length, low: ti.filter((i) => d.hvec[i][j] != null && d.hvec[i][j] >= 1 && d.hvec[i][j] <= 2).length }));
+  let rows = d.hospitals.flatMap((h, j) => !inRegion[j] ? [] : [{ h, j, full: ti.filter((i) => d.hvec[i][j] != null && d.hvec[i][j] <= 0).length, low: ti.filter((i) => d.hvec[i][j] != null && d.hvec[i][j] >= 1 && d.hvec[i][j] <= 2).length }]);
   if (hist.strip === 'busy') rows = rows.filter((r) => r.full || r.low).sort((a, b) => b.full - a.full || b.low - a.low);
   if (!ti.length) { $('strip').innerHTML = '<p class="note">이 시간대에는 수집 기록이 없어요.</p>'; return; }
   if (!rows.length) { $('strip').innerHTML = '<p class="note">이 시간대에는 꽉 차거나 1~2개 남은 응급실이 없었어요.</p>'; return; }

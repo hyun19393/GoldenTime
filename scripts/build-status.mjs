@@ -75,15 +75,25 @@ const perHosp = {};
 const today = latestAt ? latestAt.slice(0, 10) : null;
 const byHour = Array.from({ length: 24 }, () => ({ n: 0, full: 0 }));
 const byHourToday = Array.from({ length: 24 }, () => ({ n: 0, full: 0 }));
+// 시도별로도 같은 것을 센다(현황판에서 지역을 골라 볼 수 있게). 목록에 없는 기관은 시도를 모르므로 '전체'에만 들어간다
+const hours24 = () => Array.from({ length: 24 }, () => ({ n: 0, full: 0 }));
+const byHourSido = {}, byHourTodaySido = {};
 for (const t of times) {
   const tm = parseKST(t);
   const h = Number(t.slice(11, 13)); // 수집 시각 글자가 한국 시간이라 시(時)를 바로 읽는다
   const hourAll = byHour[h];
-  const hourToday = t.slice(0, 10) === today ? byHourToday[h] : null;
+  const isToday = t.slice(0, 10) === today;
+  const hourToday = isToday ? byHourToday[h] : null;
   for (const r of snaps.get(t)) {
     const v = num(r.hvec);
     if (v == null) continue;
     const full = v <= 0;
+    const sd = hosp[r.hpid]?.sido;
+    if (sd) {
+      const a = (byHourSido[sd] ??= hours24())[h];
+      a.n++; if (full) a.full++;
+      if (isToday) { const b = (byHourTodaySido[sd] ??= hours24())[h]; b.n++; if (full) b.full++; }
+    }
     const p = (perHosp[r.hpid] ??= { n: 0, full: 0, name: r.dutyName, ages: [] });
     p.n++;
     hourAll.n++;
@@ -294,6 +304,9 @@ const status = {
   hospitals: hospitalsNow,
   byHour: hourRates(byHour),
   byHourToday: today ? { day: today, hours: hourRates(byHourToday) } : null,
+  // 시도별 { 시도: 24시간 } (오늘은 그 시도의 오늘 기록이 있을 때만)
+  byHourSido: Object.fromEntries(Object.entries(byHourSido).map(([k, v]) => [k, hourRates(v)])),
+  byHourTodaySido: Object.fromEntries(Object.entries(byHourTodaySido).map(([k, v]) => [k, hourRates(v)])),
   timeline,
   bySi: siList,
   noEr,

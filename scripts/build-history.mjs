@@ -23,7 +23,7 @@ export function buildDay(day, bedRows, runRows, info, { firstAt, nowAt }) {
   // 수집 시각 목록과 응급실 목록
   const times = [...new Set(bedRows.map((r) => r.collected_at))].sort();
   const hp = new Map();
-  for (const r of bedRows) hp.set(r.hpid, { hpid: r.hpid, name: r.dutyName, si: info[r.hpid]?.si ?? '', cls: info[r.hpid]?.cls ?? '', base: num(r.hvs01) });
+  for (const r of bedRows) hp.set(r.hpid, { hpid: r.hpid, name: r.dutyName, sido: info[r.hpid]?.sido ?? '', si: info[r.hpid]?.si ?? '', cls: info[r.hpid]?.cls ?? '', base: num(r.hvs01) });
   const hospitals = [...hp.values()].sort((a, b) => a.si.localeCompare(b.si, 'ko') || a.name.localeCompare(b.name, 'ko'));
   const col = new Map(hospitals.map((h, i) => [h.hpid, i]));
   const ti = new Map(times.map((t, i) => [t, i]));
@@ -91,7 +91,7 @@ export function main(args = {}) {
 
   const info = {};
   if (existsSync(join(DATA, 'hospitals.csv'))) {
-    for (const r of parseCSV(readFileSync(join(DATA, 'hospitals.csv'), 'utf8'))) info[r.hpid] = { si: regionOf(r.dutyAddr).si, cls: r.dutyEmclsName ?? '' };
+    for (const r of parseCSV(readFileSync(join(DATA, 'hospitals.csv'), 'utf8'))) info[r.hpid] = { ...regionOf(r.dutyAddr), cls: r.dutyEmclsName ?? '' };
   }
   const runs = existsSync(join(DATA, 'runs.csv')) ? parseCSV(readFileSync(join(DATA, 'runs.csv'), 'utf8')) : [];
   const runsByDay = {};
