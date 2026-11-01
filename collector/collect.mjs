@@ -288,7 +288,12 @@ export async function runOp(spec, now, ctx = {}) {
     }
     return false;
   }
-  if (spec.required) ctx.label ??= at;
+  if (spec.required) {
+    ctx.label ??= at;
+    // 일부 시도만 실패: 받은 시도는 저장하고, 다시 해 볼 만한 실패면 새 실행에서 모든 시도를 다시 받는다
+    // (새 실행이 같은 시각의 빈 시도를 채워 지금 상태·통계에 빠지는 곳이 없게)
+    if (failed.length && causes.every(retryable)) ctx.redo = true;
+  }
   saveRaw(spec.name, firstXml); // 처음 한 번만 원문 저장
   const file = join(DATA, spec.name, `${kstDate(now)}.csv`);
   let rows = items;
@@ -330,7 +335,12 @@ function doneToday(file, today) {
 async function refreshDaily(now) {
   const today = kstDate(now);
   const listFile = join(DATA, 'hospitals.csv');
-  if (!doneToday(listFile, today)) {
+  // 오늘 받았더라도 수집할 시도가 늘어 목록에 빠진 시도가 있으면 다시 받는다
+  const covers = () => {
+    const addrs = parseCSV(readFileSync(listFile, 'utf8')).map((r) => r.dutyAddr ?? '');
+    return STAGES.every((s) => addrs.some((a) => a.startsWith(s)));
+  };
+  if (!doneToday(listFile, today) || !covers()) {
     const { items, total, firstXml, failed } = await fetchRegions(LIST);
     if (!items.length) {
       logRun({ started_at: formatKST(now), op: LIST.name, ok: 0, error: failed.join(' / ').slice(0, 200) });
@@ -341,9 +351,14 @@ async function refreshDaily(now) {
     logRun({ started_at: formatKST(now), op: LIST.name, ok: failed.length ? 0 : 1, total, items: items.length, error: failed.join(' / ').slice(0, 200) });
   }
   const infoFile = join(DATA, 'hospital_info.csv');
-  if (doneToday(infoFile, today) || !existsSync(listFile)) return;
-  const hpids = parseCSV(readFileSync(listFile, 'utf8')).map((r) => r.hpid).filter(Boolean);
-  const rows = [];
+  if (!existsSync(listFile)) return;
+  const all = parseCSV(readFileSync(listFile, 'utf8')).map((r) => r.hpid).filter(Boolean);
+  // 오늘 이미 받았으면, 목록에 새로 생긴 기관(시도를 늘린 날 등)만 받아 기존 줄에 더한다
+  const kept = doneToday(infoFile, today) ? parseCSV(readFileSync(infoFile, 'utf8')).map(({ collected_at, ...r }) => r) : [];
+  const have = new Set(kept.map((r) => r.hpid));
+  const hpids = all.filter((h) => !have.has(h));
+  if (!hpids.length) return;
+  const rows = [...kept];
   let failed = 0;
   let skipped = 0;
   let next = 0;
@@ -362,11 +377,11 @@ async function refreshDaily(now) {
     }
   };
   await Promise.all(Array.from({ length: 4 }, worker));
-  const order = new Map(hpids.map((h, i) => [h, i]));
+  const order = new Map(all.map((h, i) => [h, i]));
   rows.sort((a, b) => (order.get(a.hpid) ?? 1e9) - (order.get(b.hpid) ?? 1e9));
-  if (rows.length) writeTable(infoFile, rows, formatKST(now));
+  if (rows.length > kept.length) writeTable(infoFile, rows, formatKST(now));
   const err = [failed && `${failed}곳 실패`, skipped && `${skipped}곳 시간 부족`].filter(Boolean).join(', ');
-  logRun({ started_at: formatKST(now), op: INFO.name, ok: err ? 0 : 1, total: hpids.length, items: rows.length, error: err });
+  logRun({ started_at: formatKST(now), op: INFO.name, ok: err ? 0 : 1, total: hpids.length, items: rows.length - kept.length, error: err });
 }
 
 export async function main() {

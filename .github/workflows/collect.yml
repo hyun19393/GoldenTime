@@ -39,7 +39,7 @@ jobs:
         run: node collector/collect.mjs
         env:
           SERVICE_KEY: ${{ secrets.SERVICE_KEY }}
-          STAGES: 경기도   # 수집할 시도 (여러 곳이면 쉼표로 구분, 예: 서울특별시,경기도)
+          STAGES: 서울특별시,경기도,인천광역시   # 수집할 시도 (쉼표로 구분). 2026-11-01 서울·인천 추가
           REDO: ${{ inputs.redo && '1' || '' }}
           REDO_FLAG_FILE: ${{ runner.temp }}/redo.flag
       - name: 새 실행이 필요한지 확인

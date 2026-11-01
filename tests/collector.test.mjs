@@ -29,8 +29,8 @@ const MSGS = wrap([
   { dutyName: '나병원', hpid: 'A2', symBlkMsg: '응급실 과밀', symBlkMsgTyp: '응급', symBlkSttDtm: '20261025093000', symTypCod: 'Y000', symTypCodMag: '응급실', symOutDspYon: '차단' },
 ]);
 const LIST = wrap([
-  { hpid: 'A1', dutyName: '가병원', dutyEmclsName: '지역응급의료센터', wgs84Lat: '37.32', wgs84Lon: '127.10' },
-  { hpid: 'A2', dutyName: '나병원', dutyEmclsName: '권역응급의료센터', wgs84Lat: '37.35', wgs84Lon: '127.12' },
+  { hpid: 'A1', dutyName: '가병원', dutyAddr: '경기도 용인시 수지구 1', dutyEmclsName: '지역응급의료센터', wgs84Lat: '37.32', wgs84Lon: '127.10' },
+  { hpid: 'A2', dutyName: '나병원', dutyAddr: '경기도 성남시 분당구 2', dutyEmclsName: '권역응급의료센터', wgs84Lat: '37.35', wgs84Lon: '127.12' },
 ]);
 const info = (hpid) => wrap([{ hpid, dutyName: hpid === 'A1' ? '가병원' : '나병원', hperyn: '20', dgidIdName: '내과,외과' }]);
 

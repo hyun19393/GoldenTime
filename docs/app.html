@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>골든타임 경로</title>
-<meta name="description" content="도착했을 때 받아줄 가능성까지 계산해 경기도 응급실을 추천하는 탐구용 웹앱">
+<meta name="description" content="도착했을 때 받아줄 가능성까지 계산해 서울·인천·경기 응급실을 추천하는 탐구용 웹앱">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
@@ -123,7 +123,7 @@
 <div class="wrap">
   <header>
     <h1>골든타임 경로</h1>
-    <p class="sub">도착했을 때 받아줄 가능성까지 계산해 경기도 응급실을 추천해요 · <a href="./">수집 현황판</a></p>
+    <p class="sub">도착했을 때 받아줄 가능성까지 계산해 서울·인천·경기 응급실을 추천해요 · <a href="./">수집 현황판</a></p>
     <p class="warn"><b>교육·탐구용이에요.</b> 실제 응급 상황에서는 바로 119에 신고하세요.</p>
     <div class="quota" id="quota">
       <div class="q-top">
@@ -213,11 +213,12 @@
             <li><b>병원이 입력한 값</b>: 입력이 늦거나 틀리면 계산도 그만큼 틀려요.</li>
             <li><b>병원끼리 독립이라고 가정</b>: 실제로는 주변 병원이 함께 붐빌 때가 있어, 그럴 때는 실효 도착 시간이 실제보다 짧게 나올 수 있어요.</li>
             <li><b>정해 둔 값</b>: 확인 지연 3분, 세 번째 병원까지만 계산하는 것은 정해 둔 가정이에요.</li>
-            <li><b>하루 검색 횟수에 한도가 있어요 (카카오 길찾기 하루 사용 한도)</b>: 한 출발지에서 여러 곳까지 한 번에 찾는 '다중 목적지 길찾기'는 하루 1,000번까지 무료예요. 검색 한 번에 보통 6~7번, 많아야 12번(출발지에서 1번 + 다른 후보가 9.5km 안에 있는 후보 병원마다 1번) 써서, <b>하루에 약 140번 검색</b>할 수 있어요(가장 많이 쓰는 곳에서만 검색해도 약 80번). 하나씩 찾는 '자동차 길찾기'는 하루 10,000번이라 검색 한 번에 보통 15~20번을 써도 넉넉해요. 한도를 넘으면 그날 남은 검색은 길찾기가 실패해 순위를 보여 주지 않아요(다음 날 다시 쓸 수 있어요). <span class="def">(2026년 10월 카카오 개발자 문서 기준, 한도는 바뀔 수 있어요)</span></li>
+            <li><b>하루 검색 횟수에 한도가 있어요 (카카오 길찾기 하루 사용 한도)</b>: 한 출발지에서 여러 곳까지 한 번에 찾는 '다중 목적지 길찾기'는 하루 1,000번까지 무료예요. 가까운 응급실을 12곳까지만 계산해서 검색 한 번에 많아야 13번(출발지에서 1번 + 다른 후보가 9.5km 안에 있는 후보 병원마다 1번) 써요. 그래서 <b>하루에 적어도 약 76번은 검색</b>할 수 있어요(경기도에서는 보통 6~7번이라 약 140번). 서울처럼 응급실이 촘촘한 곳은 한 번에 더 많이 써요. 하나씩 찾는 '자동차 길찾기'는 하루 10,000번이라 검색 한 번에 보통 15~20번을 써도 넉넉해요. 한도를 넘으면 그날 남은 검색은 길찾기가 실패해 순위를 보여 주지 않아요(다음 날 다시 쓸 수 있어요). <span class="def">(2026년 10월 카카오 개발자 문서 기준, 한도는 바뀔 수 있어요)</span></li>
             <li><b>'실시간'은 지금 출발할 때의 교통이에요</b>: 거절된 병원에서 다음 병원으로 실제로 다시 출발하는 건 보통 10~20분 뒤라, 그때의 교통과는 조금 다를 수 있어요.</li>
             <li><b>먼 병원끼리는 한 방향만</b>: 9.5km보다 먼 병원 짝은 한 방향 시간만 받아 반대 방향에도 써요. 일방통행 등으로 실제와 조금 다를 수 있어요.</li>
             <li><b>결과가 나오기까지 몇 초 더 걸려요</b>: 병원 사이 길찾기를 여러 번 부르기 때문이에요.</li>
-            <li><b>범위</b>: 경기도에서 실시간 병상을 알리는 응급실(권역·지역응급의료센터, 지역응급의료기관)만 계산해요. 병상 정보를 내지 않는 응급실운영신고기관과 다른 시도 응급실은 빠져 있어요.</li>
+            <li><b>범위</b>: 서울·인천·경기에서 실시간 병상을 알리는 응급실(권역·지역응급의료센터, 지역응급의료기관)만 계산해요. 병상 정보를 내지 않는 응급실운영신고기관과 다른 시도 응급실은 빠져 있어요.</li>
+            <li><b>가까운 12곳까지</b>: 출발지에서 직선으로 가까운 응급실 12곳까지만 계산해요. 길찾기 하루 한도를 지키려는 제한이고, 경기도에서는 후보가 12곳을 넘은 적이 없었어요(2026-11-01, 출발지 1,220곳). 서울처럼 촘촘한 곳에서는 13번째로 가까운 곳부터는 빠져요.</li>
           </ul>
           <p id="dataInfo"></p>
         </details>
@@ -258,6 +259,7 @@ import { ranks, spearman } from './engine/stats.mjs';
 const PROXY = 'https://goldentime-proxy.gt-er-map.workers.dev';
 const NEAR_M = 9500;       // 다중 목적지 길찾기 반경(10km)보다 조금 안쪽
 const MIN_CANDIDATES = 6;  // 가까운 곳이 이보다 적으면 더 먼 곳을 하나씩 길찾기로 채운다
+const MAX_CANDIDATES = 12; // 후보 상한: 다중 목적지 길찾기를 검색당 많아야 13번으로 묶는다(경기도 출발지 1,220곳의 최댓값 12곳)
 const DELAY_MIN = 3;
 const DEPTH = 3;
 const LIVE_CONC = 6;         // 응급실 사이 실시간 길찾기를 동시에 몇 개씩 부를지
@@ -461,7 +463,7 @@ const routeTo = (o, h, summary = false) => proxy(`/route?origin=${o.lon},${o.lat
 async function roadTimes(origin, fails) {
   const sorted = ers.map((h) => ({ h, m: haversineM(origin, h) })).sort((a, b) => a.m - b.m);
   const cand = (x, t) => ({ id: x.h.id, name: x.h.name, travelMin: t.min, straightM: x.m, roadM: t.m });
-  const near = sorted.filter((x) => x.m <= NEAR_M).slice(0, 30);
+  const near = sorted.filter((x) => x.m <= NEAR_M).slice(0, MAX_CANDIDATES);
   const far = sorted.filter((x) => x.m > NEAR_M).slice(0, Math.max(0, MIN_CANDIDATES - near.length));
   const out = [];
 
@@ -524,7 +526,7 @@ function drawPins() {
 }
 
 function initMap() {
-  map = new kakao.maps.Map($('map'), { center: new kakao.maps.LatLng(37.41, 127.25), level: 10 });
+  map = new kakao.maps.Map($('map'), { center: new kakao.maps.LatLng(37.45, 127.0), level: 10 });
   map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
   kakao.maps.event.addListener(map, 'click', (e) => {
     const ll = e.latLng;
@@ -618,7 +620,7 @@ async function setOrigin(o) {
       Object.assign(r, { straightM: c.straightM, roadM: c.roadM });
     });
     const notes = [];
-    if (nearestM > 20000) notes.push('가장 가까운 경기도 응급실도 직선 20km 넘게 떨어져 있어요(경기도 밖이면 결과가 맞지 않아요).');
+    if (nearestM > 20000) notes.push('가장 가까운 응급실도 직선 20km 넘게 떨어져 있어요(서울·인천·경기 밖이면 결과가 맞지 않아요).');
     notes.push(reused ? '5분 안에 같은 곳을 다시 검색해 앞의 길찾기 결과를 다시 썼어요(이번 길찾기 0번).'
       : `이번 검색 길찾기 요청: 다중 목적지 ${usage.multi}번 · 자동차 ${usage.single}번.`);
     if (!fresh) notes.push('병상 정보를 새로 받지 못해 갖고 있던 정보로 계산했어요.');

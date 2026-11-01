@@ -56,7 +56,7 @@ https://hyun19393.github.io/GoldenTime/ (GitHub Pages, `docs/` 폴더)
 | `data/hospital_info.csv` | ⑤ 응급의료기관 기본정보 조회 (진료과목, 병상 수) | 하루 1번 |
 | `data/runs.csv` | 수집 실행 기록 | 매번 |
 
-수집 지역: 경기도 (`.github/workflows/collect.yml`의 `STAGES`에서 변경, 여러 시도 가능)
+수집 지역: 서울특별시·경기도·인천광역시 (2026-11-01부터, `.github/workflows/collect.yml`의 `STAGES`에서 변경). 시군구 이름은 경기도는 시군 이름, 서울·인천은 같은 이름의 구가 있어 `서울 중구`처럼 시도 약칭을 붙인다(`engine/region.mjs`). 웹앱은 출발지에서 직선으로 가까운 응급실 12곳까지만 계산한다(카카오 길찾기 하루 한도).
 
 하루 호출 수: ①② 각 144회, ⑨ 24회 안팎, ③ 1회, ⑤ 기관 수만큼 (기능별 한도 1,000회)
 

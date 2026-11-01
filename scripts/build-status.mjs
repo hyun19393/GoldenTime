@@ -10,6 +10,7 @@ import { parseKST, parseHvidate, formatKST } from '../engine/time.mjs';
 import { normFlag, SEVERE } from '../engine/codes.mjs';
 import { causeCode } from '../engine/causes.mjs';
 import { regularStart, BED_COLS } from './load.mjs';
+import { regionOf } from '../engine/region.mjs';
 
 const args = Object.fromEntries(
   process.argv.slice(2).reduce((acc, a, i, arr) => (a.startsWith('--') ? [...acc, [a.slice(2), arr[i + 1]]] : acc), []),
@@ -33,7 +34,7 @@ const readTable = (f) => (existsSync(join(DATA, f)) ? parseCSV(readFileSync(join
 // ---- 기관 정보
 const list = readTable('hospitals.csv');
 const info = Object.fromEntries(readTable('hospital_info.csv').map((r) => [r.hpid, r]));
-const sigungu = (addr = '') => addr.split(/\s+/)[1] ?? '';
+const sigungu = (addr) => regionOf(addr).si;
 const hosp = Object.fromEntries(
   list.map((r) => [
     r.hpid,
@@ -41,7 +42,7 @@ const hosp = Object.fromEntries(
       hpid: r.hpid,
       name: r.dutyName,
       cls: r.dutyEmclsName,
-      si: sigungu(r.dutyAddr),
+      ...regionOf(r.dutyAddr), // sido(시도), si(시군구: 경기는 시군 이름, 서울·인천은 '서울 중구'처럼)
       addr: r.dutyAddr,
       tel: r.dutyTel3 || r.dutyTel1,
       lat: Number(r.wgs84Lat),
@@ -190,7 +191,7 @@ const siList = Object.values(bySi)
   .map((s) => ({ si: s.si, er: s.er, fullNow: s.full, avgFullRate: s.rateN ? s.rateSum / s.rateN : null }))
   .sort((a, b) => b.er - a.er || a.si.localeCompare(b.si, 'ko'));
 const GYEONGGI = ['수원시', '성남시', '의정부시', '안양시', '부천시', '광명시', '평택시', '동두천시', '안산시', '고양시', '과천시', '구리시', '남양주시', '오산시', '시흥시', '군포시', '의왕시', '하남시', '용인시', '파주시', '이천시', '안성시', '김포시', '화성시', '광주시', '양주시', '포천시', '여주시', '연천군', '가평군', '양평군'];
-const noEr = GYEONGGI.filter((s) => !bySi[s]);
+const noEr = GYEONGGI.filter((s) => !bySi[s]); // 경기도만 (서울·인천의 구 목록은 넣지 않았다)
 // 실시간 병상을 알리는 응급실이 없는 시군에도, 병상 정보를 내지 않는 응급실운영신고기관이 있을 수 있다
 const noErOther = Object.fromEntries(noEr.map((s) => [s, list.filter((r) => sigungu(r.dutyAddr) === s).map((r) => `${r.dutyName}(${r.dutyEmclsName})`)]));
 const excludedRows = list.filter((r) => !latest.some((b) => b.hpid === r.hpid)); // 목록에는 있지만 실시간 병상을 내지 않는 기관

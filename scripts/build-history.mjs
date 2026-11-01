@@ -10,6 +10,7 @@ import { parseCSV, readColumns } from '../engine/csv.mjs';
 import { parseKST, parseHvidate, formatKST } from '../engine/time.mjs';
 import { causeCode } from '../engine/causes.mjs';
 import { regularStart, BED_COLS } from './load.mjs';
+import { regionOf } from '../engine/region.mjs';
 
 export const SLOT_MIN = 10;
 const SLOTS = (24 * 60) / SLOT_MIN; // 144칸
@@ -90,7 +91,7 @@ export function main(args = {}) {
 
   const info = {};
   if (existsSync(join(DATA, 'hospitals.csv'))) {
-    for (const r of parseCSV(readFileSync(join(DATA, 'hospitals.csv'), 'utf8'))) info[r.hpid] = { si: (r.dutyAddr ?? '').split(/\s+/)[1] ?? '', cls: r.dutyEmclsName ?? '' };
+    for (const r of parseCSV(readFileSync(join(DATA, 'hospitals.csv'), 'utf8'))) info[r.hpid] = { si: regionOf(r.dutyAddr).si, cls: r.dutyEmclsName ?? '' };
   }
   const runs = existsSync(join(DATA, 'runs.csv')) ? parseCSV(readFileSync(join(DATA, 'runs.csv'), 'utf8')) : [];
   const runsByDay = {};

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>골든타임 수집 현황판</title>
-<meta name="description" content="경기도 응급실 실시간 가용병상 공공데이터 수집 현황">
+<meta name="description" content="서울·인천·경기 응급실 실시간 가용병상 공공데이터 수집 현황">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
@@ -206,7 +206,7 @@
   <header>
     <div>
       <h1>골든타임 수집 현황판</h1>
-      <div class="sub">경기도 응급실 실시간 가용병상 공공데이터 · 10분마다 자동 수집 · <a href="app.html">응급실 추천 웹앱</a></div>
+      <div class="sub">서울·인천·경기 응급실 실시간 가용병상 공공데이터 · 10분마다 자동 수집 · <a href="app.html">응급실 추천 웹앱</a></div>
     </div>
     <div class="sub" id="updated"></div>
   </header>
@@ -227,7 +227,7 @@
       <button type="button" class="fold-btn" aria-expanded="false" aria-controls="mapBody"><span class="ft">지도</span><span class="sub" id="mapSummary"></span><span class="arrow" aria-hidden="true">▼</span></button>
       <div class="fold-body" id="mapBody"><div class="fold-inner"><div class="fold-pad">
         <p class="lead">응급실 위치와 지금 남은 병상 상태예요. 점을 누르면 자세한 값이 나와요.</p>
-        <div id="map" role="img" aria-label="경기도 응급실 위치와 남은 병상 상태 지도"></div>
+        <div id="map" role="img" aria-label="서울·인천·경기 응급실 위치와 남은 병상 상태 지도"></div>
         <div class="legend">
           <span><span class="dot" style="background:var(--full)"></span>꽉 참 (남은 병상 0 이하)</span>
           <span><span class="dot" style="background:var(--low)"></span>1~2개 남음</span>
@@ -238,9 +238,9 @@
     </section>
     <section class="card">
       <h2>수집 중인 응급실 <span class="sub" id="erCount"></span></h2>
-      <p class="lead">실시간 병상을 알리는 경기도 응급실 전체 목록이에요. 줄을 누르면 그 병원의 거절 확률 계산을 볼 수 있어요.</p>
+      <p class="lead">실시간 병상을 알리는 서울·인천·경기 응급실 전체 목록이에요. 줄을 누르면 그 병원의 거절 확률 계산을 볼 수 있어요.</p>
       <div class="seg" id="erFilter" role="group" aria-label="상태로 거르기"></div>
-      <input type="search" id="erSearch" placeholder="병원 이름이나 시군으로 찾기">
+      <input type="search" id="erSearch" placeholder="병원 이름이나 시군구로 찾기">
       <div class="scroll"><table id="erTable"></table></div>
       <p class="note">입력 경과 = 수집 시각 − 병원이 마지막으로 값을 입력한 시각. 60분이 넘으면 '지금 상태'로 믿기 어려워 계산에서 빼요.</p>
     </section>
@@ -265,8 +265,8 @@
       <p class="note">날짜별로 자세히 보려면 '날짜별 기록' 탭을 쓰세요.</p>
     </section>
     <section class="card">
-      <h2>시군별</h2>
-      <p class="lead">시군마다 응급실 수와 지금 꽉 찬 곳이에요.</p>
+      <h2>시군구별</h2>
+      <p class="lead">시군구마다 응급실 수와 지금 꽉 찬 곳이에요. 서울·인천은 같은 이름의 구가 있어 앞에 시도를 붙였어요.</p>
       <div class="scroll"><table id="siTable"></table></div>
       <p class="note" id="noEr"></p>
     </section>
@@ -423,7 +423,7 @@
 
     <section class="card sub-panel" id="p-table" hidden>
       <h2>② 결과표: 지금 남은 병상별로, 몇 분 뒤 0 이하였던 비율</h2>
-      <p class="lead">경기도 응급실 전체를 합친 실제 비율(보정 전 k/n)이에요. 시간대를 골라 볼 수 있어요.</p>
+      <p class="lead">수집 중인 응급실(서울·인천·경기) 전체를 합친 실제 비율(보정 전 k/n)이에요. 시간대를 골라 볼 수 있어요.</p>
       <div class="seg" id="heatSeg" role="group" aria-label="시간대 고르기"></div>
       <div class="scrollx"><table class="heat" id="heat"></table></div>
       <div class="heat-legend" id="heatLegend"></div>
@@ -481,7 +481,7 @@
       </section>
       <section class="card">
         <h2>수집에서 빠진 기관 <span class="sub" id="exCount"></span></h2>
-        <p class="lead">경기도 응급의료기관 목록에는 있지만 실시간 병상 정보를 내지 않아 수집·계산에서 빠진 곳이에요.</p>
+        <p class="lead">서울·인천·경기 응급의료기관 목록에는 있지만 실시간 병상 정보를 내지 않아 수집·계산에서 빠진 곳이에요.</p>
         <div class="scroll"><table id="exTable2"></table></div>
       </section>
     </div>
@@ -755,13 +755,13 @@ function drawLine(tl) {
 }
 
 function drawSi(list, noEr, other, notReporting) {
-  $('siTable').innerHTML = '<tr><th>시군</th><th class="num">응급실</th><th class="num">지금 꽉 참</th><th class="num">평균 꽉 찬 비율</th></tr>' +
+  $('siTable').innerHTML = '<tr><th>시군구</th><th class="num">응급실</th><th class="num">지금 꽉 참</th><th class="num">평균 꽉 찬 비율</th></tr>' +
     list.map((s) => `<tr><td>${esc(s.si)}</td><td class="num">${s.er}</td><td class="num">${s.fullNow ? `<span class="pill full">${s.fullNow}</span>` : 0}</td><td class="num">${fmtP(s.avgFullRate)}</td></tr>`).join('');
   const none = noEr.filter((s) => !(other[s] ?? []).length);
   const only = noEr.filter((s) => (other[s] ?? []).length);
   $('noEr').innerHTML = [
-    none.length ? `응급의료기관 목록에 응급실이 없는 시군: ${esc(none.join(', '))}.` : '',
-    only.length ? `실시간 병상을 알리지 않는 응급실(응급실운영신고기관)만 있는 시군: ${esc(only.join(', '))}.` : '',
+    none.length ? `응급의료기관 목록에 응급실이 없는 경기도 시군: ${esc(none.join(', '))}.` : '',
+    only.length ? `실시간 병상을 알리지 않는 응급실(응급실운영신고기관)만 있는 경기도 시군: ${esc(only.join(', '))}.` : '',
     notReporting ? `실시간 병상 정보를 내지 않는 ${notReporting}곳은 <a href="#/status">수집 상태</a> 탭에 따로 적어 두었어요.` : '',
   ].filter(Boolean).join(' ');
 }
@@ -1188,7 +1188,7 @@ function showStatus() {
   // 빠진 기관
   const ex = status.excluded ?? [];
   $('exCount').textContent = `${ex.length}곳`;
-  $('exTable2').innerHTML = '<tr><th>기관</th><th>시군</th><th>분류</th></tr>' + ex.map((e) => `<tr><td>${esc(e.name)}</td><td>${esc(e.si)}</td><td class="sub">${esc(e.cls)}</td></tr>`).join('');
+  $('exTable2').innerHTML = '<tr><th>기관</th><th>시군구</th><th>분류</th></tr>' + ex.map((e) => `<tr><td>${esc(e.name)}</td><td>${esc(e.si)}</td><td class="sub">${esc(e.cls)}</td></tr>`).join('');
 
   // 입력 신선도
   const hs = [...status.hospitals].sort((a, b) => (b.staleRate ?? -1) - (a.staleRate ?? -1) || (b.ageMedian ?? 0) - (a.ageMedian ?? 0));
