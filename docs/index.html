@@ -916,8 +916,9 @@ function drawSlots(d, lo, hi) {
 function drawStrip(d, ti) {
   // 11-01 12:20 확대 전 기록에는 시도 칸이 없고, 그때는 경기도만 받았다
   const sidoOf = (h) => h.sido ?? '경기도';
-  hist.region = regionSeg('stripRegionSeg', new Set(d.hospitals.map(sidoOf)), hist.region, (v) => { hist.region = v; drawStrip(d, ti); });
-  const inRegion = d.hospitals.map((h) => hist.region === 'all' || sidoOf(h) === hist.region);
+  // 고른 지역이 없는 날(확대 전)에는 '전체'로 보이되, 고른 지역은 기억해 두었다가 그 지역이 있는 날에 다시 쓴다
+  const reg = regionSeg('stripRegionSeg', new Set(d.hospitals.map(sidoOf)), hist.region, (v) => { hist.region = v; drawStrip(d, ti); });
+  const inRegion = d.hospitals.map((h) => reg === 'all' || sidoOf(h) === reg);
   const opts = [['busy', '붐빈 응급실만'], ['all', `${inRegion.filter(Boolean).length}곳 모두`]];
   $('stripSeg').innerHTML = opts.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${v === hist.strip}">${l}</button>`).join('');
   $('stripSeg').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; hist.strip = b.dataset.v; drawStrip(d, ti); };
