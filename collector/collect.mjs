@@ -5,7 +5,8 @@
 //   SERVICE_KEY  공공데이터포털 인증키 (저장소 Secrets에만 보관, 코드에 쓰지 않음)
 //   STAGES       수집할 시도, 쉼표로 구분 (기본: 경기도). 예: 서울특별시,경기도,인천광역시
 //   DATA_DIR     저장 폴더 (기본: data)
-//   REDO         1이면 '새 실행'(앞 실행이 연결 문제로 실패해서 워크플로가 한 번 더 부른 실행): 끈기 있게 다시 시도한다
+//   REDO         1이면 '새 실행'(앞 실행이 연결 문제로 실패해서 워크플로가 한 번 더 부른 실행)
+//   REDO_N       몇 번째 새 실행인지(1~2). 없으면 REDO에 따라 0 또는 1
 //   REDO_FLAG_FILE  가용병상이 연결 문제로 실패해 새 실행이 필요하면 이 파일을 만든다 (워크플로가 읽음)
 //
 // 실패 대책 (2026-10-26 분석·시뮬레이션 결과, 결재 후 도입)
@@ -16,6 +17,10 @@
 //   5) (2026-10-28 점검 후) 정시 실행은 https로 한 번만 부른다. 실패 18번 중 같은 실행 안 재시도로 살아난 것은 0번,
 //      새 실행은 11번 모두 성공했다. 재시도로 약 30초를 버리지 않고 바로 새 실행에 맡긴다.
 //      http로는 부르지 않는다(인증키가 암호화 없이 주소에 실려 가지 않도록).
+//   6) (2026-11-01, 1주 기록) 같은 실행 안 재시도는 21번 중 0번 성공(새 실행의 5·15·30초 기다림 포함), 새 실행은 37번 중 36번 성공.
+//      → 새 실행도 한 번만 부르고, 새 실행마저 실패하면 다른 실행 컴퓨터에서 한 번 더(새 실행 최대 2번).
+//      → 다만 이번 실행에서 이미 한 번 받은 뒤 다음 요청만 연결이 끊긴 경우(1주 3번)는 실행 컴퓨터 문제가 아니라
+//        한 번의 연결 문제이므로 1초 뒤 한 번만 다시 부른다(시도가 늘어 서울·인천을 함께 받을 때 일부 시도만 실패하는 것을 줄인다).
 //
 // 저장 위치                          기능(오퍼레이션)                              주기
 //   data/beds/날짜.csv              ① 응급실 실시간 가용병상정보 조회              10분
@@ -38,9 +43,11 @@ const KEY = process.env.SERVICE_KEY;
 export const STAGES = (process.env.STAGES || process.env.STAGE1 || '경기도').split(',').map((s) => s.trim()).filter(Boolean);
 const DATA = process.env.DATA_DIR || 'data';
 const BASE = 'apis.data.go.kr/B552657/ErmctInfoInqireService/';
-export const REDO = ['1', 'true'].includes(process.env.REDO ?? '');
+export const REDO_N = /^[0-2]$/.test(process.env.REDO_N ?? '') ? Number(process.env.REDO_N) : ['1', 'true'].includes(process.env.REDO ?? '') ? 1 : 0;
+export const REDO = REDO_N > 0;
+export const MAX_REDO = 2; // 새 실행은 많아야 2번 (정시 → 새 실행 1 → 새 실행 2)
 // 다시 시도하기 전에 기다리는 시간(초). 정시 실행은 다시 시도하지 않고(실패하면 새 실행), 새 실행은 마지막 기회라 끈기 있게 기다린다.
-export const WAIT_PLAN = REDO ? [5, 15, 30] : [];
+export const WAIT_PLAN = []; // 같은 실행 컴퓨터에서 기다렸다 다시 부르지 않는다(6번 참고)
 const UNIT_MS = Number(process.env.RETRY_UNIT_MS ?? 1000); // 시험할 때는 1(=1초를 1밀리초로)
 // 서버에 연결조차 못 한 오류 (같은 서버의 다른 기능도 실패할 것이 거의 확실)
 export const NETWORK = new Set(['UND_ERR_CONNECT_TIMEOUT', 'ECONNREFUSED', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN', 'EHOSTUNREACH', 'ENETUNREACH', 'ETIMEDOUT', 'UND_ERR_SOCKET']);
@@ -96,10 +103,12 @@ export function parseItems(xml) {
   return { code, msg, total, items };
 }
 
-// 한 번 부르기. 실패하면 WAIT_PLAN대로 기다렸다가 다시 시도한다(https만).
+// 한 번 부르기(https만). 이번 실행에서 이미 받은 적이 있는데 연결만 끊겼으면 1초 뒤 한 번 더 부른다(6번 참고).
 // 돌려주는 값: { text, at(성공한 시도를 시작한 시각), trail(실패한 시도 기록) }
+let gotOnce = false; // 이번 실행에서 공공데이터 서버에서 한 번이라도 받았나 (= 실행 컴퓨터는 연결되는 상태)
 async function call(op, params) {
   const trail = [];
+  let quick = false; // 연결 끊김 한 번 다시 부르기를 이미 썼나
   for (let attempt = 0; ; attempt++) {
     const proto = 'https://'; // 인증키가 주소에 들어가므로 암호화된 연결로만 부른다
     const url = new URL(proto + BASE + op);
@@ -110,9 +119,15 @@ async function call(op, params) {
       const text = await res.text();
       if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status}`), { kind: `HTTP_${res.status}` });
       if (!text.includes('<resultCode>') && TRANSIENT.test(text)) throw Object.assign(new Error('공공데이터포털 일시 오류'), { kind: 'GATEWAY', xml: text });
+      gotOnce = true;
       return { text, at, trail };
     } catch (e) {
       trail.push(`${proto.slice(0, -3)}:${causeOf(e)}:${((Date.now() - at) / 1000).toFixed(1)}`);
+      if (gotOnce && !quick && NETWORK.has(causeOf(e)) && !timeUp()) {
+        quick = true;
+        await new Promise((r) => setTimeout(r, 1 * UNIT_MS));
+        continue;
+      }
       if (attempt < WAIT_PLAN.length && !timeUp()) {
         await new Promise((r) => setTimeout(r, WAIT_PLAN[attempt] * UNIT_MS));
         continue;
@@ -391,6 +406,7 @@ export async function main() {
   }
   const now = Date.now();
   deadline = now + BUDGET_MS;
+  gotOnce = false;
   const ctx = {};
   const before = recentBedFailures(); // 이번 실행 전까지 가용병상이 연달아 실패한 횟수
   const results = [];
@@ -400,9 +416,11 @@ export async function main() {
   // 꼭 필요한 기능(가용병상)이 실패하면 실행을 실패로 표시해 알림을 받는다
   if (bedsFailed) process.exitCode = 1;
   // 새 실행 요청: 다시 해 볼 만한 실패이고, 이번 실행이 새 실행이 아니며, 긴 장애 중(앞에서 2번 이상 연달아 실패)이 아닐 때만
-  const wantRedo = Boolean(bedsFailed && ctx.redo && !REDO && before < 2);
-  if (wantRedo && process.env.REDO_FLAG_FILE) writeFileSync(process.env.REDO_FLAG_FILE, '1\n');
-  if (bedsFailed) console.error(wantRedo ? '→ 새 실행 컴퓨터에서 한 번 더 받도록 요청합니다' : '→ 새 실행은 요청하지 않습니다' + (REDO ? ' (이미 새 실행)' : before >= 2 ? ' (긴 장애 중)' : ' (새 실행 대상이 아닌 실패)'));
+  //   before에는 이번 묶음(정시 + 앞선 새 실행 REDO_N번)의 실패도 들어 있으므로, 그 앞의 실패만 세어 긴 장애인지 본다
+  const longOutage = before - REDO_N >= 2;
+  const wantRedo = Boolean(bedsFailed && ctx.redo && REDO_N < MAX_REDO && !longOutage);
+  if (wantRedo && process.env.REDO_FLAG_FILE) writeFileSync(process.env.REDO_FLAG_FILE, `${REDO_N + 1}\n`); // 다음 새 실행 번호
+  if (bedsFailed) console.error(wantRedo ? `→ 새 실행 컴퓨터에서 한 번 더 받도록 요청합니다 (새 실행 ${REDO_N + 1}번째)` : '→ 새 실행은 요청하지 않습니다' + (REDO_N >= MAX_REDO ? ` (새 실행 ${MAX_REDO}번 모두 실패)` : longOutage ? ' (긴 장애 중)' : ' (새 실행 대상이 아닌 실패)'));
   return results.map(([spec, ok]) => [spec.name, ok]);
 }
 

@@ -102,3 +102,20 @@ test('시도를 늘린 날: 오늘 받은 기관 목록에 없는 시도가 있�
   assert.deepEqual(infoCalls, []);
   process.exitCode = 0;
 });
+
+test('여러 시도 중 한 시도만 연결이 한 번 끊기면 1초 뒤 다시 불러 모두 받는다(부분 실패·새 실행 없음)', async () => {
+  const { dir, mod, flag } = await fresh();
+  let inc = 0;
+  globalThis.fetch = async (url) => {
+    const u = new URL(url);
+    if (u.searchParams.get('STAGE1') === '인천광역시' && u.pathname.endsWith('getEmrrmRltmUsefulSckbdInfoInqire') && inc++ === 0) throw connectTimeout();
+    return new Response(body(u));
+  };
+  const res = await mod.main();
+  assert.deepEqual(res[0], ['beds', true]);
+  const beds = parseCSV(readFileSync(join(dir, 'beds', `${today}.csv`), 'utf8'));
+  assert.deepEqual(beds.map((r) => r.hpid), ['서울특별시-1', '경기도-1', '인천광역시-1']);
+  assert.equal(inc, 2);
+  assert.equal(flag(), false);
+  process.exitCode = 0;
+});

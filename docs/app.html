@@ -218,7 +218,7 @@
             <li><b>먼 병원끼리는 한 방향만</b>: 9.5km보다 먼 병원 짝은 한 방향 시간만 받아 반대 방향에도 써요. 일방통행 등으로 실제와 조금 다를 수 있어요.</li>
             <li><b>결과가 나오기까지 몇 초 더 걸려요</b>: 병원 사이 길찾기를 여러 번 부르기 때문이에요.</li>
             <li><b>범위</b>: 서울·인천·경기에서 실시간 병상을 알리는 응급실(권역·지역응급의료센터, 지역응급의료기관)만 계산해요. 병상 정보를 내지 않는 응급실운영신고기관과 다른 시도 응급실은 빠져 있어요.</li>
-            <li><b>가까운 12곳까지</b>: 출발지에서 직선으로 가까운 응급실 12곳까지만 계산해요. 길찾기 하루 한도를 지키려는 제한이고, 경기도에서는 후보가 12곳을 넘은 적이 없었어요(2026-11-01, 출발지 1,220곳). 서울처럼 촘촘한 곳에서는 13번째로 가까운 곳부터는 빠져요.</li>
+            <li><b>도로로 가까운 12곳까지</b>: 출발지에서 실제 도로 시간이 짧은 응급실 12곳까지만 계산해요. 길찾기 하루 한도를 지키려는 제한이고, 경기도에서는 후보가 12곳을 넘은 적이 없었어요(2026-11-01, 출발지 1,220곳). 서울처럼 촘촘한 곳에서는 도로 시간 13번째부터는 빠져요.</li>
           </ul>
           <p id="dataInfo"></p>
         </details>
@@ -259,7 +259,7 @@ import { ranks, spearman } from './engine/stats.mjs';
 const PROXY = 'https://goldentime-proxy.gt-er-map.workers.dev';
 const NEAR_M = 9500;       // 다중 목적지 길찾기 반경(10km)보다 조금 안쪽
 const MIN_CANDIDATES = 6;  // 가까운 곳이 이보다 적으면 더 먼 곳을 하나씩 길찾기로 채운다
-const MAX_CANDIDATES = 12; // 후보 상한: 다중 목적지 길찾기를 검색당 많아야 13번으로 묶는다(경기도 출발지 1,220곳의 최댓값 12곳)
+const MAX_CANDIDATES = 12; // 후보 상한: 도로 시간이 짧은 12곳만 후보 → 다중 목적지 길찾기를 검색당 많아야 13번으로 묶는다(경기도 출발지 1,220곳의 최댓값 12곳)
 const DELAY_MIN = 3;
 const DEPTH = 3;
 const LIVE_CONC = 6;         // 응급실 사이 실시간 길찾기를 동시에 몇 개씩 부를지
@@ -463,7 +463,7 @@ const routeTo = (o, h, summary = false) => proxy(`/route?origin=${o.lon},${o.lat
 async function roadTimes(origin, fails) {
   const sorted = ers.map((h) => ({ h, m: haversineM(origin, h) })).sort((a, b) => a.m - b.m);
   const cand = (x, t) => ({ id: x.h.id, name: x.h.name, travelMin: t.min, straightM: x.m, roadM: t.m });
-  const near = sorted.filter((x) => x.m <= NEAR_M).slice(0, MAX_CANDIDATES);
+  const near = sorted.filter((x) => x.m <= NEAR_M).slice(0, 30); // 출발지 → 반경 안 응급실은 30곳까지 몇 곳이든 요청 1번
   const far = sorted.filter((x) => x.m > NEAR_M).slice(0, Math.max(0, MIN_CANDIDATES - near.length));
   const out = [];
 
@@ -490,7 +490,9 @@ async function roadTimes(origin, fails) {
       if (t) out.push(cand(x, t)); else fails.origin.push([x.h.id, whyRoute(r)]);
     } catch (e) { usage.failed++; fails.origin.push([x.h.id, whyErr(e)]); }
   }));
-  return { candidates: out, nearestM: sorted[0]?.m ?? Infinity };
+  // 후보끼리의 길찾기는 후보마다 1번씩 들므로, 실제 도로 시간이 짧은 순서로 MAX_CANDIDATES곳만 후보로 쓴다(직선 거리로 고르지 않는다)
+  out.sort((a, b) => a.travelMin - b.travelMin);
+  return { candidates: out.slice(0, MAX_CANDIDATES), nearestM: sorted[0]?.m ?? Infinity };
 }
 
 // ---------- 지도

@@ -24,14 +24,15 @@ const connectTimeout = () => { offset += 10_000; return Object.assign(new TypeEr
 
 // 시나리오마다 새 저장 폴더와 새 모듈(환경 변수를 다시 읽도록)
 let n = 0;
-async function fresh({ redo = false, runsCsv } = {}) {
+async function fresh({ redo = false, redoN = '', runsCsv } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'stab-'));
   if (runsCsv) writeFileSync(join(dir, 'runs.csv'), runsCsv);
   process.env.DATA_DIR = dir;
   process.env.REDO = redo ? '1' : '';
+  process.env.REDO_N = redoN;
   process.env.REDO_FLAG_FILE = join(dir, 'redo.flag');
   const mod = await import(`../collector/collect.mjs?stab${n++}`);
-  return { dir, mod, runs: () => parseCSV(readFileSync(join(dir, 'runs.csv'), 'utf8')), flag: () => existsSync(join(dir, 'redo.flag')) };
+  return { dir, mod, runs: () => parseCSV(readFileSync(join(dir, 'runs.csv'), 'utf8')), flag: () => existsSync(join(dir, 'redo.flag')), flagText: () => (existsSync(join(dir, 'redo.flag')) ? readFileSync(join(dir, 'redo.flag'), 'utf8').trim() : '') };
 }
 const opOf = (url) => new URL(url).pathname.split('/').pop();
 
@@ -81,13 +82,13 @@ test('예전 머리글의 runs.csv는 머리글만 새로 쓰고 예전 줄은 �
   process.exitCode = 0;
 });
 
-test('새 실행에서 세 번째 시도에 받으면: 기록 시각 = 실제로 받은 시각, 중증질환도 같은 시각으로 저장', async () => {
-  const { mod, runs, dir } = await fresh({ redo: true });
-  let bedTries = 0;
+test('한 번 받은 뒤 다음 요청만 연결이 끊기면(1주 3번): 1초 뒤 한 번 더 불러 받고, 중증질환도 가용병상과 같은 시각으로 저장', async () => {
+  const { mod, runs, dir } = await fresh();
+  let sevTries = 0;
   const start = Date.now();
   globalThis.fetch = async (url) => {
     const op = opOf(url);
-    if (op === 'getEmrrmRltmUsefulSckbdInfoInqire' && bedTries++ < 2) throw connectTimeout();
+    if (op === 'getSrsillDissAceptncPosblInfoInqire' && sevTries++ < 1) throw connectTimeout();
     return new Response(OK_BODY(op, new URL(url)));
   };
   const res = await mod.main();
@@ -95,14 +96,20 @@ test('새 실행에서 세 번째 시도에 받으면: 기록 시각 = 실제로
   const today = (await import('../engine/time.mjs')).kstDate(start);
   const beds = parseCSV(readFileSync(join(dir, 'beds', `${today}.csv`), 'utf8'));
   const sev = parseCSV(readFileSync(join(dir, 'severe', `${today}.csv`), 'utf8'));
-  const { parseKST } = await import('../engine/time.mjs');
-  // 실패 2번 동안 가짜 시계가 20초 흘렀으므로 기록 시각은 시작보다 약 20초 뒤
-  const lag = (parseKST(beds[0].collected_at) - start) / 1000;
-  assert.ok(lag >= 19 && lag <= 21, `기록 시각 차이 ${lag}초`);
   assert.equal(sev[0].collected_at, beds[0].collected_at); // 짝이 맞음
-  const b = runs().find((x) => x.op === 'beds');
-  assert.equal(b.ok, '1');
-  assert.equal(b.attempts.split('|').length, 2); // 실패한 시도 2번이 남음
+  const s = runs().find((x) => x.op === 'severe');
+  assert.equal(s.ok, '1');
+  assert.equal(s.attempts, 'https:UND_ERR_CONNECT_TIMEOUT:10.0'); // 실패한 시도 1번이 남음
+  assert.equal(sevTries, 2);
+  process.exitCode = 0;
+});
+
+test('첫 요청부터 연결이 안 되면(실행 컴퓨터 문제) 같은 실행에서 다시 부르지 않는다', async () => {
+  const { mod } = await fresh();
+  const calls = [];
+  globalThis.fetch = async (url) => { calls.push(opOf(url)); throw connectTimeout(); };
+  await mod.main();
+  assert.deepEqual(calls, ['getEmrrmRltmUsefulSckbdInfoInqire']);
   process.exitCode = 0;
 });
 
@@ -118,18 +125,41 @@ test('인증키 오류처럼 다시 해도 안 되는 실패: 건너뛰지 않�
   process.exitCode = 0;
 });
 
-test('새 실행(REDO=1): 4번까지 끈기 있게 시도하고, 기록에 redo 표시, 다시 새 실행을 부르지 않음', async () => {
-  const { mod, runs, flag } = await fresh({ redo: true });
-  assert.deepEqual(mod.WAIT_PLAN, [5, 15, 30]);
+test('새 실행 1번째(REDO=1): 한 번만 시도하고, 실패하면 다른 실행 컴퓨터에서 새 실행 2번째를 요청', async () => {
+  const { mod, runs, flagText } = await fresh({ redo: true });
+  assert.equal(mod.REDO_N, 1);
+  assert.deepEqual(mod.WAIT_PLAN, []);
   const calls = [];
   globalThis.fetch = async (url) => { calls.push(new URL(url)); throw connectTimeout(); };
   await mod.main();
-  assert.equal(calls.length, 4);
+  assert.equal(calls.length, 1); // 같은 실행 컴퓨터에서 기다렸다 다시 부르지 않음(1주 21번 중 0번 성공)
   assert.ok(calls.every((u) => u.protocol === 'https:')); // http로는 부르지 않음
   const b = runs().find((x) => x.op === 'beds');
   assert.equal(b.run, 'redo');
+  assert.equal(flagText(), '2');
+  process.exitCode = 0;
+});
+
+test('새 실행 2번째(REDO_N=2)마저 실패하면 더 부르지 않는다', async () => {
+  const { mod, flag } = await fresh({ redo: true, redoN: '2' });
+  assert.equal(mod.REDO_N, 2);
+  globalThis.fetch = async () => { throw connectTimeout(); };
+  await mod.main();
   assert.equal(flag(), false);
   process.exitCode = 0;
+});
+
+test('정시 실행 실패 → 새 실행 1번째를 요청(번호 1)', async () => {
+  const { mod, flagText } = await fresh();
+  globalThis.fetch = async () => { throw connectTimeout(); };
+  await mod.main();
+  assert.equal(flagText(), '1');
+  process.exitCode = 0;
+});
+
+test('REDO_N이 0~2가 아니면 무시한다(새 실행 표시만 따름)', async () => {
+  const { mod } = await fresh({ redo: false, redoN: '9' });
+  assert.equal(mod.REDO_N, 0);
 });
 
 test('원인 코드 뽑기', async () => {
