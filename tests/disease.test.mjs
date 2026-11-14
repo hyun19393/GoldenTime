@@ -96,3 +96,16 @@ test('가능 → 불가능 바뀔 확률: 시간에 비례하고 항목이 많�
   assert.equal(flipProb(30, 0), 0);
   assert.ok(SEV_FLIP_PER_MIN > 0 && SEV_FLIP_PER_MIN < 1e-4);
 });
+
+test('병원이 알린 자원: 질환에 맞는 칸만, 빈칸은 빼고, 0 이하·Y 아님은 low', async () => {
+  const { resources, RES, DISEASE_RES, RES_KEYS, DISEASES, diseaseById } = await import('../engine/disease.mjs');
+  for (const d of DISEASES) assert.ok(Array.isArray(DISEASE_RES[d.id]), d.id); // 모든 질환에 목록이 있다
+  for (const keys of Object.values(DISEASE_RES)) for (const k of keys) assert.ok(RES[k], k); // 모르는 칸 이름이 없다
+  assert.equal(RES_KEYS.length, Object.keys(RES).length);
+  const r = { hvoc: 3, hv6: 0, hvctayn: 'Y', hvangioayn: 'N1' };
+  assert.deepEqual(resources(r, diseaseById.ich).map((x) => [x.text, x.low]),
+    [['CT 가용', false], ['혈관촬영기 가용 표시 아님', true], ['수술실 3', false], ['신경외과 중환자실 0', true]]);
+  assert.deepEqual(resources(r, diseaseById.trauma).map((x) => x.key), ['hvoc', 'hvctayn']); // 값이 없는 칸은 안 보인다
+  assert.deepEqual(resources(undefined, diseaseById.mi), []);
+  assert.deepEqual(resources({ hv42: 'N', hvoc: -1 }, diseaseById.delivery).map((x) => [x.text, x.low]), [['분만실 가용 표시 아님', true], ['수술실 -1', true]]);
+});

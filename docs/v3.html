@@ -135,6 +135,7 @@
   .detail > * + * { margin-top: 8px; }
   .detail ul, .detail ol.chain { margin: 4px 0 0; padding-left: 18px; }
   .detail ol.chain li { margin: 2px 0; }
+  .detail .res { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
   .detail ul li { margin: 4px 0; overflow-wrap: anywhere; color: var(--muted); }
   .detail ul li.blk { color: var(--ink); }
   .detail .tag { margin-right: 4px; }
@@ -262,7 +263,7 @@
 
       <section class="card" id="listCard" hidden>
         <h2>추천 순위</h2>
-        <p class="capt" id="listMeta">빨리 도착하는 순서</p>
+        <p class="capt" id="listMeta">실효 도착 시간 순</p>
         <ol id="list" class="hl"></ol>
         <div id="checkBox" hidden>
           <h3 class="lh">확인이 필요한 곳 <span class="meta" id="checkMeta"></span></h3>
@@ -409,7 +410,7 @@ import { parseKST, kstHour } from './engine/time.mjs';
 import { haversineM } from './engine/geo.mjs';
 import { ranks, spearman } from './engine/stats.mjs';
 import { SEVERE, MSG_TO_SEVERE } from './engine/codes.mjs';
-import { DISEASES, diseaseById, assess, flipProb, itemLabel } from './engine/disease.mjs';
+import { DISEASES, diseaseById, assess, flipProb, itemLabel, resources } from './engine/disease.mjs';
 
 const PROXY = 'https://goldentime-proxy.gt-er-map.workers.dev';
 const NEAR_M = 9500;       // 다중 목적지 길찾기 반경(10km)보다 조금 안쪽
@@ -881,14 +882,14 @@ function render() {
   // 추천 카드: 병원 이름 · 실효 도착 시간(크게) · 길안내와 전화
   const hero = (k, r) => (r
     ? `<div class="cmp best"><span class="tag accent">${k}</span><div class="hero"><div><div class="hname">${esc(r.name)}</div>` +
-      `<div class="meta">예상 도착 · 거절 확률 ${pct(r.pReject)}</div></div><div class="htime">${min1(r.effectiveMin)}<small>분</small></div></div>${actsHtml(byId[r.id])}</div>`
+      `<div class="meta">실효 도착 시간 · 거절 확률 ${pct(r.pReject)}</div></div><div class="htime">${min1(r.effectiveMin)}<small>분</small></div></div>${actsHtml(byId[r.id])}</div>`
     : `<div class="cmp best"><span class="tag gray">${k}</span><div class="n">해당 없음</div></div>`);
   const moveBox = (k, r) => (r
     ? `<div class="cmp"><div class="k">${k}</div><div class="v">${min1(r.travelMin)}분 이동</div><div class="n">${esc(r.name)}</div>${tierChip(r.id)}</div>`
     : none(k));
   const known = hasItems();
   // 정보가 언제 것인지 늘 보여 준다 (공공데이터는 10분마다 바뀜)
-  $('listMeta').textContent = `${known ? '가능이 확인된 곳' : '병상 기준'} · 빨리 도착하는 순서 · 병상 정보 ${Math.round(sinceObsMin())}분 전`;
+  $('listMeta').textContent = `${known ? '가능이 확인된 곳' : '병상 기준'} · 실효 도착 시간 순 · 병상 정보 ${Math.round(sinceObsMin())}분 전`;
   // 비교 칸은 추천과 다른 병원일 때만 (같은 병원을 두 번 보여 주지 않는다)
   const tiles = [];
   if (nearest.id !== best?.id) tiles.push(moveBox('가장 가까운 곳', nearest));
@@ -900,10 +901,10 @@ function render() {
   if (!best) say.push(`계산한 범위 안에 ${known ? '가능이 확인된' : '막는 메시지가 없는'} 응급실이 없어요. 아래 '확인이 필요한 곳'에 전화로 확인하거나 119에 신고하세요.`);
   else {
     const jn = judge[nearest.id];
-    if (nearest.id === best.id) say.push('가장 가까운 곳이 추천이에요.');
+    if (nearest.id === best.id) say.push('가장 가까운 곳이 실효 도착 시간으로도 가장 빨라요.');
     else if (jn.tier === 'ok') {
       const gain = nearest.effectiveMin - best.effectiveMin;
-      say.push(gain < 0.5 ? '가장 가까운 곳과 추천한 곳의 예상 도착 시간이 거의 같아요.' : `가장 가까운 곳은 거절될 가능성이 높아, 추천한 곳이 평균 ${min1(gain)}분 빨라요.`);
+      say.push(gain < 0.5 ? '가장 가까운 곳과 추천한 곳의 실효 도착 시간이 거의 같아요.' : `가장 가까운 곳은 거절될 가능성이 높아, 추천한 곳의 실효 도착 시간이 ${min1(gain)}분 짧아요.`);
     } else say.push(`가장 가까운 ${nearest.name}${eun(nearest.name)} ${jn.tier === 'no' ? '지금 받을 수 없다고 표시돼 있어요' : '받아 줄지 확인이 필요해요'}(${jn.why.join(' · ')}).`);
     const c = checks[0];
     if (sev && !disease.items.length && disease.id !== 'none') say.push('이 질환은 병원별 수용 정보가 없어, 병상과 메시지만 보고 추천했어요.');
@@ -952,6 +953,9 @@ function detailHtml(r) {
   if (r.chain?.length > 1) out.push('<div><b>여기서 받아 주지 않으면</b><ol class="chain">' + r.chain.slice(1).map((s) => `<li>${esc(s.name)} <span class="meta">${min1(s.travelMin)}분 더 · 거절 확률 ${pct(s.p)}</span></li>`).join('') +
     '</ol>' + (r.unresolved > 0.05 ? `<span class="meta">세 곳 모두 거절될 확률 ${pct(r.unresolved)}</span>` : '') + '</div>');
   if (j.tier !== 'ok') out.push(`<div><b>${tierName(j.tier)}</b>: ${esc(j.why.join(' · '))}</div>`);
+  // 수술실·중환자실·장비: 병원이 공공데이터에 알린 값 그대로. 순위·확률에는 쓰지 않는다
+  const res = resources(sev?.hosp[r.id]?.r, disease);
+  if (res.length) out.push(`<div><b>병원이 알린 자원</b> <span class="meta">참고용 · 순위 계산에는 쓰지 않아요</span><div class="res">${res.map((x) => `<span class="tag ${x.low ? 'low' : 'gray'}">${esc(x.text)}</span>`).join('')}</div></div>`);
   const line = (m) => `<li${m.block ? ' class="blk"' : ''}>${m.contact ? '<span class="tag call">사전 연락</span>' : ''}<span class="meta">${esc(msgKind(m).replace(/^([^\[].*)$/, '[$1]'))}</span> ${esc(m.t)} <span class="meta">(${esc(m.s)} ~ ${esc(m.e)})</span></li>`;
   if (j.rel.length) out.push(`<div><b>관련 메시지 ${j.rel.length}건</b><ul>${j.rel.map(line).join('')}</ul></div>`);
   if (j.other.length) out.push(`<details><summary>이 병원의 다른 메시지 ${j.other.length}건</summary><ul>${j.other.map(line).join('')}</ul></details>`);

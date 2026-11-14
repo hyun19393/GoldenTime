@@ -7,7 +7,7 @@
 //
 // 쓰는 자료는 수집기가 이미 받고 있는 세 가지뿐이다.
 //   ① 중증질환 수용가능정보(27개 항목 + 응급실)  ② 응급실·중증질환 메시지  ③ 실시간 가용병상(거절 확률, engine/model.mjs)
-// 가용병상의 수술실·중환자실·장비 칸은 활용가이드로 뜻을 확인하지 못해 쓰지 않는다.
+// 가용병상의 수술실·중환자실·장비 칸은 활용가이드로 뜻을 확인해 참고 정보로만 보여 준다(파일 끝의 RES). 판단(assess)에는 쓰지 않는다.
 //
 // 근거 (2026-11-01 12:20 ~ 11-14, 서울·인천·경기 152곳, 질환 표시 짝 약 290만 개)
 //   '가능' → 10분 뒤 '불가능' 0.0069%, 60분 뒤 0.0417% (도착까지 시간에 비례) → SEV_FLIP_PER_MIN
@@ -126,4 +126,39 @@ export function assess(h, d) {
     if (contact.length) why.push('사전 연락 필요');
   }
   return { tier, why, noItems, unknownItems, rel, other, contact };
+}
+
+// ---- 병원이 알린 자원 (가용병상 API의 수술실·중환자실·장비 칸)
+// 칸 이름과 뜻은 공공데이터포털 활용가이드(국립중앙의료원 전국 응급의료기관 정보 조회 서비스 V1.3)의 '응급실 실시간 가용병상정보' 표 그대로다.
+// 숫자 칸은 남은 수, 장비 칸은 'Y'가 가용. 장비 칸의 'N'·'N1'은 가이드에 뜻이 없어 "가용 표시 아님"으로만 보여 준다.
+export const RES = {
+  hvoc: '수술실', hv39: '외상전용 수술실', hv60: '외상소생실', hv42: '분만실', hv43: '화상전용처치실',
+  hvicc: '일반 중환자실', hvcc: '신경과 중환자실', hvccc: '흉부외과 중환자실', hvncc: '신생아 중환자실',
+  hv2: '내과 중환자실', hv3: '외과 중환자실', hv6: '신경외과 중환자실', hv9: '외상 중환자실', hv32: '소아 중환자실', hv34: '심장내과 중환자실',
+  hvctayn: 'CT', hvmriayn: 'MRI', hvangioayn: '혈관촬영기', hvincuayn: '인큐베이터', hvventisoayn: '인공호흡기(조산아)',
+  hvcrrtayn: 'CRRT', hvecmoayn: 'ECMO', hvhypoayn: '중심체온조절유도기',
+};
+// 질환마다 함께 보여 줄 자원. 순위·확률에는 쓰지 않는 참고 정보다 (어떤 자원이 꼭 필요한지는 환자마다 달라 공공데이터로 정할 수 없다)
+export const DISEASE_RES = {
+  none: ['hvoc', 'hvicc'],
+  mi: ['hvangioayn', 'hv34', 'hvccc', 'hvecmoayn'], aortaT: ['hvoc', 'hvccc', 'hvctayn'], aortaA: ['hvoc', 'hvccc', 'hvctayn'],
+  stroke: ['hvctayn', 'hvmriayn', 'hvangioayn', 'hvcc'], ich: ['hvctayn', 'hvangioayn', 'hvoc', 'hv6'], sah: ['hvctayn', 'hvangioayn', 'hvoc', 'hv6'], ichx: ['hvctayn', 'hvoc', 'hv6'],
+  abd: ['hvoc', 'hv3'], gall: ['hvoc', 'hv3'], gi: ['hv2'], giC: ['hv32'], intus: ['hvoc', 'hv32'], bronch: ['hv2'], bronchC: ['hv32'],
+  delivery: ['hv42', 'hvoc'], obOp: ['hvoc', 'hv42'], gynOp: ['hvoc'], lbw: ['hvncc', 'hvincuayn', 'hvventisoayn'],
+  burn: ['hv43'], replant: ['hvoc'], replantX: ['hvoc'], hd: ['hvicc'], crrt: ['hvcrrtayn', 'hvicc'], psy: [], eye: ['hvoc'], ir: ['hvangioayn'], irC: ['hvangioayn', 'hv32'],
+  arrest: ['hvicc', 'hvecmoayn', 'hvhypoayn'], trauma: ['hvoc', 'hv39', 'hv60', 'hv9', 'hvctayn'], fracture: ['hvoc'],
+};
+export const RES_KEYS = Object.keys(RES);
+/** 병원 자원 r(severe.json의 r)에서 질환 d에 맞는 것만. 값이 없는 칸은 뺀다. → [{key, label, text, low}] (low: 0 이하이거나 가용 표시 아님) */
+export function resources(r, d) {
+  const out = [];
+  for (const key of DISEASE_RES[d.id] ?? []) {
+    const v = r?.[key];
+    if (v == null || v === '') continue;
+    const eq = key.endsWith('yn');
+    if (eq) out.push({ key, label: RES[key], text: v === 'Y' ? `${RES[key]} 가용` : `${RES[key]} 가용 표시 아님`, low: v !== 'Y' });
+    else if (/^-?\d+$/.test(String(v))) out.push({ key, label: RES[key], text: `${RES[key]} ${v}`, low: Number(v) <= 0 });
+    else out.push({ key, label: RES[key], text: v === 'Y' ? `${RES[key]} 가용` : `${RES[key]} 가용 표시 아님`, low: v !== 'Y' }); // 분만실·화상전용처치실은 Y/N으로 온다
+  }
+  return out;
 }

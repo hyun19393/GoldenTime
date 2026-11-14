@@ -11,6 +11,7 @@ import { normFlag, SEVERE } from '../engine/codes.mjs';
 import { causeCode } from '../engine/causes.mjs';
 import { regularStart, BED_COLS } from './load.mjs';
 import { regionOf } from '../engine/region.mjs';
+import { RES_KEYS } from '../engine/disease.mjs';
 
 const args = Object.fromEntries(
   process.argv.slice(2).reduce((acc, a, i, arr) => (a.startsWith('--') ? [...acc, [a.slice(2), arr[i + 1]]] : acc), []),
@@ -171,7 +172,14 @@ for (const m of msgRows) {
 const sevHosp = {};
 for (const r of sevLatestRows) sevHosp[r.hpid] = { f: Array.from({ length: 28 }, (_, i) => normFlag(r[`MKioskTy${i + 1}`]) ?? '-').join('') };
 for (const m of activeMsgs) ((sevHosp[m.hpid] ??= {}).m ??= []).push({ c: m.code, d: m.dept, t: m.msg, s: m.start, e: m.end });
-const severeOut = { at: sevLatestRows[0]?.collected_at ?? null, msgAt: messagesAt, hosp: sevHosp };
+// 수술실·중환자실·장비 칸 (가용병상 API, 활용가이드의 칸 이름 그대로). 빈칸은 싣지 않는다
+const resRows = latestAt ? readDir('beds', 1, ['collected_at', 'hpid', ...RES_KEYS])[0]?.rows.filter((r) => r.collected_at === latestAt) ?? [] : []; // 가장 최근 파일만 한 번 더 읽는다
+for (const r of resRows) {
+  const res = {};
+  for (const k of RES_KEYS) { const v = (r[k] ?? '').trim(); if (v !== '') res[k] = /^-?\d+$/.test(v) ? Number(v) : v; }
+  if (Object.keys(res).length) (sevHosp[r.hpid] ??= {}).r = res;
+}
+const severeOut = { at: sevLatestRows[0]?.collected_at ?? null, msgAt: messagesAt, resAt: resRows.length ? latestAt : null, hosp: sevHosp };
 
 // ---- 지금 상태 (병원별)
 const hospitalsNow = latest.map((r) => {
