@@ -88,16 +88,16 @@
   .region-seg { margin: 0 0 12px; align-items: center; }
   .region-seg::before { content: '지역'; font-size: 12.5px; color: var(--muted); margin-right: 2px; }
   .row-link { cursor: pointer; }
-  #msgTable { table-layout: fixed; }
-  #msgTable td { overflow-wrap: anywhere; }
-  #msgTable col.c1 { width: 27%; } #msgTable col.c2 { width: 20%; } #msgTable col.c3 { width: 33%; } #msgTable col.c4 { width: 20%; }
-  #msgTable td.num { white-space: normal; font-size: 12.5px; }
+  table.msgs { table-layout: fixed; }
+  table.msgs td { overflow-wrap: anywhere; }
+  table.msgs col.c1 { width: 27%; } table.msgs col.c2 { width: 20%; } table.msgs col.c3 { width: 33%; } table.msgs col.c4 { width: 20%; }
+  table.msgs td.num { white-space: normal; font-size: 12.5px; }
   @media (max-width: 600px) {
-    #msgTable colgroup, #msgTable tr:first-child { display: none; }
-    #msgTable tr { display: block; padding: 8px 0; border-bottom: 1px solid var(--line); }
-    #msgTable td { display: block; border: 0; padding: 1px 0; text-align: left; }
-    #msgTable td:first-child { font-weight: 500; }
-    #msgTable td.num br { display: none; }
+    table.msgs colgroup, table.msgs tr:first-child { display: none; }
+    table.msgs tr { display: block; padding: 8px 0; border-bottom: 1px solid var(--line); }
+    table.msgs td { display: block; border: 0; padding: 1px 0; text-align: left; }
+    table.msgs td:first-child { font-weight: 500; }
+    table.msgs td.num br { display: none; }
     #exTable tr:first-child { display: none; }
     #exTable tr { display: block; border-bottom: 1px solid var(--line); padding: 6px 0; }
     #exTable td { display: block; border: 0; padding: 1px 0; font-size: 12.5px; text-align: left; white-space: normal; }
@@ -208,7 +208,7 @@
   <header>
     <div>
       <h1>골든타임 수집 현황판</h1>
-      <div class="sub">서울·인천·경기 응급실 실시간 가용병상 공공데이터 · 10분마다 자동 수집 · <a href="app.html">응급실 추천 웹앱</a></div>
+      <div class="sub">서울·인천·경기 응급실 실시간 가용병상 공공데이터 · 10분마다 자동 수집 · <a href="app.html">응급실 추천 웹앱</a> · <a href="v3.html">v3 베타(질환별)</a></div>
     </div>
     <div class="sub" id="updated"></div>
   </header>
@@ -278,7 +278,7 @@
       <div class="fold-body" id="msgBody"><div class="fold-inner"><div class="fold-pad">
         <p class="lead">병원이 직접 올린 '이런 환자는 받기 어려움' 안내예요. 확률 계산에는 쓰지 않아요.</p>
         <input type="search" id="msgSearch" placeholder="병원 이름이나 내용으로 찾기 (예: 소아, 전문의)">
-        <div class="scroll"><table id="msgTable"></table></div>
+        <div class="scroll"><table id="msgTable" class="msgs"></table></div>
       </div></div></div>
     </section>
   </section>
@@ -338,6 +338,15 @@
         <p class="lead">고른 시각에 수집한 응급실별 값 그대로예요 (남은 병상이 적은 순).</p>
         <div class="pick"><label for="snapSel" class="sub">수집 시각</label><select id="snapSel"></select></div>
         <div class="scroll"><table id="snapTable"></table></div>
+      </section>
+      <section class="card">
+        <h2>그날의 수용 불가 메시지 <span class="sub" id="dayMsgCount"></span></h2>
+        <p class="lead">그날 수집기가 본 병원 메시지예요(1시간마다 확인). 병원이 써 넣은 전화번호·환자 번호·이름은 가려서 보여 줘요.</p>
+        <input type="search" id="dayMsgSearch" placeholder="병원 이름이나 내용으로 찾기">
+        <div class="scroll"><table id="dayMsgTable" class="msgs"></table></div>
+        <h3>질환별 '불가능' 표시 <span class="sub" id="dayNoCount"></span></h3>
+        <p class="lead">병원이 그 질환을 '불가능'으로 표시해 둔 시간이에요 (10분마다 확인한 기록 기준).</p>
+        <div class="scroll"><table id="dayNoTable"></table></div>
       </section>
       <section class="card">
         <h2>실행 기록</h2>
@@ -527,6 +536,7 @@
 import { BUCKETS, BUCKET_LABEL, HOUR_BIN_LABEL, STALE_MIN, SHRINK_M, bedBucket, hourBin, explainPoint, explainBase, makeRejectProb } from './engine/model.mjs';
 import { parseKST, kstHour, formatKST } from './engine/time.mjs';
 import { causeText, parseAttempts } from './engine/causes.mjs';
+import { SEVERE } from './engine/codes.mjs';
 
 // ---------- 공통 도구
 const $ = (id) => document.getElementById(id);
@@ -877,6 +887,33 @@ function drawDay() {
   drawStrip(d, ti);
   drawSnap(d, ti);
   drawRuns(d, lo, hi);
+  drawDayMsgs(d);
+}
+
+// 그날의 수용 불가 메시지와 질환별 '불가능' 표시 (시간대 고르기와 상관없이 하루 전체)
+function drawDayMsgs(d) {
+  const msgs = d.messages, nos = d.severeNo;
+  if (!msgs) { // 이 기능 전에 만든 날짜 파일
+    $('dayMsgCount').textContent = ''; $('dayNoCount').textContent = '';
+    $('dayMsgTable').innerHTML = '<tr><td class="sub">이 날짜의 메시지 기록은 다음 수집 때 만들어져요.</td></tr>'; $('dayNoTable').innerHTML = '';
+    return;
+  }
+  const render = (q) => {
+    const f = q ? msgs.filter((m) => (m.name + m.type + m.dept + m.msg).includes(q)) : msgs;
+    $('dayMsgCount').textContent = `${f.length}건`;
+    $('dayMsgTable').innerHTML = f.length
+      ? '<colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"></colgroup><tr><th>병원</th><th>구분</th><th>내용</th><th class="num">기간</th></tr>' +
+        f.map((m) => `<tr><td>${esc(m.name)}</td><td>${esc(m.type)}${m.dept && m.dept !== m.type ? `<br><span class="sub">${esc(m.dept)}</span>` : ''}</td><td>${esc(m.msg)}</td><td class="num">${esc(m.start)}<br>~ ${esc(m.end)}</td></tr>`).join('')
+      : '<tr><td class="sub">메시지가 없어요.</td></tr>';
+  };
+  $('dayMsgSearch').value = '';
+  $('dayMsgSearch').oninput = (e) => render(e.target.value.trim());
+  render('');
+  $('dayNoCount').textContent = `${nos.length}건`;
+  $('dayNoTable').innerHTML = nos.length
+    ? '<tr><th>병원</th><th>질환</th><th class="num">표시된 시간</th><th class="num">수집 횟수</th></tr>' +
+      nos.map((r) => `<tr><td>${esc(r.name)}</td><td>${esc(SEVERE[`MKioskTy${r.item}`] ?? r.item)}</td><td class="num">${esc(r.from)} ~ ${esc(r.to)}</td><td class="num">${r.n}</td></tr>`).join('')
+    : '<tr><td class="sub">\'불가능\'으로 표시된 질환이 없었어요.</td></tr>';
 }
 
 function drawSlots(d, lo, hi) {

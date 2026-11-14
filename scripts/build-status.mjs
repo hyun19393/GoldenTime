@@ -11,6 +11,7 @@ import { normFlag, SEVERE } from '../engine/codes.mjs';
 import { causeCode } from '../engine/causes.mjs';
 import { regularStart, BED_COLS } from './load.mjs';
 import { regionOf } from '../engine/region.mjs';
+import { maskText } from '../engine/disease.mjs';
 
 const args = Object.fromEntries(
   process.argv.slice(2).reduce((acc, a, i, arr) => (a.startsWith('--') ? [...acc, [a.slice(2), arr[i + 1]]] : acc), []),
@@ -158,13 +159,20 @@ for (const m of msgRows) {
     hpid: m.hpid,
     name: m.dutyName,
     type: m.symTypCodMag || m.symTypCod,
+    code: m.symTypCod, // Y000 = 응급실, 그 밖은 질환 항목 (engine/codes.mjs의 MSG_TO_SEVERE)
     kind: m.symBlkMsgTyp, // 응급(진료과·조건 제한) / 중증(질환별 불가)
     dept: m.trtPrtCodMag,
-    msg: m.symBlkMsg,
+    msg: maskText(m.symBlkMsg), // 병원이 써 넣은 전화번호·환자 번호·이름은 공개 화면에 싣지 않는다
     start: st ? formatKST(st).slice(5, 16) : '',
     end: en ? formatKST(en).slice(5, 16) : '',
   });
 }
+
+// ---- 질환별 안내용 파일 (웹앱 v3 베타가 읽는다): 병원별 27개 항목 + 응급실 표시 28글자(Y 가능 · N 불가능 · - 정보미제공)와 지금 걸린 메시지
+const sevHosp = {};
+for (const r of sevLatestRows) sevHosp[r.hpid] = { f: Array.from({ length: 28 }, (_, i) => normFlag(r[`MKioskTy${i + 1}`]) ?? '-').join('') };
+for (const m of activeMsgs) ((sevHosp[m.hpid] ??= {}).m ??= []).push({ c: m.code, d: m.dept, t: m.msg, s: m.start, e: m.end });
+const severeOut = { at: sevLatestRows[0]?.collected_at ?? null, msgAt: messagesAt, hosp: sevHosp };
 
 // ---- 지금 상태 (병원별)
 const hospitalsNow = latest.map((r) => {
@@ -321,4 +329,5 @@ const status = {
 
 mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, JSON.stringify(status));
+writeFileSync(join(dirname(OUT), 'severe.json'), JSON.stringify(severeOut));
 console.log(`status: 수집 ${times.length}회, 응급실 ${hospitalsNow.length}곳, 메시지 ${activeMsgs.length}건 → ${OUT}`);

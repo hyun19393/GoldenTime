@@ -1,6 +1,7 @@
 // 수집 현황판의 '날짜별 기록' 파일을 만든다. 수집할 때마다 GitHub Actions에서 실행된다.
 //   docs/history/index.json        날짜 목록과 날짜별 요약
-//   docs/history/YYYY-MM-DD.json   그날의 모든 수집 시각 × 응급실별 남은 병상·입력 경과, 10분 칸별 수집 결과, 실행 기록
+//   docs/history/YYYY-MM-DD.json   그날의 모든 수집 시각 × 응급실별 남은 병상·입력 경과, 10분 칸별 수집 결과, 실행 기록,
+//                                  그날 걸려 있던 수용 불가 메시지, 질환별 '불가능' 표시 구간
 // 이미 만든 날짜는 원본(가용병상 CSV 크기, 그날 실행 기록 수)이 바뀌지 않았으면 다시 만들지 않는다(보통 오늘만 다시 만듦).
 // 사용법: node scripts/build-history.mjs [--data data] [--out docs/history]
 import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
@@ -11,6 +12,8 @@ import { parseKST, parseHvidate, formatKST } from '../engine/time.mjs';
 import { causeCode } from '../engine/causes.mjs';
 import { regularStart, BED_COLS } from './load.mjs';
 import { regionOf } from '../engine/region.mjs';
+import { normFlag } from '../engine/codes.mjs';
+import { maskText } from '../engine/disease.mjs';
 
 export const SLOT_MIN = 10;
 const SLOTS = (24 * 60) / SLOT_MIN; // 144칸
@@ -19,7 +22,33 @@ const SLOTS = (24 * 60) / SLOT_MIN; // 144칸
 const slotOf = (hms) => Math.floor((Number(hms.slice(0, 2)) * 60 + Number(hms.slice(3, 5))) / SLOT_MIN);
 const num = (v) => (v === '' || v == null ? null : Number(v));
 
-export function buildDay(day, bedRows, runRows, info, { firstAt, nowAt }) {
+// 날짜별 파일의 모양이 바뀌면 올린다 → 이미 만든 날짜도 한 번 다시 만든다
+export const HIST_VERSION = 2;
+const msgTime = (v) => { const t = parseHvidate(v); return t == null ? '' : formatKST(t).slice(5, 16); };
+
+// 그날 걸려 있던 수용 불가 메시지 (수집기가 그날 본 서로 다른 메시지). at = 처음 본 시각
+export const dayMessages = (msgRows) => msgRows.map((m) => ({
+  at: (m.collected_at ?? '').slice(11, 16), hpid: m.hpid, name: m.dutyName, code: m.symTypCod, type: m.symTypCodMag || m.symTypCod,
+  dept: m.trtPrtCodMag ?? '', msg: maskText(m.symBlkMsg), start: msgTime(m.symBlkSttDtm), end: msgTime(m.symBlkEndDtm),
+}));
+
+// 질환별 '불가능' 표시가 이어진 구간: { hpid, name, item(항목 번호 1~27), from, to(HH:MM), n(수집 횟수) }
+export function severeNoRuns(sevRows) {
+  const open = new Map(), out = [];
+  for (const r of sevRows) {
+    const at = r.collected_at.slice(11, 16);
+    for (let i = 1; i <= 27; i++) {
+      const key = `${r.hpid}|${i}`, cur = open.get(key);
+      if (normFlag(r[`MKioskTy${i}`]) === 'N') {
+        if (cur) { cur.to = at; cur.n++; } else open.set(key, { hpid: r.hpid, name: r.dutyName, item: i, from: at, to: at, n: 1 });
+      } else if (cur) { out.push(cur); open.delete(key); }
+    }
+  }
+  out.push(...open.values());
+  return out.sort((a, b) => a.name.localeCompare(b.name, 'ko') || a.item - b.item || (a.from < b.from ? -1 : 1));
+}
+
+export function buildDay(day, bedRows, runRows, info, { firstAt, nowAt, msgRows = [], sevRows = [] }) {
   // 수집 시각 목록과 응급실 목록
   const times = [...new Set(bedRows.map((r) => r.collected_at))].sort();
   const hp = new Map();
@@ -78,7 +107,7 @@ export function buildDay(day, bedRows, runRows, info, { firstAt, nowAt }) {
     everFull,
     staleShare: cellN ? staleN / cellN : null,
   };
-  return { summary, data: { day, regularFrom: formatKST(firstAt), hospitals, times: times.map((t) => t.slice(11)), hvec, age, slots, runs, summary } };
+  return { summary, data: { day, regularFrom: formatKST(firstAt), hospitals, times: times.map((t) => t.slice(11)), hvec, age, slots, runs, summary, messages: dayMessages(msgRows), severeNo: severeNoRuns(sevRows) } };
 }
 
 export function main(args = {}) {
@@ -111,12 +140,15 @@ export function main(args = {}) {
   const out = [];
   let rebuilt = 0;
   for (const day of days) {
-    const sig = `${statSync(join(bedDir, `${day}.csv`)).size}|${(runsByDay[day] ?? []).length}`;
+    const extra = (sub) => join(DATA, sub, `${day}.csv`);
+    const size = (f) => (existsSync(f) ? statSync(f).size : 0);
+    const sig = `v${HIST_VERSION}|${statSync(join(bedDir, `${day}.csv`)).size}|${(runsByDay[day] ?? []).length}|${size(extra('messages'))}|${size(extra('severe'))}`;
     const old = prevBy[day];
     // 오늘은 시간이 흐르면 '아직 안 온 칸'이 줄어드므로, 원본이 같아도 마지막 날은 늘 다시 만든다
     if (old && old.sig === sig && day !== days.at(-1) && existsSync(join(OUT, `${day}.json`))) { out.push(old); continue; }
     const rows = day === days[0] ? firstRows : readColumns(readFileSync(join(bedDir, `${day}.csv`), 'utf8'), BED_COLS);
-    const { summary, data } = buildDay(day, rows, runsByDay[day] ?? [], info, { firstAt, nowAt });
+    const readIf = (f) => (existsSync(f) ? parseCSV(readFileSync(f, 'utf8')) : []);
+    const { summary, data } = buildDay(day, rows, runsByDay[day] ?? [], info, { firstAt, nowAt, msgRows: readIf(extra('messages')), sevRows: readIf(extra('severe')) });
     writeFileSync(join(OUT, `${day}.json`), JSON.stringify(data));
     out.push({ ...summary, sig });
     rebuilt++;

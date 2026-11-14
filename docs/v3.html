@@ -1,0 +1,1018 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>골든타임 경로 v3 베타</title>
+<meta name="description" content="의심 질환을 받아 줄 수 있다고 알린 서울·인천·경기 응급실 중에서 도착 시 거절 가능성까지 계산해 추천하는 탐구용 웹앱 (v3 베타)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f6f3; --surface: #ffffff; --ink: #1d1d1b; --muted: #6b6a64; --line: #e3e2dc;
+    --full: #d6453d; --low: #e39b1b; --ok: #2f9e66; --stale: #9a9993; --accent: #2a63b8;
+    --full-bg: #fbe9e7; --low-bg: #fcf1dc; --ok-bg: #e4f3ea; --accent-bg: #e6eefa; --glass: rgba(255, 255, 255, .5);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161615; --surface: #1f1f1d; --ink: #ecebe6; --muted: #a3a29b; --line: #34332f;
+      --full: #ef6a5f; --low: #f0b443; --ok: #4cbc84; --stale: #7b7a74; --accent: #6b9ae6;
+      --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f; --accent-bg: #1c2a40; --glass: rgba(31, 31, 29, .5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161615; --surface: #1f1f1d; --ink: #ecebe6; --muted: #a3a29b; --line: #34332f;
+    --full: #ef6a5f; --low: #f0b443; --ok: #4cbc84; --stale: #7b7a74; --accent: #6b9ae6;
+    --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f; --accent-bg: #1c2a40; --glass: rgba(31, 31, 29, .5);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font-family: "Noto Sans KR", system-ui, sans-serif; font-size: 15px; line-height: 1.55; word-break: keep-all; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 20px 16px 40px; }
+  header { margin-bottom: 14px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+  .warn { background: var(--full-bg); color: var(--ink); border-radius: 8px; padding: 8px 12px; font-size: 13px; margin: 10px 0 0; }
+  .quota { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 13px; margin: 6px 0 0; }
+  .quota .q-top { display: flex; align-items: center; gap: 10px; }
+  .quota .q-label { font-weight: 700; white-space: nowrap; }
+  .quota .q-bar { flex: 1; height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; }
+  .quota .q-fill { display: block; height: 100%; width: 0; background: var(--ok); border-radius: 999px; transition: width .4s ease; }
+  .quota.mid .q-fill { background: var(--low); }
+  .quota.high .q-fill { background: var(--full); }
+  .quota .q-pct { min-width: 4.5em; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .quota .q-sub { color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .quota.unknown .q-pct, .quota.unknown .q-sub { color: var(--stale); }
+  .layout { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 880px) { .layout { grid-template-columns: minmax(0, 1fr); } .mapcol { order: -1; } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; min-width: 0; }
+  h2 { font-size: 15px; margin: 0 0 10px; }
+  #map { height: 640px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
+  @media (max-width: 880px) { #map { height: 380px; } }
+  .row { display: flex; gap: 8px; }
+  input[type=search] { flex: 1; min-width: 0; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+  button { font: inherit; font-size: 14px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); cursor: pointer; white-space: nowrap; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:disabled { opacity: .5; cursor: default; }
+  .hint { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
+  #places { list-style: none; margin: 8px 0 0; padding: 0; }
+  #places li button { width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 7px 4px; white-space: normal; }
+  #places li small { color: var(--muted); display: block; font-size: 12px; }
+  .status { font-size: 13.5px; color: var(--muted); }
+  .status.err { color: var(--full); }
+  .compare { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .cmp { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+  .cmp.best { border-color: var(--accent); background: var(--accent-bg); }
+  .cmp .k { font-size: 12px; color: var(--muted); }
+  .cmp .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; }
+  .cmp .v small { font-size: 12px; font-weight: 500; color: var(--muted); }
+  .cmp .n { font-size: 12.5px; overflow-wrap: anywhere; }
+  .gain { font-size: 13.5px; margin: 10px 0 0; }
+  ol.hl { list-style: none; margin: 0; padding: 0; }
+  ol.hl > li { border-bottom: 1px solid var(--line); padding: 9px 4px; cursor: pointer; border-radius: 6px; }
+  ol.hl > li:hover { background: var(--bg); }
+  ol.hl > li.sel { background: var(--accent-bg); }
+  .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .name { font-weight: 700; overflow-wrap: anywhere; }
+  .eff { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .meta { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tag { display: inline-block; font-size: 11.5px; padding: 0 6px; border-radius: 4px; margin-right: 4px; }
+  .tag.full { background: var(--full-bg); color: var(--full); } .tag.low { background: var(--low-bg); color: var(--low); }
+  .tag.ok { background: var(--ok-bg); color: var(--ok); } .tag.gray { background: var(--bg); color: var(--muted); }
+  .chain { font-size: 12.5px; margin-top: 4px; }
+  .pin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); cursor: pointer; }
+  .pin.full { background: var(--full); } .pin.low { background: var(--low); } .pin.ok { background: var(--ok); } .pin.stale { background: var(--stale); }
+  .pin.sel { width: 20px; height: 20px; box-shadow: 0 0 0 3px var(--accent); }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
+  details { font-size: 13px; color: var(--muted); }
+  details p { margin: 6px 0; }
+  details h3 { font-size: 13.5px; color: var(--ink); margin: 14px 0 4px; }
+  details ul { margin: 4px 0; padding-left: 18px; }
+  details li { margin: 3px 0; }
+  details .eq { background: var(--bg); color: var(--ink); border-radius: 8px; padding: 8px 10px; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+  details .def { font-size: 12px; }
+  details b { color: var(--ink); }
+  footer { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .dist-wrap { max-height: 420px; overflow: auto; }
+  table.dist { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.dist th, table.dist td { padding: 6px 6px; border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.dist th { position: sticky; top: 0; background: var(--surface); color: var(--muted); font-weight: 500; font-size: 12px; }
+  table.dist th:first-child, table.dist td:first-child { text-align: left; white-space: normal; overflow-wrap: anywhere; }
+  table.dist td small { color: var(--muted); margin-left: 2px; }
+  table.dist tr.sel td { background: var(--accent-bg); }
+  .dsum { font-size: 13px; margin: 0 0 8px; }
+  .dsum b { font-variant-numeric: tabular-nums; }
+  .ln { display: inline-block; width: 22px; height: 0; margin-right: 4px; vertical-align: 3px; }
+  a { color: var(--accent); }
+  /* 계산 실패 창: 닫기 전까지 그대로, 닫으면 오른쪽 아래 작은 표시로 남는다 */
+  .fail-dlg { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .4); }
+  .fail-box { width: 100%; max-width: 480px; max-height: 85vh; overflow: auto; background: var(--surface); color: var(--ink); border: 2px solid var(--full); border-radius: 12px; padding: 16px 18px; box-shadow: 0 12px 32px rgba(0, 0, 0, .3); }
+  .fail-box h3 { margin: 0 0 8px; font-size: 16px; color: var(--full); }
+  .fail-box p { margin: 6px 0; font-size: 13.5px; }
+  .fail-box ul { margin: 6px 0; padding-left: 18px; font-size: 13.5px; }
+  .fail-box li { margin: 3px 0; overflow-wrap: anywhere; }
+  .fail-box .btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+  .fail-badge { position: fixed; right: 16px; bottom: 16px; z-index: 40; background: var(--full); border-color: var(--full); color: #fff; border-radius: 999px; padding: 6px 14px; font-size: 13px; box-shadow: 0 2px 10px rgba(0, 0, 0, .25); }
+  .fail-dlg[hidden], .fail-badge[hidden] { display: none; }
+  /* ---- v3 베타: 질환별 안내 */
+  .beta { font-size: 12px; font-weight: 700; background: var(--accent); color: #fff; border-radius: 6px; padding: 1px 7px; vertical-align: 3px; margin-left: 4px; }
+  select { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+  h3.lh { font-size: 14px; margin: 18px 0 2px; }
+  ol.hl > li.dim .name { color: var(--muted); }
+  .eff.move { font-weight: 500; color: var(--muted); }
+  .tag.call { background: var(--full); color: #fff; } .tag.msg { background: var(--low-bg); color: var(--low); }
+  .detail { font-size: 12.5px; margin-top: 6px; cursor: default; }
+  .detail > div { margin-top: 4px; }
+  .detail ul { margin: 2px 0 4px; padding-left: 18px; }
+  .detail ul li { margin: 2px 0; overflow-wrap: anywhere; }
+  .detail li.blk { color: var(--ink); } .detail li { color: var(--muted); }
+  .detail summary { cursor: pointer; }
+  a.tel { display: inline-block; font-weight: 700; text-decoration: none; border: 1px solid var(--accent); border-radius: 8px; padding: 4px 10px; }
+  .pin.t-check { border-style: dashed; border-color: #1d1d1b; } .pin.t-no { opacity: .35; }
+  /* 사전 연락 창: 둥근 직사각형, 바탕만 반투명(글자는 선명하게). 확인을 누르면 5초 뒤 작아지고, 작은 표시를 누르면 다시 펴진다 */
+  .call-win { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 45; width: min(440px, calc(100vw - 24px)); max-height: 70vh; overflow: auto;
+    border-radius: 18px; padding: 14px 16px; border: 2px solid var(--full); background: var(--glass); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 10px 30px rgba(0, 0, 0, .28); }
+  .call-win h3 { margin: 0 0 2px; font-size: 15px; color: var(--full); }
+  .call-win .who { font-weight: 700; overflow-wrap: anywhere; }
+  .call-win ul { margin: 6px 0; padding-left: 18px; font-size: 13.5px; }
+  .call-win li { margin: 3px 0; overflow-wrap: anywhere; }
+  .call-win .btns { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 10px; }
+  .call-win a.primary { font-size: 14px; padding: 8px 12px; border-radius: 8px; background: var(--full); color: #fff; text-decoration: none; font-weight: 700; white-space: nowrap; }
+  .call-pill { position: fixed; left: 16px; bottom: 16px; z-index: 40; max-width: calc(100vw - 150px); overflow: hidden; text-overflow: ellipsis; background: var(--full); border-color: var(--full); color: #fff; border-radius: 999px; padding: 6px 14px; font-size: 13px; box-shadow: 0 2px 10px rgba(0, 0, 0, .25); }
+  .call-win[hidden], .call-pill[hidden] { display: none; }
+</style>
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=42a491bd43887127ca6b4bf69b731aaf&libraries=services&autoload=false"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>골든타임 경로 <span class="beta">v3 베타</span></h1>
+    <p class="sub">의심 질환을 받아 줄 수 있다고 알린 응급실 중에서, 도착했을 때 받아줄 가능성까지 계산해 추천해요 · <a href="./">수집 현황판</a> · <a href="app.html">지금 쓰는 웹앱(v2)</a></p>
+    <p class="warn"><b>교육·탐구용이에요.</b> 실제 응급 상황에서는 바로 119에 신고하세요.</p>
+    <div class="quota" id="quota">
+      <div class="q-top">
+        <span class="q-label">오늘 길찾기 사용량</span>
+        <span class="q-bar" id="quotaBar" role="progressbar" aria-label="오늘 카카오 길찾기 하루 한도 사용량" aria-valuemin="0" aria-valuemax="100"><span class="q-fill" id="quotaFill"></span></span>
+        <span class="q-pct" id="quotaPct">–</span>
+      </div>
+      <div class="q-sub" id="quotaText">사용량 불러오는 중…</div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div>
+      <section class="card">
+        <h2><label for="disease">의심 질환</label></h2>
+        <select id="disease" aria-describedby="diseaseInfo"></select>
+        <p class="hint" id="diseaseInfo"></p>
+        <p class="warn" id="diseaseWarn" hidden><b>심정지·중증외상이 의심되면 직접 옮기지 말고 바로 119에 신고하세요.</b> 119 구급대가 이송 병원을 정해요.</p>
+      </section>
+
+      <section class="card">
+        <h2>출발지</h2>
+        <form class="row" id="searchForm">
+          <input type="search" id="q" placeholder="주소나 장소 이름 (예: 죽전역)" autocomplete="off" aria-label="주소나 장소 검색">
+          <button type="submit">검색</button>
+        </form>
+        <ul id="places"></ul>
+        <div class="row" style="margin-top:8px">
+          <button type="button" id="gps">현재 위치</button>
+        </div>
+        <p class="hint">지도를 눌러도 출발지가 정해져요. 출발지 좌표는 길찾기에만 쓰고 저장하지 않아요.</p>
+      </section>
+
+      <section class="card" id="resultCard" hidden>
+        <h2>비교</h2>
+        <div class="compare" id="compare"></div>
+        <p class="gain" id="gain"></p>
+      </section>
+
+      <section class="card">
+        <h2>추천 순위 <span class="meta" id="listMeta">(실효 도착 시간 순)</span></h2>
+        <p class="status" id="status">불러오는 중…</p>
+        <ol id="list" class="hl"></ol>
+        <div id="checkBox" hidden>
+          <h3 class="lh">확인이 필요한 곳 <span class="meta" id="checkMeta"></span></h3>
+          <p class="hint" style="margin-top:0">받아 줄지 공공데이터로 알 수 없어 확률을 붙이지 않았어요. 가까운 순서(도로 이동 시간)로 보여 줘요.</p>
+          <ol id="checkList" class="hl"></ol>
+        </div>
+        <div id="noBox" hidden>
+          <h3 class="lh">지금 '불가능'으로 표시된 곳 <span class="meta" id="noMeta"></span></h3>
+          <ol id="noList" class="hl"></ol>
+        </div>
+      </section>
+
+      <section class="card" id="distCard" hidden>
+        <h2>거리 비교: 직선 · 도로</h2>
+        <div class="dsum" id="distSummary"></div>
+        <div class="dist-wrap"><table class="dist" id="distTable"></table></div>
+        <p class="hint">직선 = 두 점을 곧게 이은 거리. 도로 = 카카오 길찾기가 고른 실제 경로의 길이. 작은 숫자는 가까운 순위예요. 줄을 누르면 지도에 직선과 도로 경로가 함께 그려져요.</p>
+      </section>
+
+      <section class="card">
+        <details>
+          <summary>계산 방법과 한계</summary>
+
+          <h3>0. v3 베타: 질환별 안내</h3>
+          <p>의심 질환을 고르면, 병원이 공공데이터(국립중앙의료원)에 알린 <b>중증질환 수용 가능 표시</b>(27개 항목)와 <b>수용 불가 메시지</b>로 병원을 세 가지로 나눠요.</p>
+          <ul>
+            <li><b>가능 확인</b>: 그 질환 표시가 '가능'이고 걸리는 메시지가 없는 곳. 이 병원들만 실효 도착 시간으로 순위를 매기고, 거절된 뒤 갈 다음 병원도 이 안에서 골라요.</li>
+            <li><b>확인 필요</b>: 표시가 '정보미제공'이거나, 그 질환 메시지 · 응급실 전체 메시지(포화, 사전 연락 요청 등) · 관련 진료과 메시지가 있는 곳. 받아 줄지 알 수 없어 <b>확률을 붙이지 않고</b> 이동 시간만 보여 줘요.</li>
+            <li><b>불가 표시</b>: 지금 그 질환이 '불가능'으로 표시된 곳. 계산에서 빼요.</li>
+          </ul>
+          <p class="eq">가능 확인 병원의 거절 확률 = 1 − (1 − 병상 거절 확률) × (1 − 도착 전에 표시가 '불가능'으로 바뀔 확률)</p>
+          <p class="def">(병상 거절 확률: 아래 2번 · 표시가 바뀔 확률: 1분에 약 0.0007%로 계산. 2026-11-01~11-14 기록에서 '가능'이 60분 뒤 '불가능'이 된 비율이 0.042%(1,200 / 2,875,904)였고 시간에 비례했어요. 병상과 표시가 서로 독립이라고 가정해요.)</p>
+          <ul>
+            <li><b>왜 '불가능'은 빼나요</b>: 같은 기록에서 '불가능'은 30분 뒤에도 99.5%가 그대로였어요.</li>
+            <li><b>왜 메시지를 보나요</b>: 응급실 전체에 받기 어렵다는 메시지가 걸린 동안에도 병상 수가 0 이하인 때는 10.7%뿐이었어요. 병상 수만으로는 이런 거절을 알 수 없어요.</li>
+            <li><b>메시지를 고르는 규칙</b>: 그 질환 항목의 메시지는 공공데이터 코드로 정확히 찾아요. 응급실 메시지는 진료과 칸과 글 속 낱말로 '관련 있음'을 고르는데, 이것은 <b>정해 둔 규칙</b>이라 틀릴 수 있어요. 그래서 병원을 누르면 그 병원의 메시지를 모두 원문으로 보여 줘요(전화번호·환자 번호·이름은 가려요).</li>
+            <li><b>사전 연락 창</b>: 관련 메시지에 '사전 문의', '문의 후 이송', '수용 여부 확인' 같은 글이 있으면, 그 병원을 눌렀을 때 전화 연결 창을 띄워요. 확인을 누르면 5초 뒤 작아지고, 왼쪽 아래 작은 표시를 누르면 다시 펴져요.</li>
+            <li><b>질환 정보가 없는 경우</b>: 심정지·중증외상·골절은 공공데이터에 병원별 수용 가능 표시가 없어요. 병상과 메시지(글 속 'CPR', '외상', '골절')만으로 계산하니, 받아 줄 수 있다는 뜻이 아니에요.</li>
+            <li><b>'정보미제공'은 추측하지 않아요</b>: 응급실의 약 60%(작은 병원일수록 많음)는 질환 표시를 내지 않아요. 수술실·장비 정보로 짐작하지 않고 '확인 필요'로 둬요.</li>
+            <li><b>후보 고르기</b>: 가까운 '가능 확인' 병원이 6곳보다 적으면 더 먼 '가능 확인' 병원을 가까운 순서로 채워요. 드문 질환은 먼 병원이 나올 수 있어요.</li>
+          </ul>
+
+          <h3>1. 추천 순서 = 실효 도착 시간이 짧은 순서</h3>
+          <p>그냥 가까운 순서가 아니라, 도착했는데 받아 주지 않아 다른 병원으로 다시 가야 하는 시간까지 넣어서 계산해요.</p>
+          <p class="eq">실효 도착 시간 = 이동 시간 + 거절 확률 × (확인 지연 3분 + 다음 병원의 실효 도착 시간)</p>
+          <p class="def">(이동 시간: 그 병원까지 도로로 가는 예상 시간 · 거절 확률: 도착했을 때 남은 병상이 0 이하일 확률 · 확인 지연 3분: 도착해서 거절을 확인하고 다시 출발하기까지 걸린다고 정한 시간 · 다음 병원의 실효 도착 시간: 거절된 병원에서 다시 출발해 가장 유리한 다음 병원으로 갈 때의 실효 도착 시간)</p>
+          <p>거절이 이어지는 경우를 <b>세 번째 병원까지</b> 계산하고, 세 번째 병원은 받아 준다고 보고 끝내요.</p>
+          <p><b>예</b>: A병원까지 10분, 거절 확률 20%. 거절되면 B병원까지 8분(거절 확률 10%), B도 거절하면 C병원까지 6분.<br>
+            B의 실효 도착 시간 = 8 + 0.1 × (3 + 6) = 8.9분 → A의 실효 도착 시간 = 10 + 0.2 × (3 + 8.9) = 약 12.4분.<br>
+            그래서 A가 10분 거리여도 실제로는 약 12.4분짜리로 비교해요.</p>
+          <p>순위의 각 병원을 누르면 "거절되면 → 다음 병원" 경로를 보여 줘요. 세 곳 모두 거절될 확률이 5%를 넘으면 그 확률도 함께 보여 줘요.</p>
+
+          <h3>2. 거절 확률은 어떻게 구하나요</h3>
+          <p>수집 현황판이 10분마다 모은 기록에서 "지금 남은 병상이 비슷했던 때, 그만큼 시간이 지난 뒤 실제로 0 이하였던 비율"을 세요.</p>
+          <ul>
+            <li><b>도착까지 시간</b>: 병상 정보를 마지막으로 수집한 시각부터 도착할 때까지예요. 수집 뒤 지금까지 지난 시간과 이동 시간을 더해요.</li>
+            <li>기록은 10·20·30·40·50·60분 뒤로 세어 두고, 그 사이(예: 14분)는 양쪽 값을 시간 비율대로 섞어요. 60분보다 오래 걸리면 60분 값을 써요.</li>
+            <li><b>기록이 적을 때</b>: 그 병원의 기록만으로는 몇 번 안 되는 경우가 많아, 비슷한 병원(지금까지 꽉 찬 비율이 비슷한 같은 등급의 병원들) 기록 쪽으로 당겨서 써요.</li>
+          </ul>
+          <p class="eq">거절 확률 = (k + 30 × q) ÷ (n + 30)</p>
+          <p class="def">(k: 이 병원이 같은 상황(같은 남은 병상 구간·같은 도착까지 시간·같은 시간대)에서 도착 시점에 0 이하였던 횟수 · n: 그런 상황의 전체 기록 수 · q: 같은 등급 병원들의 비율(기준값) · 30: 기준값을 '가상의 기록 30개'만큼 믿는다는 뜻. 기록 n이 많아질수록 이 병원 자신의 비율에 가까워져요.)</p>
+          <ul>
+            <li><b>등급</b>: A 꽉 찬 적 없음 · B 꽉 찬 비율 50% 미만 · C 50% 이상. 수집할 때마다 다시 매겨요.</li>
+            <li>병원 입력이 60분 넘게 지났거나 병상 정보가 없으면 지금 상태를 모른다고 보고, 그 병원의 같은 시간대 평균 거절 비율을 써요.</li>
+            <li>자세한 계산 과정과 병원별 계산은 <a href="./#/prob/method">수집 현황판 → 거절 확률</a>에서 볼 수 있어요.</li>
+          </ul>
+
+          <h3>3. 이동 시간은 어떻게 구하나요</h3>
+          <ul>
+            <li><b>계산하는 병원</b>: 출발지에서 직선 9.5km 안의 가까운 응급실(최대 30곳). 6곳보다 적으면 더 먼 곳을 채워 최소 6곳. 거절된 뒤 갈 다음 병원도 이 안에서 골라요.</li>
+            <li><b>출발지 → 응급실</b>: 카카오 실시간 길찾기(가까운 곳은 다중 목적지 길찾기 1번, 더 먼 곳은 하나씩).</li>
+            <li><b>응급실 → 응급실</b>(거절된 뒤 다음 병원으로 갈 때): 검색할 때마다 카카오 길찾기로 실시간 계산해요. 서로 직선 9.5km 안의 병원끼리는 병원마다 다중 목적지 길찾기 1번으로 한꺼번에 받아요. 그보다 먼 병원끼리는 필요한 짝을 모두 자동차 길찾기로 하나씩 받아요(한 방향만 받아 반대 방향에도 같이 써요).</li>
+            <li><b>길찾기가 하나라도 실패하면</b>: 순위를 보여 주지 않고, 몇 곳·몇 쌍이 왜 실패했는지 오류 창으로 알려요. 실패한 시간을 직선 거리 등으로 추정해 넣으면 실제와 다른 순위가 나올 수 있기 때문이에요. 오류 창을 닫으면 화면 오른쪽 아래에 작은 '계산 실패' 표시로 남고, 누르면 다시 열려요.</li>
+            <li><b>같은 곳 다시 검색</b>: 같은 출발지를 5분 안에 다시 검색하면 앞에서 받은 길찾기 결과를 다시 써요(길찾기 횟수 아끼기).</li>
+          </ul>
+
+          <h3>4. 한계</h3>
+          <ul>
+            <li><b>거절 = 남은 병상 0 이하만</b>: 전문의 부재처럼 공공데이터 병상 수에 드러나지 않는 거절 사유는 반영하지 않아요. 병원이 올린 수용 불가 메시지도 아직 확률에 넣지 않아요.</li>
+            <li><b>병원이 입력한 값</b>: 입력이 늦거나 틀리면 계산도 그만큼 틀려요.</li>
+            <li><b>병원끼리 독립이라고 가정</b>: 실제로는 주변 병원이 함께 붐빌 때가 있어, 그럴 때는 실효 도착 시간이 실제보다 짧게 나올 수 있어요.</li>
+            <li><b>정해 둔 값</b>: 확인 지연 3분, 세 번째 병원까지만 계산하는 것은 정해 둔 가정이에요.</li>
+            <li><b>하루 검색 횟수에 한도가 있어요 (카카오 길찾기 하루 사용 한도)</b>: 한 출발지에서 여러 곳까지 한 번에 찾는 '다중 목적지 길찾기'는 하루 1,000번까지 무료예요. 가까운 응급실을 12곳까지만 계산해서 검색 한 번에 많아야 13번(출발지에서 1번 + 다른 후보가 9.5km 안에 있는 후보 병원마다 1번) 써요. 그래서 <b>하루에 적어도 약 76번은 검색</b>할 수 있어요(경기도에서는 보통 6~7번이라 약 140번). 서울처럼 응급실이 촘촘한 곳은 한 번에 더 많이 써요. 하나씩 찾는 '자동차 길찾기'는 하루 10,000번이라 검색 한 번에 보통 15~20번을 써도 넉넉해요. 한도를 넘으면 그날 남은 검색은 길찾기가 실패해 순위를 보여 주지 않아요(다음 날 다시 쓸 수 있어요). <span class="def">(2026년 10월 카카오 개발자 문서 기준, 한도는 바뀔 수 있어요)</span></li>
+            <li><b>'실시간'은 지금 출발할 때의 교통이에요</b>: 거절된 병원에서 다음 병원으로 실제로 다시 출발하는 건 보통 10~20분 뒤라, 그때의 교통과는 조금 다를 수 있어요.</li>
+            <li><b>먼 병원끼리는 한 방향만</b>: 9.5km보다 먼 병원 짝은 한 방향 시간만 받아 반대 방향에도 써요. 일방통행 등으로 실제와 조금 다를 수 있어요.</li>
+            <li><b>결과가 나오기까지 몇 초 더 걸려요</b>: 병원 사이 길찾기를 여러 번 부르기 때문이에요.</li>
+            <li><b>범위</b>: 서울·인천·경기에서 실시간 병상을 알리는 응급실(권역·지역응급의료센터, 지역응급의료기관)만 계산해요. 병상 정보를 내지 않는 응급실운영신고기관과 다른 시도 응급실은 빠져 있어요.</li>
+            <li><b>도로로 가까운 12곳까지</b>: 출발지에서 실제 도로 시간이 짧은 응급실 12곳까지만 계산해요. 길찾기 하루 한도를 지키려는 제한이고, 경기도에서는 후보가 12곳을 넘은 적이 없었어요(2026-11-01, 출발지 1,220곳). 서울처럼 촘촘한 곳에서는 도로 시간 13번째부터는 빠져요.</li>
+          </ul>
+          <p id="dataInfo"></p>
+        </details>
+      </section>
+    </div>
+
+    <div class="mapcol">
+      <div id="map"></div>
+      <div class="legend">
+        <span><span class="dot" style="background:var(--ok)"></span>병상 3개 이상</span>
+        <span><span class="dot" style="background:var(--low)"></span>1~2개</span>
+        <span><span class="dot" style="background:var(--full)"></span>0 이하(꽉 참)</span>
+        <span><span class="dot" style="background:var(--stale)"></span>정보 없음·오래됨</span>
+        <span><span class="dot" style="background:var(--ok);border:1.5px dashed #1d1d1b"></span>점선 테두리: 확인 필요</span>
+        <span><span class="dot" style="background:var(--ok);opacity:.35"></span>흐림: 불가 표시</span>
+        <span><span class="ln" style="border-top:4px solid #2a63b8"></span>도로 경로</span>
+        <span><span class="ln" style="border-top:2px dashed #555550"></span>직선</span>
+      </div>
+      <footer>지도: 카카오맵 · 길찾기: 카카오모빌리티 · 병상·질환 표시·메시지: 국립중앙의료원 공공데이터</footer>
+    </div>
+  </div>
+</div>
+
+<div class="fail-dlg" id="failDlg" role="alertdialog" aria-modal="true" aria-labelledby="failTitle" hidden>
+  <div class="fail-box">
+    <h3 id="failTitle">계산 실패</h3>
+    <div id="failBody"></div>
+    <div class="btns"><button type="button" id="failRetry">다시 시도</button><button type="button" class="primary" id="failClose">닫기</button></div>
+  </div>
+</div>
+<button type="button" class="fail-badge" id="failBadge" hidden aria-label="계산 실패 내용 다시 보기">⚠ 계산 실패</button>
+
+<div class="call-win" id="callWin" role="dialog" aria-labelledby="callTitle" hidden>
+  <h3 id="callTitle">가기 전에 병원에 연락이 필요해요</h3>
+  <div class="who" id="callName"></div>
+  <ul id="callMsgs"></ul>
+  <div class="btns"><a class="primary" id="callTel">전화 연결</a><button type="button" id="callOk">확인</button></div>
+</div>
+<button type="button" class="call-pill" id="callPill" hidden aria-label="사전 연락 안내 다시 펴기"></button>
+
+<script type="module">
+import { makeRejectProb, STALE_MIN } from './engine/model.mjs';
+import { evaluate } from './engine/effective.mjs';
+import { parseKST, kstHour } from './engine/time.mjs';
+import { haversineM } from './engine/geo.mjs';
+import { ranks, spearman } from './engine/stats.mjs';
+import { SEVERE, MSG_TO_SEVERE } from './engine/codes.mjs';
+import { DISEASES, diseaseById, assess, flipProb, itemLabel } from './engine/disease.mjs';
+
+const PROXY = 'https://goldentime-proxy.gt-er-map.workers.dev';
+const NEAR_M = 9500;       // 다중 목적지 길찾기 반경(10km)보다 조금 안쪽
+const MIN_CANDIDATES = 6;  // 가까운 '가능 확인' 병원이 이보다 적으면 더 먼 '가능 확인' 병원을 하나씩 길찾기로 채운다
+const MAX_CANDIDATES = 12; // 후보 상한: '가능 확인' 병원 중 도로 시간이 짧은 12곳만 후보 → 다중 목적지 길찾기를 검색당 많아야 13번으로 묶는다(경기도 출발지 1,220곳의 최댓값 12곳)
+const DELAY_MIN = 3;
+const DEPTH = 3;
+const LIVE_CONC = 6;         // 응급실 사이 실시간 길찾기를 동시에 몇 개씩 부를지
+const CACHE_MS = 5 * 60e3;   // 길찾기 결과는 5분 동안 다시 쓴다(길찾기 횟수 아끼기)
+const SEV_MAX_AGE_MIN = 24 * 60; // 질환 표시가 이보다 오래되면 쓰지 않는다(병상만으로 계산)
+const CALL_SHRINK_MS = 5000;     // 사전 연락 창: 확인을 누른 뒤 작아지기까지
+const SHOW = { ok: 10, check: 8, no: 5 }; // 목록에 보여 줄 병원 수
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const pct = (p) => (p > 0 && p < 0.005 ? '1% 미만' : `${Math.round(p * 100)}%`);
+const min1 = (m) => (m < 10 ? m.toFixed(1) : Math.round(m).toString());
+const setStatus = (msg, err = false) => { $('status').textContent = msg; $('status').className = 'status' + (err ? ' err' : ''); };
+
+const km = (m) => (m == null ? '–' : `${(m / 1000).toFixed(1)}km`);
+
+const bedClass = (h, sinceObs) => {
+  if (h.hvec == null || h.ageMin == null || h.ageMin + sinceObs > STALE_MIN) return 'stale';
+  return h.hvec <= 0 ? 'full' : h.hvec <= 2 ? 'low' : 'ok';
+};
+const bedText = (h) => (h.hvec == null ? '정보 없음' : `남은 병상 ${h.hvec}`);
+
+// ---------- 데이터
+let status, model, rejectProb, ers, byId, obsMs;
+let sev = null, sevMs = null;            // 질환 표시·메시지 (severe.json). 못 읽으면 null → 병상만으로 계산
+let disease = DISEASES[0], judge = {};   // 고른 질환, 병원별 판단(assess 결과)
+const REFRESH_AFTER_MIN = 12; // 병상 정보가 이보다 오래되면 검색 전에 새로 받는다 (10분마다 수집 + 반영 1~2분)
+let lastLoadTry = 0;
+
+const sinceObsMin = () => Math.max(0, (Date.now() - obsMs) / 60e3);
+const sevAgeMin = () => Math.max(0, (Date.now() - sevMs) / 60e3);
+
+async function loadData() {
+  lastLoadTry = Date.now();
+  const get = (f) => fetch(`${f}?t=${Date.now()}`, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(`${f} ${r.status}`); return r.json(); });
+  const [st, md, sv] = await Promise.all([get('status.json'), get('model.json'), get('severe.json').catch(() => null)]);
+  status = st; model = md;
+  rejectProb = makeRejectProb(model);
+  obsMs = parseKST(status.latestAt);
+  sevMs = sv?.at ? parseKST(sv.at) : null;
+  sev = sevMs != null && obsMs - sevMs <= SEV_MAX_AGE_MIN * 60e3 ? sv : null;
+  ers = status.hospitals
+    .filter((h) => Number.isFinite(h.lat) && Number.isFinite(h.lon) && h.lat && h.lon)
+    .map((h) => ({ ...h, id: h.hpid }));
+  byId = Object.fromEntries(ers.map((h) => [h.id, h]));
+  rejudge();
+  const days = (model.range[1] - model.range[0]) / 86400e3;
+  $('dataInfo').textContent =
+    `병상 정보 ${status.latestAt.slice(5, 16)} 수집 기준 · ` + (sev ? `질환 표시 ${sev.at.slice(5, 16)} · 메시지 ${(sev.msgAt ?? '').slice(5, 16) || '없음'} 확인 기준 · ` : '질환 표시·메시지를 읽지 못함 · ') +
+    `거절 확률 기록 기간 ${days < 1 ? '하루 미만' : `${days.toFixed(1)}일`}` +
+    `(짝: '지금 기록'과 '몇 분 뒤 기록'을 묶은 것 ${model.pairs.toLocaleString()}개) · 응급실 사이 이동 시간: 검색할 때 실시간 길찾기`;
+}
+
+// 병원마다 고른 질환 기준으로 다시 판단하고, 질환 안내 글을 고친다
+function rejudge() {
+  const d = sev ? disease : DISEASES[0];
+  judge = Object.fromEntries(ers.map((h) => [h.id, assess(sev?.hosp[h.id], d)]));
+  const c = { ok: 0, check: 0, no: 0 };
+  for (const h of ers) c[judge[h.id].tier]++;
+  $('disease').disabled = !sev;
+  $('diseaseWarn').hidden = !sev || !['arrest', 'trauma'].includes(disease.id);
+  $('diseaseInfo').innerHTML = !sev
+    ? '질환 표시·메시지를 불러오지 못했어요. 지금은 응급실 병상만으로 계산해요(v2와 같아요).'
+    : esc(disease.items.length ? `공공데이터 항목: ${disease.items.map(itemLabel).join(' · ')}` : disease.note || '질환을 고르지 않으면 응급실 병상과 응급실 전체 메시지만으로 계산해요.') +
+      `<br>지금 응급실 ${ers.length}곳 중 <b>${disease.items.length ? '가능 확인' : '막는 메시지 없음'} ${c.ok}곳</b> · 확인 필요 ${c.check}곳 · 불가 표시 ${c.no}곳`;
+}
+
+// 페이지를 열어 둔 채 시간이 지나면 병상 정보·통계표·질환 표시를 새로 받는다 (실패하면 갖고 있던 것으로 계산하고 상태 줄에 알린다)
+async function refreshIfOld() {
+  if (sinceObsMin() <= REFRESH_AFTER_MIN || Date.now() - lastLoadTry < 60e3) return true;
+  try {
+    await loadData();
+    drawPins();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// 응급실 → 응급실 시간(분): 이번 검색에서 실시간 길찾기로 받은 값만 쓴다.
+// 실패한 짝이 하나라도 있으면 계산 전에 멈추므로(setOrigin), 여기서 값이 없으면 오류다.
+let liveT = {};
+function between(a, b) {
+  const v = liveT[a]?.[b];
+  if (!Number.isFinite(v)) throw new Error('응급실 사이 시간이 비어 있어요');
+  return v;
+}
+
+// 길찾기 결과 하나 → 시간(분)·거리(m). 실패면 null
+//   104: 출발지와 도착지가 5m 안이라 카카오가 경로를 찾지 않음 → 0분·0m (같은 자리)
+const okTime = (r) => (r?.result_code === 0 && r.summary ? { min: r.summary.duration / 60, m: r.summary.distance }
+  : r?.result_code === 104 ? { min: 0, m: 0 } : null);
+const whyRoute = (r) => (r ? `카카오 길찾기 결과 없음 (코드 ${r.result_code}${r.result_msg ? `: ${r.result_msg}` : ''})` : '카카오 응답에 이 병원 결과가 없음');
+function whyErr(e) {
+  const m = String(e?.message ?? e ?? '');
+  if (e?.status === 429 || /limit|exceed|한도/i.test(m)) return '카카오 길찾기 하루 사용 한도 초과';
+  if (e?.status === 401 || e?.status === 403) return `중계 서버가 요청을 거절함 (${m})`;
+  if (e?.status >= 500) return `중계 서버·카카오 서버 오류 (${m})`;
+  if (e instanceof TypeError) return '인터넷 연결이 끊겼거나 중계 서버가 응답하지 않음';
+  return m || '알 수 없는 오류';
+}
+
+// 길찾기 사용량 (이번 검색): 다중 목적지 / 자동차 길찾기
+let usage = { multi: 0, single: 0, failed: 0 };
+
+// 일을 n개씩 동시에 돌린다 (onDone: 하나 끝날 때마다, onError: 하나가 예상 못 한 오류로 끝날 때)
+async function pool(tasks, n, onDone, onError) {
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(n, tasks.length) }, async () => {
+    while (next < tasks.length) { const t = tasks[next++]; await t().catch((e) => { usage.failed++; onError?.(e); }); onDone?.(); }
+  }));
+}
+
+// 후보 응급실끼리의 도로 시간을 실시간으로 받는다
+//   직선 9.5km 안의 짝: 후보마다 다중 목적지 길찾기 1번 (카카오 반경 10km 제한)
+//   그보다 먼 짝: 필요한 짝을 모두 자동차 길찾기로 하나씩 (한 방향만 받아 양쪽에 쓴다)
+//   실패한 짝은 fails.pairs에 [출발 병원, 도착 병원, 원인]으로 모은다 (추정하지 않는다)
+// 병원 사이 시간은 출발지와 상관없으므로 5분 동안 모든 검색이 함께 쓴다(pairT). 이미 받은 짝은 다시 묻지 않는다.
+const pairT = {}; // pairT[a][b] = { v: 분, at: 받은 시각 }
+const freshAt = (at) => Date.now() - at < CACHE_MS;
+async function liveBetween(candidates, fails, onProgress) {
+  const ids = candidates.map((c) => c.id).filter((id) => byId[id]);
+  const has = (a, b) => { const x = pairT[a]?.[b]; return !!x && freshAt(x.at); };
+  const put = (a, b, v) => { (pairT[a] ??= {})[b] = { v, at: Date.now() }; };
+  const fail = (a, b, why) => fails.pairs.push([a, b, why]);
+  const tasks = [];
+  const far = [];
+  for (const a of ids) {
+    const near = ids.filter((b) => b !== a && !has(a, b) && haversineM(byId[a], byId[b]) <= NEAR_M);
+    if (near.length) tasks.push(async () => {
+      usage.multi++;
+      let body;
+      try {
+        body = await proxy('/matrix', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ origin: { x: byId[a].lon, y: byId[a].lat }, destinations: near.map((b) => ({ key: b, x: byId[b].lon, y: byId[b].lat })) }),
+        });
+      } catch (e) { usage.failed++; for (const b of near) fail(a, b, whyErr(e)); return; }
+      const got = Object.fromEntries((body.routes ?? []).map((r) => [r.key, r]));
+      for (const b of near) {
+        const t = okTime(got[b]);
+        if (t) put(a, b, t.min); else fail(a, b, whyRoute(got[b]));
+      }
+    });
+  }
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+    const m = haversineM(byId[ids[i]], byId[ids[j]]);
+    if (m > NEAR_M && !(has(ids[i], ids[j]) && has(ids[j], ids[i]))) far.push([ids[i], ids[j], m]);
+  }
+  far.sort((x, y) => x[2] - y[2]);
+  for (const [a, b] of far) tasks.push(async () => {
+    usage.single++;
+    let r;
+    try { r = (await proxy(`/route?origin=${byId[a].lon},${byId[a].lat}&destination=${byId[b].lon},${byId[b].lat}&summary=true`)).routes?.[0]; }
+    catch (e) { usage.failed++; fail(a, b, whyErr(e)); return; }
+    const t = okTime(r);
+    if (t) { put(a, b, t.min); put(b, a, t.min); } else fail(a, b, whyRoute(r));
+  });
+  let done = 0;
+  await pool(tasks, LIVE_CONC, () => onProgress?.(++done, tasks.length), (e) => fail('', '', whyErr(e)));
+  // 이번 계산에 쓸 값만 따로 담는다 (계산 도중 값이 바뀌지 않게). 빠진 짝이 없는지도 함께 확인 (계산에 쓰는 모든 짝 = 후보끼리 모든 방향)
+  const T = {};
+  if (!fails.pairs.length) {
+    for (const a of ids) for (const b of ids) {
+      if (a === b) continue;
+      const x = pairT[a]?.[b];
+      if (x) (T[a] ??= {})[b] = x.v; else fail(a, b, '길찾기 결과가 비어 있음');
+    }
+  }
+  return { T };
+}
+
+// 출발지 → 응급실 도로 시간·거리: 출발지(약 10m)마다 5분 동안 기억해, 질환만 바꿔 다시 계산할 때는 새로 필요한 병원만 받는다
+const originCache = new Map(); // 출발지 → { at, t: { 병원: { min, m } } }
+const cacheKey = (o) => `${o.lat.toFixed(4)},${o.lon.toFixed(4)}`;
+
+// 출발 후 leadMin분에 도착할 때 거절 확률. 병상 정보는 obsMs에 확인한 것이므로 그 뒤 지난 시간도 도착까지 시간에 더한다.
+// 입력 경과(ageMin)는 통계표를 만들 때처럼 '병상 정보를 확인한 시각' 기준이다(지난 시간은 도착까지 시간에 이미 들어 있음).
+// 질환을 골랐으면, 도착 전에 그 질환 표시가 '불가능'으로 바뀔 확률도 함께 넣는다(표시를 확인한 뒤 지난 시간 포함).
+function probAt(id, leadMin) {
+  const h = byId[id];
+  const pBed = rejectProb({
+    hpid: id,
+    hvec: h.hvec ?? NaN,
+    ageMin: h.ageMin == null ? Infinity : h.ageMin,
+    leadMin: leadMin + sinceObsMin(),
+    hourKST: kstHour(obsMs),
+  }).p;
+  const n = sev ? disease.items.length : 0;
+  return n ? 1 - (1 - pBed) * (1 - flipProb(leadMin + sevAgeMin(), n)) : pBed;
+}
+
+// ---------- 중계 서버
+async function proxy(path, init) {
+  const r = await fetch(PROXY + path, init);
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(body.error || body.msg || `길찾기 오류 ${r.status}`), { status: r.status });
+  return body;
+}
+// ---------- 오늘 길찾기 사용량 (모든 사용자가 같은 카카오 한도를 나눠 쓰므로 중계 서버가 센 값을 보여 준다)
+// 두 한도 중 더 많이 찬 쪽으로 바를 채운다. 읽지 못하면 추정하지 않고 '확인 불가'로 둔다
+const QUOTA_MID = 0.7, QUOTA_HIGH = 0.9;
+let quotaSeq = 0, quotaDay = null;
+const todayKST = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+async function refreshQuota() {
+  const my = ++quotaSeq;
+  const n = (v) => v.toLocaleString('ko-KR');
+  try {
+    const { day, used, limits } = await proxy('/usage');
+    if (my !== quotaSeq) return;
+    quotaDay = day;
+    const ratio = Math.max(used.multi / limits.multi, used.single / limits.single);
+    const shown = Math.min(1, ratio);
+    $('quota').className = 'quota' + (ratio >= QUOTA_HIGH ? ' high' : ratio >= QUOTA_MID ? ' mid' : '');
+    $('quotaFill').style.width = `${(shown * 100).toFixed(1)}%`;
+    $('quotaBar').setAttribute('aria-valuenow', String(Math.floor(shown * 100)));
+    $('quotaPct').textContent = ratio > 0 && ratio < 0.01 ? '1% 미만' : `${Math.floor(shown * 100)}%`;
+    $('quotaText').textContent = `다중 목적지 ${n(used.multi)}/${n(limits.multi)} · 자동차 ${n(used.single)}/${n(limits.single)} · 매일 0시(한국 시간) 초기화`;
+  } catch {
+    if (my !== quotaSeq) return;
+    $('quota').className = 'quota unknown';
+    $('quotaFill').style.width = '0';
+    $('quotaBar').removeAttribute('aria-valuenow');
+    $('quotaPct').textContent = '확인 불가';
+    $('quotaText').textContent = '지금은 사용량을 읽지 못했어요. 검색은 그대로 할 수 있어요.';
+  }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshQuota(); });
+// 페이지를 켜 둔 채 한국 시간 0시가 지나면 새 날짜의 사용량(0부터)으로 바꾼다
+setInterval(() => { if (quotaDay && todayKST() !== quotaDay) refreshQuota(); }, 60e3);
+
+// summary: 시간·거리만 받기(경로 선 없이 가볍게). 지도에 경로를 그릴 때만 summary 없이 부른다
+const routeTo = (o, h, summary = false) => proxy(`/route?origin=${o.lon},${o.lat}&destination=${h.lon},${h.lat}${summary ? '&summary=true' : ''}`);
+
+// 출발지 → 응급실 도로 시간 (직선·도로 거리도 함께). 실패한 병원은 fails.origin에 [병원, 원인]으로 모은다 (추정하지 않는다)
+async function roadTimes(origin, fails) {
+  const key = cacheKey(origin);
+  let ent = originCache.get(key);
+  if (!ent || !freshAt(ent.at)) originCache.set(key, (ent = { at: Date.now(), t: {} }));
+  const isOk = (x) => judge[x.h.id].tier === 'ok';
+  const sorted = ers.map((h) => ({ h, m: haversineM(origin, h) })).sort((a, b) => a.m - b.m);
+  // 출발지 → 반경 안 응급실은 30곳까지 몇 곳이든 요청 1번. 30곳을 넘으면 '가능 확인'인 곳부터 넣는다
+  const within = sorted.filter((x) => x.m <= NEAR_M);
+  const near = within.length > 30 ? [...within.filter(isOk), ...within.filter((x) => !isOk(x))].slice(0, 30) : within;
+  // 반경 안의 '가능 확인' 병원이 MIN_CANDIDATES보다 적으면, 더 먼 '가능 확인' 병원을 가까운 순서로 채운다
+  const far = sorted.filter((x) => x.m > NEAR_M && isOk(x)).slice(0, Math.max(0, MIN_CANDIDATES - near.filter(isOk).length));
+
+  const needNear = near.filter((x) => !ent.t[x.h.id]);
+  if (needNear.length) {
+    usage.multi++;
+    try {
+      const body = await proxy('/matrix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ origin: { x: origin.lon, y: origin.lat }, destinations: needNear.map((x) => ({ key: x.h.id, x: x.h.lon, y: x.h.lat })) }),
+      });
+      const got = Object.fromEntries((body.routes ?? []).map((r) => [r.key, r]));
+      for (const x of needNear) {
+        const t = okTime(got[x.h.id]);
+        if (t) ent.t[x.h.id] = t; else fails.origin.push([x.h.id, whyRoute(got[x.h.id])]);
+      }
+    } catch (e) { usage.failed++; for (const x of needNear) fails.origin.push([x.h.id, whyErr(e)]); }
+  }
+  await Promise.all(far.filter((x) => !ent.t[x.h.id]).map(async (x) => {
+    usage.single++;
+    try {
+      const r = (await routeTo(origin, x.h, true)).routes?.[0];
+      const t = okTime(r);
+      if (t) ent.t[x.h.id] = t; else fails.origin.push([x.h.id, whyRoute(r)]);
+    } catch (e) { usage.failed++; fails.origin.push([x.h.id, whyErr(e)]); }
+  }));
+  // 도로 시간을 받은 모든 병원(가능 확인 · 확인 필요 · 불가 표시)을 도로 시간이 짧은 순서로
+  const rows = [...near, ...far].filter((x) => ent.t[x.h.id])
+    .map((x) => ({ id: x.h.id, name: x.h.name, travelMin: ent.t[x.h.id].min, straightM: x.m, roadM: ent.t[x.h.id].m }))
+    .sort((a, b) => a.travelMin - b.travelMin);
+  return { rows, nearestM: sorted[0]?.m ?? Infinity };
+}
+
+// ---------- 지도
+let map, originMarker, routeLine, straightLine, pins = {}, pinOverlays = [];
+const LL = (p) => new kakao.maps.LatLng(p.lat, p.lon);
+
+// 직선(점선)을 지도에 그린다
+function clearGeoLines() {
+  if (straightLine) straightLine.setMap(null);
+  straightLine = null;
+}
+function drawGeoLines(o, h) {
+  clearGeoLines();
+  straightLine = new kakao.maps.Polyline({ path: [LL(o), LL(h)], strokeWeight: 2, strokeColor: '#555550', strokeOpacity: 0.9, strokeStyle: 'shortdash' });
+  straightLine.setMap(map);
+}
+
+function drawPins() {
+  const since = sinceObsMin();
+  for (const ov of pinOverlays) ov.setMap(null); // 새로 받은 병상 정보로 다시 그릴 때
+  pinOverlays = [];
+  pins = {};
+  for (const h of ers) {
+    const el = document.createElement('div');
+    el.className = `pin ${bedClass(h, since)} t-${judge[h.id].tier}`;
+    el.title = `${h.name} · ${bedText(h)} · ${tierName(judge[h.id].tier)}`;
+    el.addEventListener('click', (e) => { e.stopPropagation(); if (view) select(h.id); });
+    const ov = new kakao.maps.CustomOverlay({ position: LL(h), content: el, yAnchor: 0.5, xAnchor: 0.5, zIndex: 2, clickable: true });
+    ov.setMap(map);
+    pinOverlays.push(ov);
+    pins[h.id] = el;
+  }
+}
+
+function initMap() {
+  map = new kakao.maps.Map($('map'), { center: new kakao.maps.LatLng(37.45, 127.0), level: 10 });
+  map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
+  kakao.maps.event.addListener(map, 'click', (e) => {
+    const ll = e.latLng;
+    setOrigin({ lat: ll.getLat(), lon: ll.getLng(), label: '지도에서 고른 곳' });
+  });
+}
+
+// ---------- 계산
+// results = '가능 확인' 병원의 실효 도착 시간 순위, view = 화면에 쓰는 모든 병원 줄({ rows: 도로 시간 순, byId })
+let results = null, view = null, origin = null, runId = 0, selectedId = null;
+// 질환 표시가 있는 질환을 골랐을 때만 '가능 확인'이라고 부른다. 표시가 없는 경우(고르지 않음·심정지·중증외상·골절)는 병상과 메시지만 본 것이다
+const hasItems = () => !!sev && disease.items.length > 0;
+const tierName = (t) => (t === 'ok' ? (hasItems() ? '가능 확인' : '병상 기준') : t === 'check' ? '확인 필요' : '불가 표시');
+
+// 실패 창: 닫기 전까지 그대로 → 닫으면 오른쪽 아래 작은 표시 → 누르면 다시 열림
+function showFail(html) {
+  $('failBody').innerHTML = html;
+  $('failBadge').hidden = true;
+  $('failDlg').hidden = false;
+  $('failClose').focus();
+}
+function closeFail() { $('failDlg').hidden = true; $('failBadge').hidden = false; }
+function clearFail() { $('failDlg').hidden = true; $('failBadge').hidden = true; }
+$('failClose').addEventListener('click', closeFail);
+$('failBadge').addEventListener('click', () => { $('failBadge').hidden = true; $('failDlg').hidden = false; $('failClose').focus(); });
+$('failRetry').addEventListener('click', () => { clearFail(); if (origin) setOrigin(origin); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('failDlg').hidden) closeFail(); });
+
+function failHtml(o, fails, err) {
+  const items = [];
+  if (fails.origin.length) items.push(`계산에 실패한 출발지 → 응급실: <b>${fails.origin.length}곳</b>`);
+  const pairKeys = new Set(fails.pairs.filter(([a, b]) => a && b).map(([a, b]) => [a, b].sort().join('|'))); // 같은 짝(방향 무관)은 한 번만 센다
+  if (pairKeys.size) items.push(`계산에 실패한 응급실 쌍: <b>${pairKeys.size}쌍</b>`);
+  if (fails.origin.length && !fails.pairs.length) items.push('출발지 길찾기가 실패해 응급실 사이 길찾기는 하지 않았어요.');
+  const why = {};
+  for (const [, w] of fails.origin) why[w] = (why[w] ?? 0) + 1;
+  const seen = new Set(); // 같은 짝(방향 무관)은 한 번만 센다
+  for (const [a, b, w] of fails.pairs) { const k = [a, b].sort().join('|') + w; if (a && b && seen.has(k)) continue; seen.add(k); why[w] = (why[w] ?? 0) + 1; }
+  if (err) why[whyErr(err)] = (why[whyErr(err)] ?? 0) + 1;
+  const whyList = Object.entries(why).sort((x, y) => y[1] - x[1]).map(([w, n]) => `<li>${esc(w)} <span class="meta">(${n}건)</span></li>`).join('');
+  return `<p><b>${esc(o.label)}</b> 출발 계산에서 실시간 길찾기가 실패했어요. 실패한 시간을 추정해 넣으면 실제와 다른 결과가 나올 수 있어서 계산을 멈췄어요.</p>` +
+    (items.length ? `<ul>${items.map((t) => `<li>${t}</li>`).join('')}</ul>` : '') +
+    `<p><b>원인</b></p><ul>${whyList}</ul>` +
+    '<p class="meta">잠시 뒤 \'다시 시도\'를 눌러 보세요. 하루 사용 한도를 넘었다면 다음 날 다시 쓸 수 있어요. 실제 응급 상황이면 바로 119에 신고하세요.</p>';
+}
+
+async function setOrigin(o) {
+  origin = o;
+  const my = ++runId;
+  results = null; view = null;
+  clearFail();
+  hideCall();
+  if (originMarker) originMarker.setMap(null);
+  originMarker = new kakao.maps.Marker({ position: LL(o), map, zIndex: 5 });
+  if (routeLine) routeLine.setMap(null);
+  clearGeoLines();
+  for (const el of Object.values(pins)) el.classList.remove('sel');
+  $('places').innerHTML = '';
+  setStatus(`${o.label}에서 응급실까지 도로 시간 계산 중…`);
+  clearLists();
+  const fails = { origin: [], pairs: [] };
+  const failed = (err) => {
+    if (my !== runId) return;
+    setStatus('계산 실패: 실시간 길찾기가 실패해 순위를 보여 주지 않아요. 오른쪽 아래 \'계산 실패\'를 누르면 내용을 다시 볼 수 있어요.', true);
+    showFail(failHtml(o, fails, err));
+  };
+  try {
+    const fresh = await refreshIfOld();
+    if (my !== runId) return;
+    usage = { multi: 0, single: 0, failed: 0 };
+    const road = await roadTimes(o, fails);
+    if (my !== runId) return;
+    if (fails.origin.length) return failed();
+    const rows = road.rows.filter((r) => byId[r.id]); // 병상 정보를 새로 받았을 때 목록에서 빠진 곳은 제외
+    if (!rows.length) { setStatus('계산할 응급실이 없어요.', true); return; }
+    // 실효 도착 시간은 '가능 확인' 병원끼리만 계산한다 (거절된 뒤 갈 다음 병원도 이 안에서 고른다)
+    const candidates = rows.filter((r) => judge[r.id].tier === 'ok').slice(0, MAX_CANDIDATES);
+    let T = {};
+    if (candidates.length > 1) {
+      setStatus(`${o.label}: 응급실 사이 도로 시간 실시간 계산 중…`);
+      const live = await liveBetween(candidates, fails, (d, n) => { if (my === runId) setStatus(`${o.label}: 응급실 사이 도로 시간 실시간 계산 중… (${d}/${n})`); });
+      if (my !== runId) return;
+      if (fails.pairs.length) return failed();
+      T = live.T;
+    }
+    liveT = T;
+    const ranked = evaluate(candidates, between, probAt, { delayMin: DELAY_MIN, depth: DEPTH });
+    const rowById = Object.fromEntries(rows.map((r) => [r.id, r]));
+    for (const r of ranked) Object.assign(rowById[r.id], r); // 순위 계산 결과(실효 시간·거절 확률·다음 병원)를 같은 줄에 붙인다
+    view = { rows, byId: rowById };
+    results = ranked.map((r) => rowById[r.id]);
+    const n = { check: rows.filter((r) => judge[r.id].tier === 'check').length, no: rows.filter((r) => judge[r.id].tier === 'no').length };
+    const notes = [];
+    if (road.nearestM > 20000) notes.push('가장 가까운 응급실도 직선 20km 넘게 떨어져 있어요(서울·인천·경기 밖이면 결과가 맞지 않아요).');
+    notes.push(usage.multi + usage.single === 0 ? '5분 안에 받은 길찾기 결과를 다시 썼어요(이번 검색 길찾기 요청 0번).'
+      : `이번 검색 길찾기 요청: 다중 목적지 ${usage.multi}번 · 자동차 ${usage.single}번.`);
+    if (!fresh) notes.push('병상 정보를 새로 받지 못해 갖고 있던 정보로 계산했어요.');
+    if (sinceObsMin() > 30) notes.push(`병상 정보가 ${Math.round(sinceObsMin())}분 전 것이에요.`);
+    if (!sev) notes.push('질환 표시·메시지를 읽지 못해 병상만으로 계산했어요.');
+    else if (sevAgeMin() > 30) notes.push(`질환 표시가 ${Math.round(sevAgeMin())}분 전 것이에요.`);
+    if (model.pairs < 5000) notes.push('거절 통계 기록이 아직 적어 확률이 거칠어요.');
+    setStatus(`${o.label} 출발 · ${sev ? disease.label : '병상만'} · ${tierName('ok')} ${results.length}곳 계산 · 확인 필요 ${n.check}곳 · 불가 표시 ${n.no}곳 · ${notes.join(' ')}`);
+    render();
+    select((results[0] ?? rows.find((r) => judge[r.id].tier === 'check') ?? rows[0]).id);
+  } catch (e) {
+    results = null; view = null;
+    clearLists();
+    failed(e);
+  } finally {
+    // 성공하면 이어지는 경로 선 그리기(select)가 끝난 뒤 읽으므로, 여기서는 순위를 못 낸 경우에만 읽는다
+    if (my === runId && !view) refreshQuota();
+  }
+}
+
+function clearLists() {
+  for (const id of ['list', 'checkList', 'noList']) $(id).innerHTML = '';
+  for (const id of ['resultCard', 'distCard', 'checkBox', 'noBox']) $(id).hidden = true;
+}
+
+// 병원 한 줄에 붙이는 표시: 병상 · 질환 판단 · 메시지
+function tagsHtml(id, since) {
+  const h = byId[id], j = judge[id], cls = bedClass(h, since);
+  const out = [`<span class="tag ${cls === 'stale' ? 'gray' : cls}">${esc(bedText(h))}${cls === 'stale' && h.hvec != null ? '(오래됨)' : ''}</span>`];
+  if (j.tier === 'ok') { if (sev && disease.items.length) out.push('<span class="tag ok">이 질환 \'가능\' 표시</span>'); }
+  else for (const w of j.why) out.push(`<span class="tag ${w === '사전 연락 필요' ? 'call' : j.tier === 'no' ? 'full' : 'low'}">${esc(w)}</span>`);
+  if (j.tier === 'ok' && j.rel.length) out.push(`<span class="tag gray">안내 메시지 ${j.rel.length}건</span>`);
+  return out.join('');
+}
+
+function render() {
+  const since = sinceObsMin();
+  const best = results[0];
+  const nearest = view.rows[0];
+  const checks = view.rows.filter((r) => judge[r.id].tier === 'check');
+  const nos = view.rows.filter((r) => judge[r.id].tier === 'no');
+  const none = (k) => `<div class="cmp"><div class="k">${k}</div><div class="n">해당 없음</div></div>`;
+  const effBox = (k, r) => (r
+    ? `<div class="cmp best"><div class="k">${k}</div><div class="v">${min1(r.effectiveMin)}<small>분</small></div><div class="n">${esc(r.name)}</div><div class="meta">이동 ${min1(r.travelMin)}분 · 거절 ${pct(r.pReject)}</div></div>`
+    : none(k));
+  const moveBox = (k, r) => (r
+    ? `<div class="cmp"><div class="k">${k}</div><div class="v">${min1(r.travelMin)}<small>분 이동</small></div><div class="n">${esc(r.name)}</div><div class="meta">${tierName(judge[r.id].tier)}</div></div>`
+    : none(k));
+  const known = hasItems();
+  $('listMeta').textContent = known ? '(가능이 확인된 곳 · 실효 도착 시간 순)' : '(병상 기준 · 실효 도착 시간 순)';
+  $('compare').innerHTML = effBox(known ? '추천 (가능 확인된 곳)' : '추천 (병상 기준)', best) + moveBox('가장 가까운 곳', nearest) + moveBox('확인 필요한 곳 중 가장 가까운 곳', checks[0]);
+
+  const say = [];
+  if (!best) say.push(`계산한 범위 안에 ${known ? '가능이 확인된' : '막는 메시지가 없는'} 응급실이 없어요. 아래 '확인이 필요한 곳'에 전화로 확인하거나 119에 신고하세요.`);
+  else {
+    const jn = judge[nearest.id];
+    if (nearest.id === best.id) say.push(known ? '가장 가까운 곳이 가능이 확인된 곳이고, 실효 도착 시간으로도 가장 빨라요.' : '가장 가까운 곳이 실효 도착 시간으로도 가장 빨라요.');
+    else if (jn.tier === 'ok') {
+      const gain = nearest.effectiveMin - best.effectiveMin;
+      say.push(gain < 0.5 ? '추천한 곳과 가장 가까운 곳의 실효 도착 시간이 거의 같아요.' : `가장 가까운 곳으로 가는 것보다 평균 ${min1(gain)}분 빨리 받아줄 곳에 도착할 것으로 계산돼요.`);
+    } else say.push(`가장 가까운 곳(${nearest.name})은 '${tierName(jn.tier)}' 병원이에요(${jn.why.join(' · ')}). 그래서 ${jn.tier === 'no' ? '계산에서 뺐어요.' : '추천에서 빼고 아래 \'확인이 필요한 곳\'에 뒀어요.'}`);
+    const c = checks[0];
+    if (sev && !disease.items.length && disease.id !== 'none') say.push('이 질환을 받아 줄 수 있는지는 공공데이터로 알 수 없어요. 병상과 메시지만으로 계산한 순위예요.');
+    if (c && c.travelMin < best.travelMin - 0.5) say.push(`확인이 필요한 곳 중 가장 가까운 곳(${c.name})은 추천한 곳보다 이동 시간이 ${min1(best.travelMin - c.travelMin)}분 짧아요. 전화로 수용이 확인되면 더 빨리 도착할 수 있어요.`);
+  }
+  $('gain').textContent = say.join(' ');
+  $('resultCard').hidden = false;
+
+  const item = (r, head, meta, cls = '') => `<li data-id="${esc(r.id)}"${cls ? ` class="${cls}"` : ''}>
+      <div class="top"><span class="name">${head}</span>${meta}</div>
+      <div class="meta">직선 ${km(r.straightM)} · 도로 ${km(r.roadM)}</div>
+      <div>${tagsHtml(r.id, since)}</div>
+      <div class="detail" hidden></div>
+    </li>`;
+  const more = (n, shown) => (n > shown ? `· 가까운 ${shown}곳만 보여 줘요(모두 ${n}곳)` : `· ${n}곳`);
+  $('list').innerHTML = results.slice(0, SHOW.ok).map((r, i) => item(r, `${i + 1}. ${esc(r.name)}`,
+    `<span class="eff">${min1(r.effectiveMin)}분</span></div><div class="meta">이동 ${min1(r.travelMin)}분 + 거절 대비 ${min1(r.extraMin)}분 · 도착 시 거절 확률 ${pct(r.pReject)}`)).join('');
+  const moveMeta = (r) => `<span class="eff move">이동 ${min1(r.travelMin)}분</span>`;
+  $('checkList').innerHTML = checks.slice(0, SHOW.check).map((r) => item(r, esc(r.name), moveMeta(r))).join('');
+  $('checkMeta').textContent = more(checks.length, SHOW.check);
+  $('checkBox').hidden = !checks.length;
+  $('noList').innerHTML = nos.slice(0, SHOW.no).map((r) => item(r, esc(r.name), moveMeta(r), 'dim')).join('');
+  $('noMeta').textContent = more(nos.length, SHOW.no);
+  $('noBox').hidden = !nos.length;
+  for (const li of document.querySelectorAll('ol.hl > li')) li.addEventListener('click', (e) => { if (!e.target.closest('.detail')) select(li.dataset.id); });
+  renderDist();
+}
+
+// 병원을 눌렀을 때 펼치는 내용: 거절되면 갈 곳 · 판단 까닭 · 메시지 원문 · 전화
+const msgKind = (m) => (m.c === 'Y000' ? m.d || '응급실' : SEVERE[MSG_TO_SEVERE[m.c]] ?? m.c);
+const telHref = (tel) => `tel:${String(tel).replace(/[^0-9+]/g, '')}`;
+function detailHtml(r) {
+  const h = byId[r.id], j = judge[r.id];
+  const out = [];
+  if (r.chain?.length > 1) out.push('<div class="chain">거절되면 → ' + r.chain.slice(1).map((s) => `${esc(s.name)} (+${min1(s.travelMin)}분, 거절 ${pct(s.p)})`).join(' → ') +
+    (r.unresolved > 0.05 ? ` · 모두 거절될 확률 ${pct(r.unresolved)}` : '') + '</div>');
+  if (j.tier !== 'ok') out.push(`<div><b>${tierName(j.tier)}</b>: ${esc(j.why.join(' · '))}</div>`);
+  const line = (m) => `<li${m.block ? ' class="blk"' : ''}>${m.contact ? '<span class="tag call">사전 연락</span>' : ''}<span class="meta">${esc(msgKind(m).replace(/^([^\[].*)$/, '[$1]'))}</span> ${esc(m.t)} <span class="meta">(${esc(m.s)} ~ ${esc(m.e)})</span></li>`;
+  if (j.rel.length) out.push(`<div><b>관련 메시지 ${j.rel.length}건</b><ul>${j.rel.map(line).join('')}</ul></div>`);
+  if (j.other.length) out.push(`<details><summary>이 병원의 다른 메시지 ${j.other.length}건</summary><ul>${j.other.map(line).join('')}</ul></details>`);
+  if (h.tel) out.push(`<div><a class="tel" href="${telHref(h.tel)}">전화 ${esc(h.tel)}</a></div>`);
+  return out.join('');
+}
+
+// ---------- 사전 연락 창: 관련 메시지에 '사전 연락'이 필요한 글이 있는 병원을 눌렀을 때만 띄운다
+// 확인을 누르면 CALL_SHRINK_MS 뒤 작은 표시로 줄고, 작은 표시를 누르면 다시 펴진다
+let callTimer = null, callFor = null;
+function hideCall() {
+  clearInterval(callTimer); callTimer = null; callFor = null;
+  $('callWin').hidden = true; $('callPill').hidden = true;
+}
+function showCall(id) {
+  const j = judge[id], h = byId[id];
+  if (!j?.contact.length) return hideCall();
+  clearInterval(callTimer); callTimer = null; callFor = id;
+  $('callName').textContent = h.name;
+  $('callMsgs').innerHTML = j.contact.map((m) => `<li>${esc(m.t)}</li>`).join('');
+  $('callTel').hidden = !h.tel;
+  if (h.tel) { $('callTel').href = telHref(h.tel); $('callTel').textContent = `전화 연결 ${h.tel}`; }
+  $('callOk').disabled = false; $('callOk').textContent = '확인';
+  $('callPill').hidden = true; $('callWin').hidden = false;
+}
+$('callOk').addEventListener('click', () => {
+  let left = Math.round(CALL_SHRINK_MS / 1000);
+  const tick = () => { $('callOk').textContent = `확인했어요 · ${left}초 뒤 작아져요`; };
+  $('callOk').disabled = true; tick();
+  clearInterval(callTimer);
+  callTimer = setInterval(() => {
+    if (--left > 0) return tick();
+    clearInterval(callTimer); callTimer = null;
+    $('callWin').hidden = true;
+    $('callPill').textContent = `📞 사전 연락 필요 · ${byId[callFor]?.name ?? ''}`;
+    $('callPill').hidden = false;
+  }, 1000);
+});
+$('callPill').addEventListener('click', () => { if (callFor) showCall(callFor); });
+
+// 거리 비교: 직선 · 도로 거리 · 도로 시간
+function renderDist() {
+  const rows = [...view.rows].sort((a, b) => a.straightM - b.straightM);
+  const real = rows.filter((r) => r.roadM != null && r.straightM > 50);
+  const rankOf = (key, list) => { const rr = ranks(list.map((r) => r[key])); return Object.fromEntries(list.map((r, i) => [r.id, rr[i]])); };
+  const rS = rankOf('straightM', rows), rR = rankOf('roadM', real), rM = rankOf('travelMin', rows);
+  const rk = (x) => (x == null ? '' : `<small>${Number.isInteger(x) ? x : x.toFixed(1)}</small>`);
+  $('distTable').innerHTML = '<tr><th>응급실</th><th>직선</th><th>도로 거리</th><th>도로 시간</th></tr>' +
+    rows.map((r) => `<tr data-id="${esc(r.id)}"><td>${esc(r.name)}</td><td>${km(r.straightM)}${rk(rS[r.id])}</td>` +
+      `<td>${km(r.roadM)}${rk(rR[r.id])}</td><td>${min1(r.travelMin)}분${rk(rM[r.id])}</td></tr>`).join('');
+  for (const tr of $('distTable').querySelectorAll('tr[data-id]')) tr.addEventListener('click', () => select(tr.dataset.id));
+
+  const lines = [];
+  if (real.length >= 2) {
+    const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+    const rs = real.map((r) => r.roadM / r.straightM);
+    lines.push(`도로 거리는 직선의 평균 <b>${avg(rs).toFixed(2)}배</b>(${Math.min(...rs).toFixed(2)}~${Math.max(...rs).toFixed(2)}배)예요.`);
+    const t = real.map((r) => r.travelMin);
+    const f = (x) => (x == null ? '–' : x.toFixed(2));
+    lines.push(`도로 시간의 가까운 순서와 닮은 정도 (스피어먼 순위 상관, 1이면 순서가 똑같음): 직선 <b>${f(spearman(real.map((r) => r.straightM), t))}</b> · 도로 거리 <b>${f(spearman(real.map((r) => r.roadM), t))}</b> <span class="meta">(응급실 ${real.length}곳, 출발지마다 달라요)</span>`);
+  }
+  const first = (key) => [...rows].sort((a, b) => a[key] - b[key])[0];
+  const fs = first('straightM'), fm = first('travelMin');
+  lines.push(fs.id === fm.id
+    ? `직선과 도로 시간 모두 <b>${esc(fm.name)}</b>이(가) 가장 가까워요.`
+    : `가장 가까운 곳: 직선 <b>${esc(fs.name)}</b> · 도로 시간 <b>${esc(fm.name)}</b>`);
+  $('distSummary').innerHTML = lines.map((l) => `<p style="margin:0 0 4px">${l}</p>`).join('');
+  $('distCard').hidden = false;
+}
+
+async function select(id) {
+  const r = view?.byId[id];
+  if (!r) return;
+  selectedId = id;
+  for (const li of document.querySelectorAll('ol.hl > li')) {
+    const on = li.dataset.id === id;
+    li.classList.toggle('sel', on);
+    const c = li.querySelector('.detail');
+    c.hidden = !on;
+    if (on) c.innerHTML = detailHtml(r);
+  }
+  for (const [pid, el] of Object.entries(pins)) el.classList.toggle('sel', pid === id);
+  for (const tr of $('distTable').querySelectorAll('tr[data-id]')) tr.classList.toggle('sel', tr.dataset.id === id);
+  showCall(id);
+
+  const h = byId[id];
+  const my = runId;
+  if (routeLine) routeLine.setMap(null);
+  drawGeoLines(origin, h);
+  const geoBounds = new kakao.maps.LatLngBounds();
+  [LL(origin), LL(h)].forEach((p) => geoBounds.extend(p));
+  map.setBounds(geoBounds, 40, 40, 40, 40);
+  try {
+    const route = (await routeTo(origin, h)).routes?.[0];
+    if (my !== runId || selectedId !== id || route?.result_code !== 0) return;
+    const path = [];
+    for (const s of route.sections ?? []) for (const road of s.roads ?? []) {
+      const v = road.vertexes;
+      for (let i = 0; i + 1 < v.length; i += 2) path.push(new kakao.maps.LatLng(v[i + 1], v[i]));
+    }
+    if (routeLine) routeLine.setMap(null);
+    routeLine = new kakao.maps.Polyline({ path, strokeWeight: 6, strokeColor: '#2a63b8', strokeOpacity: 0.85 });
+    routeLine.setMap(map);
+    const bounds = new kakao.maps.LatLngBounds();
+    path.forEach((p) => bounds.extend(p));
+    map.setBounds(bounds, 40, 40, 40, 40);
+  } catch { /* 경로 선은 없어도 계산 결과는 그대로 */ } finally {
+    refreshQuota(); // 경로 선 그리기도 자동차 길찾기 1번
+  }
+}
+
+// ---------- 출발지 입력
+$('searchForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const q = $('q').value.trim();
+  if (!q) return;
+  const show = (items) => {
+    $('places').innerHTML = items.length
+      ? items.slice(0, 5).map((p, i) => `<li><button type="button" data-i="${i}">${esc(p.name)}<small>${esc(p.addr)}</small></button></li>`).join('')
+      : '<li class="hint">검색 결과가 없어요.</li>';
+    $('places').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+      const p = items[Number(b.dataset.i)];
+      setOrigin({ lat: p.lat, lon: p.lon, label: p.name });
+    }));
+  };
+  const geocoder = new kakao.maps.services.Geocoder();
+  const places = new kakao.maps.services.Places();
+  geocoder.addressSearch(q, (res, st) => {
+    if (st === kakao.maps.services.Status.OK && res.length) {
+      show(res.map((r) => ({ name: r.address_name, addr: r.road_address?.address_name ?? '', lat: Number(r.y), lon: Number(r.x) })));
+      return;
+    }
+    places.keywordSearch(q, (res2, st2) => {
+      show(st2 === kakao.maps.services.Status.OK
+        ? res2.map((r) => ({ name: r.place_name, addr: r.road_address_name || r.address_name, lat: Number(r.y), lon: Number(r.x) }))
+        : []);
+    });
+  });
+});
+
+$('gps').addEventListener('click', () => {
+  if (!navigator.geolocation) { setStatus('이 브라우저는 위치 기능을 지원하지 않아요.', true); return; }
+  $('gps').disabled = true;
+  setStatus('현재 위치 확인 중…');
+  navigator.geolocation.getCurrentPosition(
+    (p) => { $('gps').disabled = false; map.setCenter(new kakao.maps.LatLng(p.coords.latitude, p.coords.longitude)); setOrigin({ lat: p.coords.latitude, lon: p.coords.longitude, label: '현재 위치' }); },
+    (err) => { $('gps').disabled = false; setStatus(err.code === 1 ? '위치 권한이 거부됐어요. 주소 검색이나 지도 클릭을 써 주세요.' : '현재 위치를 찾지 못했어요.', true); },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+  );
+});
+
+// ---------- 시작
+refreshQuota();
+try {
+  if (typeof kakao === 'undefined' || !kakao.maps) throw new Error('카카오 지도를 불러오지 못했어요 (JavaScript 키·도메인 설정 확인)');
+  // 의심 질환 고르기 (묶음별)
+  const groups = new Map();
+  for (const d of DISEASES) groups.set(d.group, [...(groups.get(d.group) ?? []), d]);
+  $('disease').innerHTML = [...groups].map(([g, ds]) => {
+    const opts = ds.map((d) => `<option value="${esc(d.id)}">${esc(d.label)}</option>`).join('');
+    return g ? `<optgroup label="${esc(g)}">${opts}</optgroup>` : opts;
+  }).join('');
+  $('disease').addEventListener('change', () => {
+    disease = diseaseById[$('disease').value] ?? DISEASES[0];
+    if (!ers) return;
+    rejudge();
+    drawPins();
+    if (origin) setOrigin(origin); // 받은 길찾기 결과는 다시 쓰고, 새로 필요한 병원만 받는다
+  });
+  await Promise.all([new Promise((ok) => kakao.maps.load(ok)), loadData()]);
+  initMap();
+  drawPins();
+  setStatus(`응급실 ${ers.length}곳 · 의심 질환을 고르고, 출발지를 검색하거나 지도를 눌러 주세요.`);
+} catch (e) {
+  setStatus(`시작 실패: ${e.message}`, true);
+}
+</script>
+</body>
+</html>
