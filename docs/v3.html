@@ -34,7 +34,7 @@
   h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
   .sub { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
   .warn { background: var(--full-bg); color: var(--ink); border-radius: 8px; padding: 8px 12px; font-size: 13px; margin: 10px 0 0; }
-  .quota { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 13px; margin: 6px 0 0; }
+  .quota { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; font-size: 13px; margin: 0 0 12px; }
   .quota .q-top { display: flex; align-items: center; gap: 10px; }
   .quota .q-label { font-weight: 700; white-space: nowrap; }
   .quota .q-bar { flex: 1; height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; }
@@ -154,6 +154,7 @@
   /* 손가락으로 누르는 곳은 44px 이상, 글자는 12px 이상 */
   button, select, input[type=search] { min-height: 44px; }
   a.tel { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; }
+  .acts { display: flex; flex-wrap: wrap; gap: 8px; }
   details > summary { padding: 12px 0; }
   .tag { font-size: 12px; }
   table.dist td small { font-size: 12px; }
@@ -162,7 +163,7 @@
     .layout > div:first-child { display: contents; }
     .layout > div:first-child > section { order: 1; }
     .mapcol { order: 2; }
-    .layout > div:first-child > section.last { order: 3; }
+    .layout > div:first-child > .last { order: 3; }
   }
 </style>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=42a491bd43887127ca6b4bf69b731aaf&libraries=services&autoload=false"></script>
@@ -173,14 +174,6 @@
     <h1>골든타임 경로 <span class="beta">v3 베타</span></h1>
     <p class="sub">의심 질환을 받아 줄 수 있다고 알린 응급실 중에서, 도착했을 때 받아줄 가능성까지 계산해 추천해요 · <a href="./">수집 현황판</a> · <a href="app.html">지금 쓰는 웹앱(v2)</a></p>
     <p class="warn"><b>교육·탐구용이에요.</b> 실제 응급 상황에서는 바로 119에 신고하세요.</p>
-    <div class="quota" id="quota">
-      <div class="q-top">
-        <span class="q-label">오늘 길찾기 사용량</span>
-        <span class="q-bar" id="quotaBar" role="progressbar" aria-label="오늘 카카오 길찾기 하루 한도 사용량" aria-valuemin="0" aria-valuemax="100"><span class="q-fill" id="quotaFill"></span></span>
-        <span class="q-pct" id="quotaPct">–</span>
-      </div>
-      <div class="q-sub" id="quotaText">사용량 불러오는 중…</div>
-    </div>
   </header>
 
   <div class="layout">
@@ -233,6 +226,15 @@
         <p class="hint">직선 = 두 점을 곧게 이은 거리. 도로 = 카카오 길찾기가 고른 실제 경로의 길이. 작은 숫자는 가까운 순위예요. 줄을 누르면 지도에 직선과 도로 경로가 함께 그려져요.</p>
       </section>
 
+      <div class="quota last" id="quota">
+        <div class="q-top">
+          <span class="q-label">오늘 길찾기 사용량</span>
+          <span class="q-bar" id="quotaBar" role="progressbar" aria-label="오늘 카카오 길찾기 하루 한도 사용량" aria-valuemin="0" aria-valuemax="100"><span class="q-fill" id="quotaFill"></span></span>
+          <span class="q-pct" id="quotaPct">–</span>
+        </div>
+        <div class="q-sub" id="quotaText">사용량 불러오는 중…</div>
+      </div>
+
       <section class="card last">
         <details>
           <summary>계산 방법과 한계</summary>
@@ -251,6 +253,7 @@
             <li><b>왜 메시지를 보나요</b>: 응급실 전체에 받기 어렵다는 메시지가 걸린 동안에도 병상 수가 0 이하인 때는 10.7%뿐이었어요. 병상 수만으로는 이런 거절을 알 수 없어요.</li>
             <li><b>메시지를 고르는 규칙</b>: 그 질환 항목의 메시지는 공공데이터 코드로 정확히 찾아요. 응급실 메시지는 진료과 칸과 글 속 낱말로 '관련 있음'을 고르는데, 이것은 <b>정해 둔 규칙</b>이라 틀릴 수 있어요. 그래서 병원을 누르면 그 병원의 메시지를 모두 원문으로 보여 줘요(전화번호·환자 번호·이름은 가려요).</li>
             <li><b>사전 연락 창</b>: 관련 메시지에 '사전 문의', '문의 후 이송', '수용 여부 확인' 같은 글이 있으면, 그 병원을 눌렀을 때 전화 연결 창을 띄워요. 확인을 누르면 왼쪽 아래 작은 표시로 부드럽게 줄고, '자세히 보기'를 누르면 다시 커져요. 창 바탕은 반투명이지만 뒤에 무엇이 있어도 글자가 또렷하게(대비 7:1 이상) 보이도록 밝은 화면 70%, 어두운 화면 82% 불투명으로 맞췄어요.</li>
+            <li><b>길안내</b>: 병원을 누르면 나오는 '카카오맵 길안내'는 카카오맵을 새 창으로 열어요. 병원 이름과 좌표만 넘기고, 출발지는 넘기지 않아요.</li>
             <li><b>질환 정보가 없는 경우</b>: 심정지·중증외상·골절은 공공데이터에 병원별 수용 가능 표시가 없어요. 병상과 메시지(글 속 'CPR', '외상', '골절')만으로 계산하니, 받아 줄 수 있다는 뜻이 아니에요.</li>
             <li><b>'정보미제공'은 추측하지 않아요</b>: 응급실의 약 60%(작은 병원일수록 많음)는 질환 표시를 내지 않아요. 수술실·장비 정보로 짐작하지 않고 '확인 필요'로 둬요.</li>
             <li><b>후보 고르기</b>: 가까운 '가능 확인' 병원이 6곳보다 적으면 더 먼 '가능 확인' 병원을 가까운 순서로 채워요. 드문 질환은 먼 병원이 나올 수 있어요.</li>
@@ -568,14 +571,14 @@ async function refreshQuota() {
     quotaDay = day;
     const ratio = Math.max(used.multi / limits.multi, used.single / limits.single);
     const shown = Math.min(1, ratio);
-    $('quota').className = 'quota' + (ratio >= QUOTA_HIGH ? ' high' : ratio >= QUOTA_MID ? ' mid' : '');
+    $('quota').className = 'quota last' + (ratio >= QUOTA_HIGH ? ' high' : ratio >= QUOTA_MID ? ' mid' : '');
     $('quotaFill').style.width = `${(shown * 100).toFixed(1)}%`;
     $('quotaBar').setAttribute('aria-valuenow', String(Math.floor(shown * 100)));
     $('quotaPct').textContent = ratio > 0 && ratio < 0.01 ? '1% 미만' : `${Math.floor(shown * 100)}%`;
     $('quotaText').textContent = `다중 목적지 ${n(used.multi)}/${n(limits.multi)} · 자동차 ${n(used.single)}/${n(limits.single)} · 매일 0시(한국 시간) 초기화`;
   } catch {
     if (my !== quotaSeq) return;
-    $('quota').className = 'quota unknown';
+    $('quota').className = 'quota last unknown';
     $('quotaFill').style.width = '0';
     $('quotaBar').removeAttribute('aria-valuenow');
     $('quotaPct').textContent = '확인 불가';
@@ -854,6 +857,8 @@ function render() {
 // 병원을 눌렀을 때 펼치는 내용: 거절되면 갈 곳 · 판단 까닭 · 메시지 원문 · 전화
 const msgKind = (m) => (m.c === 'Y000' ? m.d || '응급실' : SEVERE[MSG_TO_SEVERE[m.c]] ?? m.c);
 const telHref = (tel) => `tel:${String(tel).replace(/[^0-9+]/g, '')}`;
+// 카카오맵 길찾기 바로가기: /link/to/이름,위도,경도 (목적지만 넘긴다. 출발지는 카카오맵이 사용자의 현재 위치로 정한다)
+const naviHref = (h) => `https://map.kakao.com/link/to/${encodeURIComponent(String(h.name).replace(/[,/]/g, ' '))},${h.lat},${h.lon}`;
 function detailHtml(r) {
   const h = byId[r.id], j = judge[r.id];
   const out = [];
@@ -863,7 +868,8 @@ function detailHtml(r) {
   const line = (m) => `<li${m.block ? ' class="blk"' : ''}>${m.contact ? '<span class="tag call">사전 연락</span>' : ''}<span class="meta">${esc(msgKind(m).replace(/^([^\[].*)$/, '[$1]'))}</span> ${esc(m.t)} <span class="meta">(${esc(m.s)} ~ ${esc(m.e)})</span></li>`;
   if (j.rel.length) out.push(`<div><b>관련 메시지 ${j.rel.length}건</b><ul>${j.rel.map(line).join('')}</ul></div>`);
   if (j.other.length) out.push(`<details><summary>이 병원의 다른 메시지 ${j.other.length}건</summary><ul>${j.other.map(line).join('')}</ul></details>`);
-  if (h.tel) out.push(`<div><a class="tel" href="${telHref(h.tel)}">전화 ${esc(h.tel)}</a></div>`);
+  out.push(`<div class="acts"><a class="tel" href="${esc(naviHref(h))}" target="_blank" rel="noopener noreferrer">카카오맵 길안내</a>` +
+    (h.tel ? `<a class="tel" href="${telHref(h.tel)}">전화 ${esc(h.tel)}</a>` : '') + '</div>');
   return out.join('');
 }
 
