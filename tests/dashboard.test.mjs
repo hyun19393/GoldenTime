@@ -109,13 +109,13 @@ test('정확도 점검: 시간 순서로 나누고, 짝 수와 점수가 맞게 
   assert.equal(v.calib.reduce((s, c) => s + c.n, 0), v.byLead[20].n); // 모든 짝이 어느 한 구간에 들어감
 });
 
-test("날짜별 기록: 그날의 수용 불가 메시지(전화번호·환자 번호 가림)와 질환별 '불가능' 구간", () => {
+test("날짜별 기록: 그날의 수용 불가 메시지(받은 글 그대로)와 질환별 '불가능' 구간", () => {
   const msgs = dayMessages([
     { collected_at: '2026-11-13 00:00:55', hpid: 'A', dutyName: '가병원', symTypCod: 'Y000', symTypCodMag: '응급실', trtPrtCodMag: '순환기내과', symBlkMsg: '심혈관질환 전용 핫라인: 010-1234-5678', symBlkSttDtm: '20261113000000', symBlkEndDtm: '20261114090000' },
     { collected_at: '2026-11-13 09:00:55', hpid: 'B', dutyName: '나병원', symTypCod: 'Y0020', symTypCodMag: '뇌경색의 재관류중재술', symBlkMsg: '12345678 김O수 IAT 시술 진행', symBlkSttDtm: '20261113085000', symBlkEndDtm: '' },
   ]);
-  assert.deepEqual(msgs[0], { at: '00:00', hpid: 'A', name: '가병원', code: 'Y000', type: '응급실', dept: '순환기내과', msg: '심혈관질환 전용 핫라인: (전화번호 가림)', start: '11-13 00:00', end: '11-14 09:00' });
-  assert.equal(msgs[1].msg, '(환자 정보 가림) IAT 시술 진행');
+  assert.deepEqual(msgs[0], { at: '00:00', hpid: 'A', name: '가병원', code: 'Y000', type: '응급실', dept: '순환기내과', msg: '심혈관질환 전용 핫라인: 010-1234-5678', start: '11-13 00:00', end: '11-14 09:00' });
+  assert.equal(msgs[1].msg, '12345678 김O수 IAT 시술 진행');
   assert.equal(msgs[1].end, '');
 
   const sev = (t, id, flags) => ({ collected_at: `2026-11-13 ${t}`, hpid: id, dutyName: `병원${id}`, ...Object.fromEntries(Object.entries(flags).map(([n, v]) => [`MKioskTy${n}`, v])) });

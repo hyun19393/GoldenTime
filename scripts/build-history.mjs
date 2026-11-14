@@ -13,7 +13,6 @@ import { causeCode } from '../engine/causes.mjs';
 import { regularStart, BED_COLS } from './load.mjs';
 import { regionOf } from '../engine/region.mjs';
 import { normFlag } from '../engine/codes.mjs';
-import { maskText } from '../engine/disease.mjs';
 
 export const SLOT_MIN = 10;
 const SLOTS = (24 * 60) / SLOT_MIN; // 144칸
@@ -29,7 +28,7 @@ const msgTime = (v) => { const t = parseHvidate(v); return t == null ? '' : form
 // 그날 걸려 있던 수용 불가 메시지 (수집기가 그날 본 서로 다른 메시지). at = 처음 본 시각
 export const dayMessages = (msgRows) => msgRows.map((m) => ({
   at: (m.collected_at ?? '').slice(11, 16), hpid: m.hpid, name: m.dutyName, code: m.symTypCod, type: m.symTypCodMag || m.symTypCod,
-  dept: m.trtPrtCodMag ?? '', msg: maskText(m.symBlkMsg), start: msgTime(m.symBlkSttDtm), end: msgTime(m.symBlkEndDtm),
+  dept: m.trtPrtCodMag ?? '', msg: m.symBlkMsg, start: msgTime(m.symBlkSttDtm), end: msgTime(m.symBlkEndDtm),
 }));
 
 // 질환별 '불가능' 표시가 이어진 구간: { hpid, name, item(항목 번호 1~27), from, to(HH:MM), n(수집 횟수) }

@@ -21,7 +21,7 @@
 | `engine/model.mjs` | 거절 확률 통계표 만들기, 확률 계산 |
 | `engine/effective.mjs` | 실효 도착 시간 계산 |
 | `engine/geo.mjs` · `engine/stats.mjs` | 직선 거리 계산, 순위 상관 (웹앱 거리 비교) |
-| `engine/disease.mjs` | 질환별 안내 규칙 (v3 베타): 질환 목록, 메시지 범위·사전 연락 판단, 가능 확인 · 확인 필요 · 불가 표시 나누기, 전화번호·환자 정보 가리기 |
+| `engine/disease.mjs` | 질환별 안내 규칙 (v3 베타): 질환 목록, 메시지 범위·사전 연락 판단, 가능 확인 · 확인 필요 · 불가 표시 나누기 |
 | `engine/severe.mjs` | 질환별 거절 확률 초안 (병상 0 이하 또는 그 질환 '불가능'). 데이터가 충분히 모인 뒤 다듬어 켤 예정, 지금은 실행하지 않음 |
 | `scripts/validate.mjs` | 앞 기간으로 만든 통계가 뒤 기간을 얼마나 맞히는지 검증 |
 | `scripts/build-web.mjs` | 웹앱용 파일 만들기: `docs/model.json`(거절 통계표), `docs/validation.json`(정확도 점검), `docs/engine/`(계산 코드 복사) |

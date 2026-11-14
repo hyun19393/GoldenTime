@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DISEASES, diseaseById, assess, scopeOf, isContact, isNegative, maskText, flipProb, SEV_FLIP_PER_MIN, itemLabel } from '../engine/disease.mjs';
+import { DISEASES, diseaseById, assess, scopeOf, isContact, isNegative, flipProb, SEV_FLIP_PER_MIN, itemLabel } from '../engine/disease.mjs';
 import { SEVERE } from '../engine/codes.mjs';
 
 const flags = (set = {}) => Array.from({ length: 28 }, (_, i) => set[i + 1] ?? (i === 27 ? 'Y' : '-')).join('');
@@ -87,17 +87,6 @@ test("심정지: 'CPR만 가능'은 받는다는 글이라 막지 않고, 'CPR �
   assert.equal(assess({ m: [msg('Y000', '응급실', '병실 및 중환자실 포화로 CPR은 수용 가능, f/u 은 미리 전화 부탁드립니다.')] }, a).contact.length, 0);
   assert.equal(assess({ m: [msg('Y000', '응급실', 'CPR 포함 수용불가 / 응급실 과밀화')] }, a).tier, 'check');
   assert.equal(assess({ m: [msg('Y000', '응급실', '침상 및 모니터 부족으로 CPR만 가능합니다')] }, diseaseById.none).tier, 'check'); // 다른 환자에게는 막는 글
-});
-
-test('가리기: 전화번호 · 환자 번호와 이름 · 아이디(이름)', () => {
-  assert.equal(maskText('심혈관질환 전용 핫라인: 010-1234-5678 (심장)'), '심혈관질환 전용 핫라인: (전화번호 가림) (심장)');
-  assert.equal(maskText('문의 02-123-4567, 01012345678'), '문의 (전화번호 가림), (전화번호 가림)');
-  assert.equal(maskText('12345678 김O수 IAT 시술 진행'), '(환자 정보 가림) IAT 시술 진행');
-  assert.equal(maskText('1234567고O숙 시술 중.'), '(환자 정보 가림) 시술 중.');
-  assert.equal(maskText('신생아 진료 불가 abcd12(홍길동)'), '신생아 진료 불가 (이름 가림)');
-  assert.equal(maskText('08:30-13:30 심근경색 재관류 불가'), '08:30-13:30 심근경색 재관류 불가'); // 시각은 그대로
-  assert.equal(maskText('ICH OP 진행 중'), 'ICH OP 진행 중');
-  assert.equal(maskText(null), '');
 });
 
 test('가능 → 불가능 바뀔 확률: 시간에 비례하고 항목이 많으면 조금 커진다', () => {

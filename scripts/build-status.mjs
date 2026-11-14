@@ -11,7 +11,6 @@ import { normFlag, SEVERE } from '../engine/codes.mjs';
 import { causeCode } from '../engine/causes.mjs';
 import { regularStart, BED_COLS } from './load.mjs';
 import { regionOf } from '../engine/region.mjs';
-import { maskText } from '../engine/disease.mjs';
 
 const args = Object.fromEntries(
   process.argv.slice(2).reduce((acc, a, i, arr) => (a.startsWith('--') ? [...acc, [a.slice(2), arr[i + 1]]] : acc), []),
@@ -162,7 +161,7 @@ for (const m of msgRows) {
     code: m.symTypCod, // Y000 = 응급실, 그 밖은 질환 항목 (engine/codes.mjs의 MSG_TO_SEVERE)
     kind: m.symBlkMsgTyp, // 응급(진료과·조건 제한) / 중증(질환별 불가)
     dept: m.trtPrtCodMag,
-    msg: maskText(m.symBlkMsg), // 병원이 써 넣은 전화번호·환자 번호·이름은 공개 화면에 싣지 않는다
+    msg: m.symBlkMsg,
     start: st ? formatKST(st).slice(5, 16) : '',
     end: en ? formatKST(en).slice(5, 16) : '',
   });

@@ -9,161 +9,209 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
+  /* 디자인 토큰 — Figma '골든타임 v3 웹앱 디자인'의 색 변수·글자 스타일과 같은 값 (어두운 화면 값은 코드에서 정함)
+     *-fill = 흰 글자를 올리는 바탕색, --ok/--low = 지도 점·막대의 신호색, *-ink = 옅은 바탕 위 글자색 */
   :root {
-    --bg: #f6f6f3; --surface: #ffffff; --ink: #1d1d1b; --muted: #6b6a64; --line: #e3e2dc;
-    --full: #d6453d; --low: #e39b1b; --ok: #2f9e66; --stale: #9a9993; --accent: #2a63b8;
-    --full-bg: #fbe9e7; --low-bg: #fcf1dc; --ok-bg: #e4f3ea; --accent-bg: #e6eefa; --glass: rgba(255, 255, 255, .7);
+    --bg: #F5F6F8; --surface: #FFFFFF; --ink: #14171F; --muted: #5B6472; --line: #E5E8EC; --neutral-bg: #EEF0F3;
+    --accent: #1F4FD8; --accent-fill: #1F4FD8; --accent-bg: #EAF0FF;
+    --full: #C2352D; --full-fill: #C2352D; --full-bg: #FCEBE9;
+    --low: #E39B1B; --low-ink: #8A5A00; --low-bg: #FFF3D6;
+    --ok: #2F9E66; --ok-ink: #17794B; --ok-bg: #E3F4EA; --stale: #9AA1AC;
+    --glass: rgba(255, 255, 255, .7);
+    --shadow: 0 1px 2px rgba(20, 23, 31, .04), 0 4px 16px rgba(20, 23, 31, .06);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #161615; --surface: #1f1f1d; --ink: #ecebe6; --muted: #a3a29b; --line: #34332f;
-      --full: #ef6a5f; --low: #f0b443; --ok: #4cbc84; --stale: #7b7a74; --accent: #6b9ae6;
-      --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f; --accent-bg: #1c2a40; --glass: rgba(31, 31, 29, .82);
+      --bg: #0F1115; --surface: #181B21; --ink: #ECEEF2; --muted: #A3ABB8; --line: #2A2F38; --neutral-bg: #252A33;
+      --accent: #8FB0FF; --accent-fill: #3B6BEA; --accent-bg: #1B2740;
+      --full: #FF8A7F; --full-fill: #C2352D; --full-bg: #3A1F1D;
+      --low: #F0B443; --low-ink: #F0C36A; --low-bg: #3A2E16;
+      --ok: #4CBC84; --ok-ink: #6FD3A0; --ok-bg: #15301F; --stale: #6F7682;
+      --glass: rgba(24, 27, 33, .82);
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .3);
     }
   }
   :root[data-theme="dark"] {
-    --bg: #161615; --surface: #1f1f1d; --ink: #ecebe6; --muted: #a3a29b; --line: #34332f;
-    --full: #ef6a5f; --low: #f0b443; --ok: #4cbc84; --stale: #7b7a74; --accent: #6b9ae6;
-    --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f; --accent-bg: #1c2a40; --glass: rgba(31, 31, 29, .82);
+    --bg: #0F1115; --surface: #181B21; --ink: #ECEEF2; --muted: #A3ABB8; --line: #2A2F38; --neutral-bg: #252A33;
+    --accent: #8FB0FF; --accent-fill: #3B6BEA; --accent-bg: #1B2740;
+    --full: #FF8A7F; --full-fill: #C2352D; --full-bg: #3A1F1D;
+    --low: #F0B443; --low-ink: #F0C36A; --low-bg: #3A2E16;
+    --ok: #4CBC84; --ok-ink: #6FD3A0; --ok-bg: #15301F; --stale: #6F7682;
+    --glass: rgba(24, 27, 33, .82);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .3);
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--ink); }
-  body { font-family: "Noto Sans KR", system-ui, sans-serif; font-size: 15px; line-height: 1.55; word-break: keep-all; }
-  .wrap { max-width: 1240px; margin: 0 auto; padding: 20px 16px 40px; }
-  header { margin-bottom: 14px; }
-  h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
-  .sub { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
-  .warn { background: var(--full-bg); color: var(--ink); border-radius: 8px; padding: 8px 12px; font-size: 13px; margin: 10px 0 0; }
-  .quota { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; font-size: 13px; margin: 0 0 12px; }
-  .quota .q-top { display: flex; align-items: center; gap: 10px; }
-  .quota .q-label { font-weight: 700; white-space: nowrap; }
-  .quota .q-bar { flex: 1; height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; }
-  .quota .q-fill { display: block; height: 100%; width: 0; background: var(--ok); border-radius: 999px; transition: width .4s ease; }
-  .quota.mid .q-fill { background: var(--low); }
-  .quota.high .q-fill { background: var(--full); }
-  .quota .q-pct { min-width: 4.5em; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .quota .q-sub { color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
-  .quota.unknown .q-pct, .quota.unknown .q-sub { color: var(--stale); }
+  body { font-family: "Noto Sans KR", system-ui, sans-serif; font-size: 15px; line-height: 22px; word-break: keep-all; -webkit-text-size-adjust: 100%; }
+  a { color: var(--accent); }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 20px 16px 48px; }
+
+  /* 머리말 */
+  header { margin-bottom: 12px; }
+  h1 { display: flex; align-items: center; gap: 8px; font-size: 20px; line-height: 28px; margin: 0; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); font-size: 12px; line-height: 16px; margin: 4px 0 0; }
+  .warn { background: var(--full-bg); border-radius: 12px; padding: 10px 12px; font-size: 12px; line-height: 16px; margin: 12px 0 0; }
+  .warn .btn { margin-top: 8px; }
+
+  /* 틀 */
   .layout { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 16px; align-items: start; }
-  @media (max-width: 880px) { .layout { grid-template-columns: minmax(0, 1fr); } .mapcol { order: -1; } }
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; min-width: 0; }
-  h2 { font-size: 15px; margin: 0 0 10px; }
-  #map { height: 640px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
-  @media (max-width: 880px) { #map { height: 380px; } }
-  .row { display: flex; gap: 8px; }
-  input[type=search] { flex: 1; min-width: 0; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
-  button { font: inherit; font-size: 14px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); cursor: pointer; white-space: nowrap; }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  button:disabled { opacity: .5; cursor: default; }
-  .hint { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
-  #places { list-style: none; margin: 8px 0 0; padding: 0; }
-  #places li button { width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 7px 4px; white-space: normal; }
-  #places li small { color: var(--muted); display: block; font-size: 12px; }
-  .status { font-size: 13.5px; color: var(--muted); }
+  .mapcol { position: sticky; top: 16px; }
+  .card, .cmp, .quota { background: var(--surface); border-radius: 16px; box-shadow: var(--shadow); min-width: 0; }
+  .card { padding: 16px; margin-bottom: 12px; }
+  h2 { display: flex; align-items: center; gap: 8px; font-size: 16px; line-height: 24px; margin: 0 0 12px; }
+  h3.lh { font-size: 16px; line-height: 24px; margin: 20px 0 0; }
+  .step { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-fill); color: #fff; font-size: 12px; font-weight: 400; }
+  .hint, .capt { font-size: 12px; line-height: 16px; color: var(--muted); margin: 10px 0 0; }
+  .capt { margin: -8px 0 8px; }
+  .status { font-size: 12px; line-height: 16px; color: var(--muted); margin: 0 0 8px; }
   .status.err { color: var(--full); }
-  .compare { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-  .cmp { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
-  .cmp.best { border-color: var(--accent); background: var(--accent-bg); }
-  .cmp .k { font-size: 12px; color: var(--muted); }
-  .cmp .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; }
-  .cmp .v small { font-size: 12px; font-weight: 500; color: var(--muted); }
-  .cmp .n { font-size: 12.5px; overflow-wrap: anywhere; }
-  .gain { font-size: 13.5px; margin: 10px 0 0; }
-  ol.hl { list-style: none; margin: 0; padding: 0; }
-  ol.hl > li { border-bottom: 1px solid var(--line); padding: 9px 4px; cursor: pointer; border-radius: 6px; }
-  ol.hl > li:hover { background: var(--bg); }
+  .meta { font-size: 12px; line-height: 16px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 400; }
+
+  /* 입력 · 버튼 (높이 48px) */
+  select, input[type=search] { width: 100%; min-width: 0; height: 48px; font: inherit; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); }
+  select { appearance: none; -webkit-appearance: none; padding-right: 40px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%238A93A1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+  button, .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; padding: 0 16px; font: inherit; font-size: 13px; line-height: 18px; font-weight: 500; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); cursor: pointer; white-space: nowrap; text-decoration: none; }
+  .primary { background: var(--accent-fill); border-color: var(--accent-fill); color: #fff; }
+  .danger { background: var(--full-fill); border-color: var(--full-fill); color: #fff; }
+  .wide { width: 100%; }
+  button:disabled { opacity: .5; cursor: default; }
+  .btn svg, button svg { width: 18px; height: 18px; flex: none; }
+  :is(button, .btn, select, input, summary, a):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .row { display: flex; gap: 8px; margin-top: 8px; }
+  .row input { flex: 1; }
+  #places { list-style: none; margin: 8px 0 0; padding: 0; }
+  #places:empty { margin: 0; }
+  #places li button { width: 100%; display: block; text-align: left; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 8px 4px; white-space: normal; font-size: 15px; font-weight: 400; }
+  #places li small { color: var(--muted); display: block; font-size: 12px; }
+
+  /* 칩 */
+  .tag { display: inline-flex; align-items: center; font-size: 12px; line-height: 16px; font-weight: 400; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+  .tag.ok { background: var(--ok-bg); color: var(--ok-ink); }
+  .tag.low { background: var(--low-bg); color: var(--low-ink); }
+  .tag.full { background: var(--full-bg); color: var(--full); }
+  .tag.gray { background: var(--neutral-bg); color: var(--muted); }
+  .tag.accent { background: var(--accent-bg); color: var(--accent); }
+  .tag.call { background: var(--full-fill); color: #fff; }
+  .tags, .stats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .stats { margin-top: 10px; }
+  .stats:empty { display: none; }
+
+  /* 결과: 추천(크게) + 비교 두 칸 */
+  .result { margin-bottom: 12px; }
+  .compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .cmp { padding: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .cmp .k { font-size: 12px; line-height: 16px; color: var(--muted); }
+  .cmp .v { font-size: 16px; line-height: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .cmp .n { font-size: 13px; line-height: 18px; font-weight: 500; overflow-wrap: anywhere; }
+  .cmp.best { grid-column: 1 / -1; padding: 16px; gap: 12px; align-items: stretch; box-shadow: var(--shadow), inset 0 0 0 1.5px var(--accent); }
+  .cmp.best > .tag { align-self: flex-start; }
+  .hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+  .hname { font-size: 20px; line-height: 28px; font-weight: 700; overflow-wrap: anywhere; }
+  .htime { font-size: 34px; line-height: 40px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .htime small { font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 2px; }
+  .acts { display: flex; gap: 8px; }
+  .acts > * { flex: 0 0 auto; }
+  .acts > :is(.primary, .danger) { flex: 1 1 0; min-width: 0; }
+  .gain { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--muted); margin: 12px 2px 0; }
+
+  /* 병원 목록 */
+  ol.hl { list-style: none; margin: 4px -4px 0; padding: 0; }
+  ol.hl > li { padding: 12px; border-radius: 12px; cursor: pointer; }
+  ol.hl > li + li { margin-top: 4px; }
+  @media (hover: hover) { ol.hl > li:hover { background: var(--neutral-bg); } }
   ol.hl > li.sel { background: var(--accent-bg); }
+  ol.hl > li.dim .name { color: var(--muted); }
   .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-  .name { font-weight: 700; overflow-wrap: anywhere; }
-  .eff { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .meta { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .tag { display: inline-block; font-size: 11.5px; padding: 0 6px; border-radius: 4px; margin-right: 4px; }
-  .tag.full { background: var(--full-bg); color: var(--full); } .tag.low { background: var(--low-bg); color: var(--low); }
-  .tag.ok { background: var(--ok-bg); color: var(--ok); } .tag.gray { background: var(--bg); color: var(--muted); }
-  .chain { font-size: 12.5px; margin-top: 4px; }
-  .pin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); cursor: pointer; }
-  .pin.full { background: var(--full); } .pin.low { background: var(--low); } .pin.ok { background: var(--ok); } .pin.stale { background: var(--stale); }
-  .pin.sel { width: 20px; height: 20px; box-shadow: 0 0 0 3px var(--accent); }
-  .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+  .name { font-size: 16px; line-height: 24px; font-weight: 700; overflow-wrap: anywhere; }
+  .eff { font-size: 16px; line-height: 24px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .eff.move { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .detail { font-size: 13px; line-height: 18px; margin-top: 10px; cursor: default; }
+  .detail > * + * { margin-top: 8px; }
+  .detail ul { margin: 4px 0 0; padding-left: 18px; }
+  .detail ul li { margin: 4px 0; overflow-wrap: anywhere; color: var(--muted); }
+  .detail ul li.blk { color: var(--ink); }
+  .detail .tag { margin-right: 4px; }
+  details > summary { cursor: pointer; padding: 13px 0; }
+
+  /* 지도 */
+  #map { height: 640px; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); }
+  .pin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, .25); cursor: pointer; }
+  .pin.full { background: var(--full-fill); } .pin.low { background: var(--low); } .pin.ok { background: var(--ok); } .pin.stale { background: var(--stale); }
+  .pin.sel { width: 20px; height: 20px; box-shadow: 0 0 0 3px var(--accent-fill); }
+  .pin.t-check { border-style: dashed; border-color: #14171F; } .pin.t-no { opacity: .35; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; line-height: 16px; color: var(--muted); margin-top: 10px; }
   .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
-  details { font-size: 13px; color: var(--muted); }
-  details p { margin: 6px 0; }
-  details h3 { font-size: 13.5px; color: var(--ink); margin: 14px 0 4px; }
-  details ul { margin: 4px 0; padding-left: 18px; }
-  details li { margin: 3px 0; }
-  details .eq { background: var(--bg); color: var(--ink); border-radius: 8px; padding: 8px 10px; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
-  details .def { font-size: 12px; }
-  details b { color: var(--ink); }
-  footer { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .ln { display: inline-block; width: 22px; height: 0; margin-right: 4px; vertical-align: 3px; }
+  footer { font-size: 12px; line-height: 16px; color: var(--muted); margin-top: 8px; }
+
+  /* 거리 비교 · 사용량 · 계산 방법 */
   .dist-wrap { max-height: 420px; overflow: auto; }
   table.dist { width: 100%; border-collapse: collapse; font-size: 13px; }
-  table.dist th, table.dist td { padding: 6px 6px; border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.dist th, table.dist td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   table.dist th { position: sticky; top: 0; background: var(--surface); color: var(--muted); font-weight: 500; font-size: 12px; }
   table.dist th:first-child, table.dist td:first-child { text-align: left; white-space: normal; overflow-wrap: anywhere; }
-  table.dist td small { color: var(--muted); margin-left: 2px; }
+  table.dist td small { color: var(--muted); margin-left: 2px; font-size: 12px; }
   table.dist tr.sel td { background: var(--accent-bg); }
-  .dsum { font-size: 13px; margin: 0 0 8px; }
-  .dsum b { font-variant-numeric: tabular-nums; }
-  .ln { display: inline-block; width: 22px; height: 0; margin-right: 4px; vertical-align: 3px; }
-  a { color: var(--accent); }
+  .dsum { font-size: 13px; line-height: 18px; margin: 0 0 8px; }
+  .dsum p { margin: 0 0 4px; }
+  .quota { padding: 12px 16px; font-size: 12px; line-height: 16px; margin: 0 0 12px; }
+  .quota .q-top { display: flex; align-items: center; gap: 10px; }
+  .quota .q-label { font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .quota .q-bar { flex: 1; height: 6px; background: var(--neutral-bg); border-radius: 999px; overflow: hidden; }
+  .quota .q-fill { display: block; height: 100%; width: 0; background: var(--ok); border-radius: 999px; transition: width .4s ease; }
+  .quota.mid .q-fill { background: var(--low); }
+  .quota.high .q-fill { background: var(--full-fill); }
+  .quota .q-pct { min-width: 4.5em; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .quota .q-sub { color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .quota.unknown .q-pct, .quota.unknown .q-sub { color: var(--stale); }
+  .card > details { font-size: 13px; line-height: 20px; color: var(--muted); }
+  .card > details > summary { font-size: 16px; font-weight: 700; color: var(--ink); padding: 12px 0; margin: -12px 0; }
+  .card > details p { margin: 6px 0; }
+  .card > details h3 { font-size: 14px; color: var(--ink); margin: 16px 0 4px; }
+  .card > details ul { margin: 4px 0; padding-left: 18px; }
+  .card > details li { margin: 4px 0; }
+  .card > details .eq { background: var(--bg); color: var(--ink); border-radius: 12px; padding: 10px 12px; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+  .card > details .def { font-size: 12px; }
+  .card > details b { color: var(--ink); }
+
   /* 계산 실패 창: 닫기 전까지 그대로, 닫으면 오른쪽 아래 작은 표시로 남는다 */
   .fail-dlg { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .4); }
-  .fail-box { width: 100%; max-width: 480px; max-height: 85vh; overflow: auto; background: var(--surface); color: var(--ink); border: 2px solid var(--full); border-radius: 12px; padding: 16px 18px; box-shadow: 0 12px 32px rgba(0, 0, 0, .3); }
-  .fail-box h3 { margin: 0 0 8px; font-size: 16px; color: var(--full); }
-  .fail-box p { margin: 6px 0; font-size: 13.5px; }
-  .fail-box ul { margin: 6px 0; padding-left: 18px; font-size: 13.5px; }
+  .fail-box { width: 100%; max-width: 480px; max-height: 85vh; overflow: auto; background: var(--surface); color: var(--ink); border: 2px solid var(--full); border-radius: 20px; padding: 16px; box-shadow: 0 12px 32px rgba(0, 0, 0, .3); }
+  .fail-box h3 { margin: 0 0 8px; font-size: 16px; }
+  .fail-box p, .fail-box ul { margin: 6px 0; font-size: 13px; line-height: 20px; }
+  .fail-box ul { padding-left: 18px; }
   .fail-box li { margin: 3px 0; overflow-wrap: anywhere; }
   .fail-box .btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
-  .fail-badge { position: fixed; right: 16px; bottom: 16px; z-index: 40; background: var(--full); border-color: var(--full); color: #fff; border-radius: 999px; padding: 6px 14px; font-size: 13px; box-shadow: 0 2px 10px rgba(0, 0, 0, .25); }
+  .fail-badge { position: fixed; right: 12px; bottom: 16px; z-index: 40; background: var(--full-fill); border-color: var(--full-fill); color: #fff; border-radius: 999px; box-shadow: 0 2px 10px rgba(0, 0, 0, .25); }
   .fail-dlg[hidden], .fail-badge[hidden] { display: none; }
-  /* ---- v3 베타: 질환별 안내 */
-  .beta { font-size: 12px; font-weight: 700; background: var(--accent); color: #fff; border-radius: 6px; padding: 1px 7px; vertical-align: 3px; margin-left: 4px; }
-  select { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
-  h3.lh { font-size: 14px; margin: 18px 0 2px; }
-  ol.hl > li.dim .name { color: var(--muted); }
-  .eff.move { font-weight: 500; color: var(--muted); }
-  .tag.call { background: var(--full); color: #fff; } .tag.msg { background: var(--low-bg); color: var(--low); }
-  .detail { font-size: 12.5px; margin-top: 6px; cursor: default; }
-  .detail > div { margin-top: 4px; }
-  .detail ul { margin: 2px 0 4px; padding-left: 18px; }
-  .detail ul li { margin: 2px 0; overflow-wrap: anywhere; }
-  .detail li.blk { color: var(--ink); } .detail li { color: var(--muted); }
-  .detail summary { cursor: pointer; }
-  a.tel { display: inline-block; font-weight: 700; text-decoration: none; border: 1px solid var(--accent); border-radius: 8px; padding: 4px 10px; }
-  .pin.t-check { border-style: dashed; border-color: #1d1d1b; } .pin.t-no { opacity: .35; }
+
   /* 사전 연락 창: 둥근 직사각형, 바탕만 반투명(글자는 선명하게). 확인을 누르면 왼쪽 아래 작은 표시로 부드럽게 줄고, '자세히 보기'를 누르면 다시 커진다
      바탕 불투명도는 --glass: 뒤에 무엇이 있어도 본문 글자 대비가 7:1을 넘게(밝은 화면 70%, 어두운 화면 82%). 흐림은 12px */
   .call-win { position: fixed; left: 12px; bottom: 16px; z-index: 45; width: min(440px, calc(100vw - 24px)); max-height: 70vh; overflow: auto;
-    border-radius: 18px; padding: 14px 16px; border: 2px solid var(--full); background: var(--glass); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
+    border-radius: 20px; padding: 16px; border: 2px solid var(--full); background: var(--glass); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 10px 30px rgba(0, 0, 0, .24);
     transform-origin: left bottom; transition: opacity .28s ease, transform .28s cubic-bezier(.2, .8, .2, 1), visibility 0s; }
   .call-win.min { opacity: 0; transform: scale(.2); visibility: hidden; pointer-events: none; transition: opacity .28s ease, transform .28s cubic-bezier(.4, 0, .2, 1), visibility 0s .28s; }
-  .call-win h3 { margin: 0 0 2px; font-size: 15px; color: var(--ink); }
-  .call-win .who { font-weight: 700; overflow-wrap: anywhere; }
-  .call-win ul { margin: 6px 0; padding-left: 18px; font-size: 14px; }
-  .call-win li { margin: 3px 0; overflow-wrap: anywhere; }
-  .call-win .btns { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 10px; }
-  .call-win a.primary { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; padding: 0 14px; border-radius: 10px; background: #c2352d; color: #fff; text-decoration: none; font-weight: 700; white-space: nowrap; }
-  .call-pill { position: fixed; left: 12px; bottom: 16px; z-index: 44; max-width: calc(100vw - 150px); display: inline-flex; align-items: center; gap: 8px; min-height: 44px; background: #c2352d; border-color: #c2352d; color: #fff; border-radius: 999px; padding: 0 14px; font-size: 13px; box-shadow: 0 2px 10px rgba(0, 0, 0, .25);
+  .call-win h3 { margin: 0 0 4px; font-size: 16px; line-height: 24px; }
+  .call-win .who { font-size: 13px; line-height: 18px; font-weight: 500; overflow-wrap: anywhere; }
+  .call-win ul { margin: 8px 0 12px; padding: 0; list-style: none; }
+  .call-win li { margin: 4px 0; overflow-wrap: anywhere; }
+  .call-pill { position: fixed; left: 12px; bottom: 16px; z-index: 44; max-width: calc(100vw - 150px); gap: 8px; min-height: 44px; padding: 0 14px; background: var(--full-fill); border-color: var(--full-fill); color: #fff; border-radius: 999px; box-shadow: 0 2px 10px rgba(0, 0, 0, .25);
     transition: opacity .2s ease .14s, transform .2s ease .14s, visibility 0s; }
   .call-pill span { overflow: hidden; text-overflow: ellipsis; }
-  .call-pill b { text-decoration: underline; flex: none; }
+  .call-pill b { text-decoration: underline; font-weight: 500; flex: none; }
   .call-pill.off { opacity: 0; transform: scale(.8); visibility: hidden; pointer-events: none; transition: opacity .12s ease, transform .12s ease, visibility 0s .12s; }
   .call-win[hidden], .call-pill[hidden] { display: none; }
-  @media (prefers-reduced-motion: reduce) { .call-win, .call-win.min, .call-pill, .call-pill.off { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .call-win, .call-win.min, .call-pill, .call-pill.off, .quota .q-fill { transition: none; } }
   @media (prefers-reduced-transparency: reduce) { .call-win { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; } }
-  /* 손가락으로 누르는 곳은 44px 이상, 글자는 12px 이상 */
-  button, select, input[type=search] { min-height: 44px; }
-  a.tel { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; }
-  .acts { display: flex; flex-wrap: wrap; gap: 8px; }
-  details > summary { padding: 12px 0; }
-  .tag { font-size: 12px; }
-  table.dist td small { font-size: 12px; }
-  /* 휴대폰: 의심 질환 → 출발지 → 비교 → 순위를 먼저, 지도는 그 다음, 거리 비교·계산 방법은 맨 아래 */
+
+  /* 휴대폰: 의심 질환 → 출발지 → 추천 → 순위를 먼저, 지도는 그 다음, 거리 비교·사용량·계산 방법은 맨 아래 */
   @media (max-width: 880px) {
+    .layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
     .layout > div:first-child { display: contents; }
-    .layout > div:first-child > section { order: 1; }
-    .mapcol { order: 2; }
+    .layout > div:first-child > * { order: 1; margin-bottom: 0; }
+    .mapcol { order: 2; position: static; }
     .layout > div:first-child > .last { order: 3; }
+    #map { height: 380px; }
   }
 </style>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=42a491bd43887127ca6b4bf69b731aaf&libraries=services&autoload=false"></script>
@@ -171,46 +219,45 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>골든타임 경로 <span class="beta">v3 베타</span></h1>
-    <p class="sub">의심 질환을 받아 줄 수 있다고 알린 응급실 중에서, 도착했을 때 받아줄 가능성까지 계산해 추천해요 · <a href="./">수집 현황판</a> · <a href="app.html">지금 쓰는 웹앱(v2)</a></p>
+    <h1>골든타임 경로 <span class="tag accent">v3 베타</span></h1>
+    <p class="sub">의심 질환을 받아 줄 수 있다고 알린 응급실 중에서 추천해요<br><a href="./">수집 현황판</a> · <a href="app.html">웹앱 v2</a></p>
     <p class="warn"><b>교육·탐구용이에요.</b> 실제 응급 상황에서는 바로 119에 신고하세요.</p>
   </header>
 
   <div class="layout">
     <div>
       <section class="card">
-        <h2><label for="disease">의심 질환</label></h2>
+        <h2><span class="step">1</span><label for="disease">의심 질환</label></h2>
         <select id="disease" aria-describedby="diseaseInfo"></select>
+        <div class="stats" id="diseaseStats"></div>
         <p class="hint" id="diseaseInfo"></p>
-        <p class="warn" id="diseaseWarn" hidden><b>심정지·중증외상이 의심되면 직접 옮기지 말고 바로 119에 신고하세요.</b> 119 구급대가 이송 병원을 정해요.<br><a class="tel" href="tel:119" style="margin-top:6px;background:var(--surface)">119 전화</a></p>
+        <p class="warn" id="diseaseWarn" hidden><b>심정지·중증외상이 의심되면 직접 옮기지 말고 바로 119에 신고하세요.</b> 119 구급대가 이송 병원을 정해요.<br><a class="btn danger" href="tel:119">119 전화</a></p>
       </section>
 
       <section class="card">
-        <h2>출발지</h2>
+        <h2><span class="step">2</span>출발지</h2>
+        <button type="button" class="primary wide" id="gps"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Zm0-9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg>현재 위치로 찾기</button>
         <form class="row" id="searchForm">
           <input type="search" id="q" placeholder="주소나 장소 이름 (예: 죽전역)" autocomplete="off" aria-label="주소나 장소 검색">
           <button type="submit">검색</button>
         </form>
         <ul id="places"></ul>
-        <div class="row" style="margin-top:8px">
-          <button type="button" id="gps">현재 위치</button>
-        </div>
         <p class="hint">지도를 눌러도 출발지가 정해져요. 출발지 좌표는 길찾기에만 쓰고 저장하지 않아요.</p>
       </section>
 
-      <section class="card" id="resultCard" hidden>
-        <h2>비교</h2>
+      <section class="result" id="resultCard" hidden aria-label="추천과 비교">
         <div class="compare" id="compare"></div>
         <p class="gain" id="gain"></p>
       </section>
 
       <section class="card">
-        <h2>추천 순위 <span class="meta" id="listMeta">(실효 도착 시간 순)</span></h2>
+        <h2>추천 순위</h2>
+        <p class="capt" id="listMeta">실효 도착 시간 순</p>
         <p class="status" id="status">불러오는 중…</p>
         <ol id="list" class="hl"></ol>
         <div id="checkBox" hidden>
           <h3 class="lh">확인이 필요한 곳 <span class="meta" id="checkMeta"></span></h3>
-          <p class="hint" style="margin-top:0">받아 줄지 공공데이터로 알 수 없어 확률을 붙이지 않았어요. 가까운 순서(도로 이동 시간)로 보여 줘요.</p>
+          <p class="hint" style="margin-top:2px">받아 줄지 공공데이터로 알 수 없어 확률을 붙이지 않았어요. 가까운 순서(도로 이동 시간)로 보여 줘요.</p>
           <ol id="checkList" class="hl"></ol>
         </div>
         <div id="noBox" hidden>
@@ -251,7 +298,7 @@
           <ul>
             <li><b>왜 '불가능'은 빼나요</b>: 같은 기록에서 '불가능'은 30분 뒤에도 99.5%가 그대로였어요.</li>
             <li><b>왜 메시지를 보나요</b>: 응급실 전체에 받기 어렵다는 메시지가 걸린 동안에도 병상 수가 0 이하인 때는 10.7%뿐이었어요. 병상 수만으로는 이런 거절을 알 수 없어요.</li>
-            <li><b>메시지를 고르는 규칙</b>: 그 질환 항목의 메시지는 공공데이터 코드로 정확히 찾아요. 응급실 메시지는 진료과 칸과 글 속 낱말로 '관련 있음'을 고르는데, 이것은 <b>정해 둔 규칙</b>이라 틀릴 수 있어요. 그래서 병원을 누르면 그 병원의 메시지를 모두 원문으로 보여 줘요(전화번호·환자 번호·이름은 가려요).</li>
+            <li><b>메시지를 고르는 규칙</b>: 그 질환 항목의 메시지는 공공데이터 코드로 정확히 찾아요. 응급실 메시지는 진료과 칸과 글 속 낱말로 '관련 있음'을 고르는데, 이것은 <b>정해 둔 규칙</b>이라 틀릴 수 있어요. 그래서 병원을 누르면 그 병원의 메시지를 모두 원문으로 보여 줘요.</li>
             <li><b>사전 연락 창</b>: 관련 메시지에 '사전 문의', '문의 후 이송', '수용 여부 확인' 같은 글이 있으면, 그 병원을 눌렀을 때 전화 연결 창을 띄워요. 확인을 누르면 왼쪽 아래 작은 표시로 부드럽게 줄고, '자세히 보기'를 누르면 다시 커져요. 창 바탕은 반투명이지만 뒤에 무엇이 있어도 글자가 또렷하게(대비 7:1 이상) 보이도록 밝은 화면 70%, 어두운 화면 82% 불투명으로 맞췄어요.</li>
             <li><b>길안내</b>: 병원을 누르면 나오는 '카카오맵 길안내'는 카카오맵을 새 창으로 열어요. 병원 이름과 좌표만 넘기고, 출발지는 넘기지 않아요.</li>
             <li><b>질환 정보가 없는 경우</b>: 심정지·중증외상·골절은 공공데이터에 병원별 수용 가능 표시가 없어요. 병상과 메시지(글 속 'CPR', '외상', '골절')만으로 계산하니, 받아 줄 수 있다는 뜻이 아니에요.</li>
@@ -316,11 +363,11 @@
       <div class="legend">
         <span><span class="dot" style="background:var(--ok)"></span>병상 3개 이상</span>
         <span><span class="dot" style="background:var(--low)"></span>1~2개</span>
-        <span><span class="dot" style="background:var(--full)"></span>0 이하(꽉 참)</span>
+        <span><span class="dot" style="background:var(--full-fill)"></span>0 이하(꽉 참)</span>
         <span><span class="dot" style="background:var(--stale)"></span>정보 없음·오래됨</span>
-        <span><span class="dot" style="background:var(--ok);border:1.5px dashed #1d1d1b"></span>점선 테두리: 확인 필요</span>
+        <span><span class="dot" style="background:var(--ok);border:1.5px dashed var(--ink)"></span>점선 테두리: 확인 필요</span>
         <span><span class="dot" style="background:var(--ok);opacity:.35"></span>흐림: 불가 표시</span>
-        <span><span class="ln" style="border-top:4px solid #2a63b8"></span>도로 경로</span>
+        <span><span class="ln" style="border-top:4px solid #1F4FD8"></span>도로 경로</span>
         <span><span class="ln" style="border-top:2px dashed #555550"></span>직선</span>
       </div>
       <footer>지도: 카카오맵 · 길찾기: 카카오모빌리티 · 병상·질환 표시·메시지: 국립중앙의료원 공공데이터</footer>
@@ -341,7 +388,7 @@
   <h3 id="callTitle">가기 전에 병원에 연락이 필요해요</h3>
   <div class="who" id="callName"></div>
   <ul id="callMsgs"></ul>
-  <div class="btns"><a class="primary" id="callTel">전화 연결</a><button type="button" id="callOk">확인</button></div>
+  <div class="acts"><a class="btn danger" id="callTel">전화 연결</a><button type="button" id="callOk">확인</button></div>
 </div>
 <button type="button" class="call-pill off" id="callPill" hidden></button>
 
@@ -418,10 +465,11 @@ function rejudge() {
   for (const h of ers) c[judge[h.id].tier]++;
   $('disease').disabled = !sev;
   $('diseaseWarn').hidden = !sev || !['arrest', 'trauma'].includes(disease.id);
-  $('diseaseInfo').innerHTML = !sev
+  $('diseaseStats').innerHTML = !sev ? '' :
+    `<span class="tag ok">${disease.items.length ? '가능 확인' : '막는 메시지 없음'} ${c.ok}곳</span><span class="tag low">확인 필요 ${c.check}곳</span><span class="tag full">불가 표시 ${c.no}곳</span>`;
+  $('diseaseInfo').textContent = !sev
     ? '질환 표시·메시지를 불러오지 못했어요. 지금은 응급실 병상만으로 계산해요(v2와 같아요).'
-    : esc(disease.items.length ? `공공데이터 항목: ${disease.items.map(itemLabel).join(' · ')}` : disease.note || '질환을 고르지 않으면 응급실 병상과 응급실 전체 메시지만으로 계산해요.') +
-      `<br>지금 응급실 ${ers.length}곳 중 <b>${disease.items.length ? '가능 확인' : '막는 메시지 없음'} ${c.ok}곳</b> · 확인 필요 ${c.check}곳 · 불가 표시 ${c.no}곳`;
+    : disease.items.length ? `공공데이터 항목: ${disease.items.map(itemLabel).join(' · ')}` : disease.note || '질환을 고르지 않으면 응급실 병상과 응급실 전체 메시지만으로 계산해요.';
 }
 
 // 페이지를 열어 둔 채 시간이 지나면 병상 정보·통계표·질환 표시를 새로 받는다 (실패하면 갖고 있던 것으로 계산하고 상태 줄에 알린다)
@@ -808,15 +856,18 @@ function render() {
   const checks = view.rows.filter((r) => judge[r.id].tier === 'check');
   const nos = view.rows.filter((r) => judge[r.id].tier === 'no');
   const none = (k) => `<div class="cmp"><div class="k">${k}</div><div class="n">해당 없음</div></div>`;
-  const effBox = (k, r) => (r
-    ? `<div class="cmp best"><div class="k">${k}</div><div class="v">${min1(r.effectiveMin)}<small>분</small></div><div class="n">${esc(r.name)}</div><div class="meta">이동 ${min1(r.travelMin)}분 · 거절 ${pct(r.pReject)}</div></div>`
-    : none(k));
+  const tierChip = (id) => { const t = judge[id].tier; return `<span class="tag ${t === 'ok' ? 'ok' : t === 'check' ? 'low' : 'full'}">${tierName(t)}</span>`; };
+  // 추천 카드: 병원 이름 · 실효 도착 시간(크게) · 길안내와 전화
+  const hero = (k, r) => (r
+    ? `<div class="cmp best"><span class="tag accent">${k}</span><div class="hero"><div><div class="hname">${esc(r.name)}</div>` +
+      `<div class="meta">이동 ${min1(r.travelMin)}분 · 도착 시 거절 확률 ${pct(r.pReject)}</div></div><div class="htime">${min1(r.effectiveMin)}<small>분</small></div></div>${actsHtml(byId[r.id])}</div>`
+    : `<div class="cmp best"><span class="tag gray">${k}</span><div class="n">해당 없음</div></div>`);
   const moveBox = (k, r) => (r
-    ? `<div class="cmp"><div class="k">${k}</div><div class="v">${min1(r.travelMin)}<small>분 이동</small></div><div class="n">${esc(r.name)}</div><div class="meta">${tierName(judge[r.id].tier)}</div></div>`
+    ? `<div class="cmp"><div class="k">${k}</div><div class="v">${min1(r.travelMin)}분 이동</div><div class="n">${esc(r.name)}</div>${tierChip(r.id)}</div>`
     : none(k));
   const known = hasItems();
-  $('listMeta').textContent = known ? '(가능이 확인된 곳 · 실효 도착 시간 순)' : '(병상 기준 · 실효 도착 시간 순)';
-  $('compare').innerHTML = effBox(known ? '추천 (가능 확인된 곳)' : '추천 (병상 기준)', best) + moveBox('가장 가까운 곳', nearest) + moveBox('확인 필요한 곳 중 가장 가까운 곳', checks[0]);
+  $('listMeta').textContent = known ? '가능이 확인된 곳 · 실효 도착 시간 순' : '병상 기준 · 실효 도착 시간 순';
+  $('compare').innerHTML = hero(known ? '추천 · 가능 확인된 곳' : '추천 · 병상 기준', best) + moveBox('가장 가까운 곳', nearest) + moveBox('확인 필요한 곳 중 가장 가까운 곳', checks[0]);
 
   const say = [];
   if (!best) say.push(`계산한 범위 안에 ${known ? '가능이 확인된' : '막는 메시지가 없는'} 응급실이 없어요. 아래 '확인이 필요한 곳'에 전화로 확인하거나 119에 신고하세요.`);
@@ -837,7 +888,7 @@ function render() {
   const item = (r, head, meta, cls = '') => `<li data-id="${esc(r.id)}"${cls ? ` class="${cls}"` : ''}>
       <div class="top"><span class="name">${head}</span>${meta}</div>
       <div class="meta">직선 ${km(r.straightM)} · 도로 ${km(r.roadM)}</div>
-      <div>${tagsHtml(r.id, since)}</div>
+      <div class="tags">${tagsHtml(r.id, since)}</div>
       <div class="detail" hidden></div>
     </li>`;
   const more = (n, shown) => (n > shown ? `· 가까운 ${shown}곳만 보여 줘요(모두 ${n}곳)` : `· ${n}곳`);
@@ -856,9 +907,18 @@ function render() {
 
 // 병원을 눌렀을 때 펼치는 내용: 거절되면 갈 곳 · 판단 까닭 · 메시지 원문 · 전화
 const msgKind = (m) => (m.c === 'Y000' ? m.d || '응급실' : SEVERE[MSG_TO_SEVERE[m.c]] ?? m.c);
+// 버튼에 넣는 아이콘 (글자색을 따라간다)
+const svgIcon = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+const IC = {
+  navi: svgIcon('M3 11 22 2 13 21 11 13 3 11Z'),
+  phone: svgIcon('M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z'),
+};
 const telHref = (tel) => `tel:${String(tel).replace(/[^0-9+]/g, '')}`;
 // 카카오맵 길찾기 바로가기: /link/to/이름,위도,경도 (목적지만 넘긴다. 출발지는 카카오맵이 사용자의 현재 위치로 정한다)
 const naviHref = (h) => `https://map.kakao.com/link/to/${encodeURIComponent(String(h.name).replace(/[,/]/g, ' '))},${h.lat},${h.lon}`;
+// 길안내 · 전화 버튼
+const actsHtml = (h, telLabel = '전화') => `<div class="acts"><a class="btn primary" href="${esc(naviHref(h))}" target="_blank" rel="noopener noreferrer">${IC.navi}카카오맵 길안내</a>` +
+  (h.tel ? `<a class="btn" href="${telHref(h.tel)}">${IC.phone}${esc(telLabel)}</a>` : '') + '</div>';
 function detailHtml(r) {
   const h = byId[r.id], j = judge[r.id];
   const out = [];
@@ -868,8 +928,7 @@ function detailHtml(r) {
   const line = (m) => `<li${m.block ? ' class="blk"' : ''}>${m.contact ? '<span class="tag call">사전 연락</span>' : ''}<span class="meta">${esc(msgKind(m).replace(/^([^\[].*)$/, '[$1]'))}</span> ${esc(m.t)} <span class="meta">(${esc(m.s)} ~ ${esc(m.e)})</span></li>`;
   if (j.rel.length) out.push(`<div><b>관련 메시지 ${j.rel.length}건</b><ul>${j.rel.map(line).join('')}</ul></div>`);
   if (j.other.length) out.push(`<details><summary>이 병원의 다른 메시지 ${j.other.length}건</summary><ul>${j.other.map(line).join('')}</ul></details>`);
-  out.push(`<div class="acts"><a class="tel" href="${esc(naviHref(h))}" target="_blank" rel="noopener noreferrer">카카오맵 길안내</a>` +
-    (h.tel ? `<a class="tel" href="${telHref(h.tel)}">전화 ${esc(h.tel)}</a>` : '') + '</div>');
+  out.push(actsHtml(h, h.tel));
   return out.join('');
 }
 
@@ -889,8 +948,8 @@ function showCall(id) {
   $('callName').textContent = h.name;
   $('callMsgs').innerHTML = j.contact.map((m) => `<li>${esc(m.t)}</li>`).join('');
   $('callTel').hidden = !h.tel;
-  if (h.tel) { $('callTel').href = telHref(h.tel); $('callTel').textContent = `전화 연결 ${h.tel}`; }
-  $('callPill').innerHTML = `<span>📞 사전 연락 필요 · ${esc(h.name)}</span><b>자세히 보기</b>`;
+  if (h.tel) { $('callTel').href = telHref(h.tel); $('callTel').innerHTML = IC.phone + esc(`전화 연결 ${h.tel}`); }
+  $('callPill').innerHTML = `${IC.phone}<span>사전 연락 필요 · ${esc(h.name)}</span><b>자세히 보기</b>`;
   callState('open');
 }
 $('callOk').addEventListener('click', () => { callState('min'); $('callPill').focus({ preventScroll: true }); });
@@ -957,7 +1016,7 @@ async function select(id) {
       for (let i = 0; i + 1 < v.length; i += 2) path.push(new kakao.maps.LatLng(v[i + 1], v[i]));
     }
     if (routeLine) routeLine.setMap(null);
-    routeLine = new kakao.maps.Polyline({ path, strokeWeight: 6, strokeColor: '#2a63b8', strokeOpacity: 0.85 });
+    routeLine = new kakao.maps.Polyline({ path, strokeWeight: 6, strokeColor: '#1F4FD8', strokeOpacity: 0.85 });
     routeLine.setMap(map);
     const bounds = new kakao.maps.LatLngBounds();
     path.forEach((p) => bounds.extend(p));
