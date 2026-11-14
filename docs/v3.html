@@ -12,19 +12,19 @@
   :root {
     --bg: #f6f6f3; --surface: #ffffff; --ink: #1d1d1b; --muted: #6b6a64; --line: #e3e2dc;
     --full: #d6453d; --low: #e39b1b; --ok: #2f9e66; --stale: #9a9993; --accent: #2a63b8;
-    --full-bg: #fbe9e7; --low-bg: #fcf1dc; --ok-bg: #e4f3ea; --accent-bg: #e6eefa; --glass: rgba(255, 255, 255, .5);
+    --full-bg: #fbe9e7; --low-bg: #fcf1dc; --ok-bg: #e4f3ea; --accent-bg: #e6eefa; --glass: rgba(255, 255, 255, .7);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #161615; --surface: #1f1f1d; --ink: #ecebe6; --muted: #a3a29b; --line: #34332f;
       --full: #ef6a5f; --low: #f0b443; --ok: #4cbc84; --stale: #7b7a74; --accent: #6b9ae6;
-      --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f; --accent-bg: #1c2a40; --glass: rgba(31, 31, 29, .5);
+      --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f; --accent-bg: #1c2a40; --glass: rgba(31, 31, 29, .82);
     }
   }
   :root[data-theme="dark"] {
     --bg: #161615; --surface: #1f1f1d; --ink: #ecebe6; --muted: #a3a29b; --line: #34332f;
     --full: #ef6a5f; --low: #f0b443; --ok: #4cbc84; --stale: #7b7a74; --accent: #6b9ae6;
-    --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f; --accent-bg: #1c2a40; --glass: rgba(31, 31, 29, .5);
+    --full-bg: #3a201d; --low-bg: #3a2e16; --ok-bg: #18301f; --accent-bg: #1c2a40; --glass: rgba(31, 31, 29, .82);
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--ink); }
@@ -131,17 +131,39 @@
   .detail summary { cursor: pointer; }
   a.tel { display: inline-block; font-weight: 700; text-decoration: none; border: 1px solid var(--accent); border-radius: 8px; padding: 4px 10px; }
   .pin.t-check { border-style: dashed; border-color: #1d1d1b; } .pin.t-no { opacity: .35; }
-  /* 사전 연락 창: 둥근 직사각형, 바탕만 반투명(글자는 선명하게). 확인을 누르면 5초 뒤 작아지고, 작은 표시를 누르면 다시 펴진다 */
-  .call-win { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 45; width: min(440px, calc(100vw - 24px)); max-height: 70vh; overflow: auto;
-    border-radius: 18px; padding: 14px 16px; border: 2px solid var(--full); background: var(--glass); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 10px 30px rgba(0, 0, 0, .28); }
-  .call-win h3 { margin: 0 0 2px; font-size: 15px; color: var(--full); }
+  /* 사전 연락 창: 둥근 직사각형, 바탕만 반투명(글자는 선명하게). 확인을 누르면 왼쪽 아래 작은 표시로 부드럽게 줄고, '자세히 보기'를 누르면 다시 커진다
+     바탕 불투명도는 --glass: 뒤에 무엇이 있어도 본문 글자 대비가 7:1을 넘게(밝은 화면 70%, 어두운 화면 82%). 흐림은 12px */
+  .call-win { position: fixed; left: 12px; bottom: 16px; z-index: 45; width: min(440px, calc(100vw - 24px)); max-height: 70vh; overflow: auto;
+    border-radius: 18px; padding: 14px 16px; border: 2px solid var(--full); background: var(--glass); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
+    transform-origin: left bottom; transition: opacity .28s ease, transform .28s cubic-bezier(.2, .8, .2, 1), visibility 0s; }
+  .call-win.min { opacity: 0; transform: scale(.2); visibility: hidden; pointer-events: none; transition: opacity .28s ease, transform .28s cubic-bezier(.4, 0, .2, 1), visibility 0s .28s; }
+  .call-win h3 { margin: 0 0 2px; font-size: 15px; color: var(--ink); }
   .call-win .who { font-weight: 700; overflow-wrap: anywhere; }
-  .call-win ul { margin: 6px 0; padding-left: 18px; font-size: 13.5px; }
+  .call-win ul { margin: 6px 0; padding-left: 18px; font-size: 14px; }
   .call-win li { margin: 3px 0; overflow-wrap: anywhere; }
   .call-win .btns { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 10px; }
-  .call-win a.primary { font-size: 14px; padding: 8px 12px; border-radius: 8px; background: var(--full); color: #fff; text-decoration: none; font-weight: 700; white-space: nowrap; }
-  .call-pill { position: fixed; left: 16px; bottom: 16px; z-index: 40; max-width: calc(100vw - 150px); overflow: hidden; text-overflow: ellipsis; background: var(--full); border-color: var(--full); color: #fff; border-radius: 999px; padding: 6px 14px; font-size: 13px; box-shadow: 0 2px 10px rgba(0, 0, 0, .25); }
+  .call-win a.primary { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; padding: 0 14px; border-radius: 10px; background: #c2352d; color: #fff; text-decoration: none; font-weight: 700; white-space: nowrap; }
+  .call-pill { position: fixed; left: 12px; bottom: 16px; z-index: 44; max-width: calc(100vw - 150px); display: inline-flex; align-items: center; gap: 8px; min-height: 44px; background: #c2352d; border-color: #c2352d; color: #fff; border-radius: 999px; padding: 0 14px; font-size: 13px; box-shadow: 0 2px 10px rgba(0, 0, 0, .25);
+    transition: opacity .2s ease .14s, transform .2s ease .14s, visibility 0s; }
+  .call-pill span { overflow: hidden; text-overflow: ellipsis; }
+  .call-pill b { text-decoration: underline; flex: none; }
+  .call-pill.off { opacity: 0; transform: scale(.8); visibility: hidden; pointer-events: none; transition: opacity .12s ease, transform .12s ease, visibility 0s .12s; }
   .call-win[hidden], .call-pill[hidden] { display: none; }
+  @media (prefers-reduced-motion: reduce) { .call-win, .call-win.min, .call-pill, .call-pill.off { transition: none; } }
+  @media (prefers-reduced-transparency: reduce) { .call-win { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+  /* 손가락으로 누르는 곳은 44px 이상, 글자는 12px 이상 */
+  button, select, input[type=search] { min-height: 44px; }
+  a.tel { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; }
+  details > summary { padding: 12px 0; }
+  .tag { font-size: 12px; }
+  table.dist td small { font-size: 12px; }
+  /* 휴대폰: 의심 질환 → 출발지 → 비교 → 순위를 먼저, 지도는 그 다음, 거리 비교·계산 방법은 맨 아래 */
+  @media (max-width: 880px) {
+    .layout > div:first-child { display: contents; }
+    .layout > div:first-child > section { order: 1; }
+    .mapcol { order: 2; }
+    .layout > div:first-child > section.last { order: 3; }
+  }
 </style>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=42a491bd43887127ca6b4bf69b731aaf&libraries=services&autoload=false"></script>
 </head>
@@ -167,7 +189,7 @@
         <h2><label for="disease">의심 질환</label></h2>
         <select id="disease" aria-describedby="diseaseInfo"></select>
         <p class="hint" id="diseaseInfo"></p>
-        <p class="warn" id="diseaseWarn" hidden><b>심정지·중증외상이 의심되면 직접 옮기지 말고 바로 119에 신고하세요.</b> 119 구급대가 이송 병원을 정해요.</p>
+        <p class="warn" id="diseaseWarn" hidden><b>심정지·중증외상이 의심되면 직접 옮기지 말고 바로 119에 신고하세요.</b> 119 구급대가 이송 병원을 정해요.<br><a class="tel" href="tel:119" style="margin-top:6px;background:var(--surface)">119 전화</a></p>
       </section>
 
       <section class="card">
@@ -204,14 +226,14 @@
         </div>
       </section>
 
-      <section class="card" id="distCard" hidden>
+      <section class="card last" id="distCard" hidden>
         <h2>거리 비교: 직선 · 도로</h2>
         <div class="dsum" id="distSummary"></div>
         <div class="dist-wrap"><table class="dist" id="distTable"></table></div>
         <p class="hint">직선 = 두 점을 곧게 이은 거리. 도로 = 카카오 길찾기가 고른 실제 경로의 길이. 작은 숫자는 가까운 순위예요. 줄을 누르면 지도에 직선과 도로 경로가 함께 그려져요.</p>
       </section>
 
-      <section class="card">
+      <section class="card last">
         <details>
           <summary>계산 방법과 한계</summary>
 
@@ -228,7 +250,7 @@
             <li><b>왜 '불가능'은 빼나요</b>: 같은 기록에서 '불가능'은 30분 뒤에도 99.5%가 그대로였어요.</li>
             <li><b>왜 메시지를 보나요</b>: 응급실 전체에 받기 어렵다는 메시지가 걸린 동안에도 병상 수가 0 이하인 때는 10.7%뿐이었어요. 병상 수만으로는 이런 거절을 알 수 없어요.</li>
             <li><b>메시지를 고르는 규칙</b>: 그 질환 항목의 메시지는 공공데이터 코드로 정확히 찾아요. 응급실 메시지는 진료과 칸과 글 속 낱말로 '관련 있음'을 고르는데, 이것은 <b>정해 둔 규칙</b>이라 틀릴 수 있어요. 그래서 병원을 누르면 그 병원의 메시지를 모두 원문으로 보여 줘요(전화번호·환자 번호·이름은 가려요).</li>
-            <li><b>사전 연락 창</b>: 관련 메시지에 '사전 문의', '문의 후 이송', '수용 여부 확인' 같은 글이 있으면, 그 병원을 눌렀을 때 전화 연결 창을 띄워요. 확인을 누르면 5초 뒤 작아지고, 왼쪽 아래 작은 표시를 누르면 다시 펴져요.</li>
+            <li><b>사전 연락 창</b>: 관련 메시지에 '사전 문의', '문의 후 이송', '수용 여부 확인' 같은 글이 있으면, 그 병원을 눌렀을 때 전화 연결 창을 띄워요. 확인을 누르면 왼쪽 아래 작은 표시로 부드럽게 줄고, '자세히 보기'를 누르면 다시 커져요. 창 바탕은 반투명이지만 뒤에 무엇이 있어도 글자가 또렷하게(대비 7:1 이상) 보이도록 밝은 화면 70%, 어두운 화면 82% 불투명으로 맞췄어요.</li>
             <li><b>질환 정보가 없는 경우</b>: 심정지·중증외상·골절은 공공데이터에 병원별 수용 가능 표시가 없어요. 병상과 메시지(글 속 'CPR', '외상', '골절')만으로 계산하니, 받아 줄 수 있다는 뜻이 아니에요.</li>
             <li><b>'정보미제공'은 추측하지 않아요</b>: 응급실의 약 60%(작은 병원일수록 많음)는 질환 표시를 내지 않아요. 수술실·장비 정보로 짐작하지 않고 '확인 필요'로 둬요.</li>
             <li><b>후보 고르기</b>: 가까운 '가능 확인' 병원이 6곳보다 적으면 더 먼 '가능 확인' 병원을 가까운 순서로 채워요. 드문 질환은 먼 병원이 나올 수 있어요.</li>
@@ -318,7 +340,7 @@
   <ul id="callMsgs"></ul>
   <div class="btns"><a class="primary" id="callTel">전화 연결</a><button type="button" id="callOk">확인</button></div>
 </div>
-<button type="button" class="call-pill" id="callPill" hidden aria-label="사전 연락 안내 다시 펴기"></button>
+<button type="button" class="call-pill off" id="callPill" hidden></button>
 
 <script type="module">
 import { makeRejectProb, STALE_MIN } from './engine/model.mjs';
@@ -338,7 +360,6 @@ const DEPTH = 3;
 const LIVE_CONC = 6;         // 응급실 사이 실시간 길찾기를 동시에 몇 개씩 부를지
 const CACHE_MS = 5 * 60e3;   // 길찾기 결과는 5분 동안 다시 쓴다(길찾기 횟수 아끼기)
 const SEV_MAX_AGE_MIN = 24 * 60; // 질환 표시가 이보다 오래되면 쓰지 않는다(병상만으로 계산)
-const CALL_SHRINK_MS = 5000;     // 사전 연락 창: 확인을 누른 뒤 작아지기까지
 const SHOW = { ok: 10, check: 8, no: 5 }; // 목록에 보여 줄 병원 수
 
 const $ = (id) => document.getElementById(id);
@@ -749,6 +770,8 @@ async function setOrigin(o) {
     if (model.pairs < 5000) notes.push('거절 통계 기록이 아직 적어 확률이 거칠어요.');
     setStatus(`${o.label} 출발 · ${sev ? disease.label : '병상만'} · ${tierName('ok')} ${results.length}곳 계산 · 확인 필요 ${n.check}곳 · 불가 표시 ${n.no}곳 · ${notes.join(' ')}`);
     render();
+    // 휴대폰처럼 좁은 화면에서는 결과(비교 카드)가 보이게 내려 준다
+    if (matchMedia('(max-width: 880px)').matches) $('resultCard').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
     select((results[0] ?? rows.find((r) => judge[r.id].tier === 'check') ?? rows[0]).id);
   } catch (e) {
     results = null; view = null;
@@ -845,37 +868,27 @@ function detailHtml(r) {
 }
 
 // ---------- 사전 연락 창: 관련 메시지에 '사전 연락'이 필요한 글이 있는 병원을 눌렀을 때만 띄운다
-// 확인을 누르면 CALL_SHRINK_MS 뒤 작은 표시로 줄고, 작은 표시를 누르면 다시 펴진다
-let callTimer = null, callFor = null;
-function hideCall() {
-  clearInterval(callTimer); callTimer = null; callFor = null;
-  $('callWin').hidden = true; $('callPill').hidden = true;
+// 상태: none(없음) · open(창이 펴짐) · min(작은 표시). 확인 → min, '자세히 보기' → open. 줄고 커지는 움직임은 CSS가 맡는다
+let callFor = null;
+function callState(st) {
+  $('callWin').hidden = st === 'none'; $('callPill').hidden = st === 'none';
+  $('callWin').classList.toggle('min', st === 'min');
+  $('callPill').classList.toggle('off', st !== 'min');
 }
+function hideCall() { callFor = null; callState('none'); }
 function showCall(id) {
   const j = judge[id], h = byId[id];
   if (!j?.contact.length) return hideCall();
-  clearInterval(callTimer); callTimer = null; callFor = id;
+  callFor = id;
   $('callName').textContent = h.name;
   $('callMsgs').innerHTML = j.contact.map((m) => `<li>${esc(m.t)}</li>`).join('');
   $('callTel').hidden = !h.tel;
   if (h.tel) { $('callTel').href = telHref(h.tel); $('callTel').textContent = `전화 연결 ${h.tel}`; }
-  $('callOk').disabled = false; $('callOk').textContent = '확인';
-  $('callPill').hidden = true; $('callWin').hidden = false;
+  $('callPill').innerHTML = `<span>📞 사전 연락 필요 · ${esc(h.name)}</span><b>자세히 보기</b>`;
+  callState('open');
 }
-$('callOk').addEventListener('click', () => {
-  let left = Math.round(CALL_SHRINK_MS / 1000);
-  const tick = () => { $('callOk').textContent = `확인했어요 · ${left}초 뒤 작아져요`; };
-  $('callOk').disabled = true; tick();
-  clearInterval(callTimer);
-  callTimer = setInterval(() => {
-    if (--left > 0) return tick();
-    clearInterval(callTimer); callTimer = null;
-    $('callWin').hidden = true;
-    $('callPill').textContent = `📞 사전 연락 필요 · ${byId[callFor]?.name ?? ''}`;
-    $('callPill').hidden = false;
-  }, 1000);
-});
-$('callPill').addEventListener('click', () => { if (callFor) showCall(callFor); });
+$('callOk').addEventListener('click', () => { callState('min'); $('callPill').focus({ preventScroll: true }); });
+$('callPill').addEventListener('click', () => { if (!callFor) return; callState('open'); $('callOk').focus({ preventScroll: true }); });
 
 // 거리 비교: 직선 · 도로 거리 · 도로 시간
 function renderDist() {
