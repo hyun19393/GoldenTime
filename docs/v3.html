@@ -1053,6 +1053,12 @@ function render() {
     const g = nearest.effectiveMin - best.effectiveMin; // 개발자 모드 문장과 같은 기준: 0.5분 미만이면 '거의 같음'이라 따로 알리지 않는다
     short = jn.tier === 'ok' ? (g < 0.5 ? '' : `가장 가까운 ${nearest.name}보다 ${min1(g)}분 빨라요`)
       : `가장 가까운 ${nearest.name}${eun(nearest.name)} ${jn.tier === 'no' ? '지금 받을 수 없다고 표시돼 있어요' : '전화로 확인이 필요해요'}`;
+    // 개발자 모드와 같은 계산: 추천 병원보다 0.5분 넘게 가까운 '확인 필요' 병원이 있으면 줄어드는 도로 시간을 알린다 (11-16 결정, A안)
+    const c = checks[0];
+    if (c && c.travelMin < best.travelMin - 0.5) {
+      const n = min1(best.travelMin - c.travelMin);
+      short += (short ? '. ' : '') + (c.id === nearest.id && jn.tier === 'check' ? `전화로 받아 준다고 하면 ${n}분 더 빨리 갈 수 있어요` : `${c.name}에 전화해 받아 준다고 하면 ${n}분 더 빨리 갈 수 있어요`);
+    }
   }
   $('gain').innerHTML = `<span class="dev">${esc(say.join(' '))}</span>` + (short ? `<span class="user note ${best && nearest.id !== best.id && judge[nearest.id].tier !== 'ok' ? 'warnnote' : ''}">${esc(short)}</span>` : '');
   $('resultCard').hidden = false; $('listCard').hidden = false;
