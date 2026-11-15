@@ -6,8 +6,7 @@
 import { writeFileSync, mkdirSync, copyFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { loadSnapshots, loadSevereByKey } from './load.mjs';
-import { buildDiseaseModels } from '../engine/severe.mjs';
+import { loadSnapshots } from './load.mjs';
 import { buildModel } from '../engine/model.mjs';
 import { evaluateSplit } from '../engine/validate.mjs';
 
@@ -25,10 +24,6 @@ export function main(args = {}) {
   const check = evaluateSplit(rows);
   if (check) writeFileSync(join(OUT, 'validation.json'), JSON.stringify({ createdAt: new Date().toISOString(), ...check }));
 
-  // 질환별 통계표(engine/severe.mjs)는 데이터가 충분히 모인 뒤 다시 다듬어 켠다. 지금은 만들지 않는다.
-  if (args.severe) {
-    writeFileSync(join(OUT, 'model-severe.json'), JSON.stringify(buildDiseaseModels(rows, loadSevereByKey(join(DATA, 'severe')))));
-  }
 
   for (const f of ENGINE_FILES) copyFileSync(join('engine', f), join(OUT, 'engine', f));
 
