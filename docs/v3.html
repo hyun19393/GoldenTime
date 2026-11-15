@@ -132,6 +132,7 @@
   .eff.move { font-size: 13px; font-weight: 500; color: var(--muted); }
   .detail { font-size: 13px; line-height: 18px; margin-top: 10px; cursor: default; }
   .detail > * + * { margin-top: 8px; }
+  .detail > .acts + * { margin-top: 12px; }
   .detail ul, .detail ol.chain { margin: 4px 0 0; padding-left: 18px; }
   .detail ol.chain li { margin: 2px 0; }
   .detail .res { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
@@ -288,8 +289,9 @@
   .core { margin: 4px 0 0; padding: 14px 16px; border-radius: 16px; background: var(--accent-bg); }
   .core-h { margin: 0; font-size: 15px; line-height: 22px; font-weight: 700; color: var(--ink); }
   .core-b { margin: 4px 0 0; font-size: 13px; line-height: 19px; color: var(--muted); }
+  .legal { margin: 20px 0 8px; font-size: 12px; line-height: 17px; color: var(--muted); }
   /* 사용자 모드: 남는 글씨는 모두 13px 이상 */
-  body[data-mode="user"] :is(.copy, .warn, .hint, .capt, .meta, .tag, .legend, footer, #places li small) { font-size: 13px; line-height: 18px; }
+  body[data-mode="user"] :is(.copy, .warn, .hint, .capt, .meta, .tag, .legend, footer, .legal, #places li small) { font-size: 13px; line-height: 18px; }
   body[data-mode="user"] .tag { padding: 4px 10px; }
   body[data-mode="user"] .step { width: 24px; height: 24px; font-size: 13px; }
   .hwhy { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
@@ -319,7 +321,7 @@
 <script>try { if (localStorage.getItem('gt-mode') === 'dev') document.body.dataset.mode = 'dev'; } catch {}</script>
 <div class="wrap">
   <header class="topbar" id="topbar">
-    <p class="copy"><span class="dev">© 2025–2026 hyun19393. All rights reserved. 무단 복제·사용 금지 (저작권법 제136조: 7년 이하 징역 또는 1억 원 이하 벌금)</span><span class="user">© 2025–2026 hyun19393 · 무단 복제·사용 금지</span></p>
+    <p class="copy">© 2025–2026 hyun19393 · 무단 복제·사용 금지</p>
     <div class="tb-row">
       <h1>골든타임<span class="tag accent dev">v3 베타</span></h1>
       <div class="seg" id="modeSeg" role="radiogroup" aria-label="화면 모드">
@@ -500,6 +502,7 @@
     </div>
   </div>
   </main>
+  <p class="legal">© 2025–2026 hyun19393. All rights reserved. 무단 복제·사용 금지 (저작권법 제136조: 7년 이하 징역 또는 1억 원 이하 벌금)</p>
 </div>
 
 <div class="fail-dlg" id="failDlg" role="alertdialog" aria-modal="true" aria-labelledby="failTitle" hidden>
@@ -1091,7 +1094,7 @@ const actsHtml = (h, telLabel = '전화') => `<div class="acts"><a class="btn pr
   (h.tel ? `<a class="btn" href="${telHref(h.tel)}">${IC.phone}${esc(telLabel)}</a>` : '') + '</div>';
 function detailHtml(r) {
   const h = byId[r.id], j = judge[r.id];
-  const out = [];
+  const out = [actsHtml(h, h.tel)]; // 길안내·전화가 먼저 (펼친 내용이 길어도 바로 누를 수 있게)
   if (r.chain?.length > 1) out.push('<div class="dev"><b>여기서 받아 주지 않으면</b><ol class="chain">' + r.chain.slice(1).map((s) => `<li>${esc(s.name)} <span class="meta">${min1(s.travelMin)}분 더 · 거절 확률 ${pct(s.p)}</span></li>`).join('') +
     '</ol>' + (r.unresolved > 0.05 ? `<span class="meta">세 곳 모두 거절될 확률 ${pct(r.unresolved)}</span>` : '') + '</div>');
   if (j.tier !== 'ok') out.push(`<div><b>${tierName(j.tier)}</b>: ${esc(j.why.join(' · '))}</div>`);
@@ -1102,7 +1105,6 @@ function detailHtml(r) {
   const line = (m) => `<li${m.block ? ' class="blk"' : ''}>${m.contact ? '<span class="tag call">사전 연락</span>' : ''}<span class="meta">${esc(msgKind(m).replace(/^([^\[].*)$/, '[$1]'))}</span> ${esc(m.t)} <span class="meta">(${esc(m.s)} ~ ${esc(m.e)})</span></li>`;
   if (j.rel.length) out.push(`<div class="dev"><b>관련 메시지 ${j.rel.length}건</b><ul>${j.rel.map(line).join('')}</ul></div>`);
   if (j.other.length) out.push(`<details class="dev"><summary>이 병원의 다른 메시지 ${j.other.length}건</summary><ul>${j.other.map(line).join('')}</ul></details>`);
-  out.push(actsHtml(h, h.tel));
   return out.join('');
 }
 
@@ -1260,15 +1262,21 @@ $('gps').addEventListener('click', () => {
 function topAnchor() {
   if (scrollY < 4) return null;
   const tb = $('topbar').getBoundingClientRect().bottom;
-  let best = null;
   for (const y of [tb + 12, tb + (innerHeight - tb) * 0.25, tb + (innerHeight - tb) * 0.45]) for (const x of [innerWidth / 2, innerWidth / 4, innerWidth * 3 / 4]) {
     let el = document.elementFromPoint(x, y);
     const d = el?.closest('.dev, .user'); if (d) el = d.parentElement;
     const li = el?.closest('ol.hl > li');
     if (li) return { el: li, top: li.getBoundingClientRect().top }; // 병원 줄이 보이면 그 줄이 우선
-    best ??= el?.closest('.result, .card');
   }
-  return best && { el: best, top: best.getBoundingClientRect().top };
+  // 병원 줄이 안 보이면(예: 개발자 모드에만 있는 계산 방법을 보는 중): 두 모드에 모두 있는 칸 중
+  // 위쪽 막대 선에 걸치거나 그 위에 있는 가장 아래 칸. 화면 순서(CSS order)가 문서 순서와 달라도 되게 위치로 고른다.
+  let best = null, bestTop = -Infinity;
+  for (const el of document.querySelectorAll('ol.hl > li, .result, .card')) {
+    if (el.closest('.dev, .user')) continue;
+    const r = el.getBoundingClientRect();
+    if (r.height && r.top <= tb + 12 && r.top > bestTop) { best = el; bestTop = r.top; }
+  }
+  return best && { el: best, top: bestTop };
 }
 function setMode(mode, animate = true) {
   const a = topAnchor(); // 화면 전환 효과가 시작되기 전에 잡아야 한다 (효과 중에는 위치 찾기가 막힌다)
