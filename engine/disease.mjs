@@ -11,6 +11,8 @@
 //
 // 근거 (2026-11-01 12:20 ~ 11-14, 서울·인천·경기 152곳, 질환 표시 짝 약 290만 개)
 //   '가능' → 10분 뒤 '불가능' 0.0069%, 60분 뒤 0.0417% (도착까지 시간에 비례) → SEV_FLIP_PER_MIN
+//   2026-11-15 분석(10-25~11-15): 표시가 24시간 넘게 그대로이고 병상이 급히 줄지 않을 때는 60분 뒤 0.0213%(695/3,266,782),
+//   24시간 안에 바뀌었거나 30분 사이 병상이 5 이상 줄었을 때는 0.1666%(849/509,645) → SEV_FLIP. 시간 분할 검증에서 한 값보다 로그손실 7.5~8.6% 개선
 //   '불가능' → 30분 뒤에도 '불가능' 99.5%  → 지금 '불가능'이면 뺀다
 //   응급실 전체에 걸린 부정 메시지가 있는 동안 병상 0 이하는 10.7%뿐 → 병상 수만으로는 이런 거절을 알 수 없다
 import { SEVERE, MSG_TO_SEVERE } from './codes.mjs';
@@ -19,6 +21,19 @@ import { SEVERE, MSG_TO_SEVERE } from './codes.mjs';
 export const SEV_FLIP_PER_MIN = 1200 / 2875904 / 60;
 // 항목 n개가 모두 '가능'일 때, leadMin분 뒤 하나라도 '불가능'으로 바뀔 확률 (항목끼리 독립이라고 가정, 값이 아주 작아 영향은 0.1%p 미만)
 export const flipProb = (leadMin, n = 1) => (n > 0 ? 1 - (1 - Math.min(1, SEV_FLIP_PER_MIN * Math.max(0, leadMin))) ** n : 0);
+// 상태별 1분당 확률. stable = 표시가 24시간 넘게 그대로 + 병상 급감 아님, unstable = 그 밖(정보가 없을 때도 조심스럽게 이쪽)
+export const SEV_FLIP = { stable: 695 / 3266782 / 60, unstable: 849 / 509645 / 60 };
+/** 안정 항목 nStable개와 불안정 항목 nUnstable개가 모두 '가능'일 때, leadMin분 뒤 하나라도 '불가능'으로 바뀔 확률 */
+export const flipProb2 = (leadMin, nStable, nUnstable) => {
+  const t = Math.max(0, leadMin), q = (rate) => 1 - Math.min(1, rate * t);
+  return 1 - q(SEV_FLIP.stable) ** Math.max(0, nStable) * q(SEV_FLIP.unstable) ** Math.max(0, nUnstable);
+};
+/** 병원 표시 h(severe.json의 hosp[id])에서 질환 d의 항목을 안정/불안정으로 센다. s = 항목별 '1'(24시간 그대로), d = 병상 급감 */
+export function stability(h, d) {
+  let stable = 0, unstable = 0;
+  for (const n of d.items) (h?.s?.[n - 1] === '1' && !h?.d ? stable++ : unstable++);
+  return { stable, unstable };
+}
 
 export const itemLabel = (n) => SEVERE[`MKioskTy${n}`];
 

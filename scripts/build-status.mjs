@@ -124,7 +124,7 @@ const timeline = times
   });
 
 // ---- 중증질환 (가장 최근 수집)
-const sevDays = readDir('severe', 1);
+const sevDays = readDir('severe', 2); // 어제·오늘 (24시간 유지 여부를 보려고 이틀치)
 const sevLatestRows = (() => {
   const all = sevDays.at(-1)?.rows ?? [];
   const last = all.at(-1)?.collected_at;
@@ -171,6 +171,22 @@ for (const m of msgRows) {
 // ---- 질환별 안내용 파일 (웹앱 v3 베타가 읽는다): 병원별 27개 항목 + 응급실 표시 28글자(Y 가능 · N 불가능 · - 정보미제공)와 지금 걸린 메시지
 const sevHosp = {};
 for (const r of sevLatestRows) sevHosp[r.hpid] = { f: Array.from({ length: 28 }, (_, i) => normFlag(r[`MKioskTy${i + 1}`]) ?? '-').join('') };
+// 표시가 24시간 넘게 그대로인 항목(s: 항목별 '1'/'0')과 30분 사이 병상 5 이상 감소(d). 표시가 바뀔 확률을 나누는 데 쓴다
+{
+  const lastAt = sevLatestRows[0]?.collected_at, lastMs = lastAt ? parseKST(lastAt) : NaN;
+  const hist = new Map(); // hpid → 지난 24시간의 표시 글자열들
+  for (const day of sevDays) for (const r of day.rows) {
+    const t = parseKST(r.collected_at); if (!(lastMs - t <= 24 * 3600e3 && t <= lastMs)) continue;
+    let a = hist.get(r.hpid); if (!a) hist.set(r.hpid, a = []);
+    a.push(Array.from({ length: 27 }, (_, i) => normFlag(r[`MKioskTy${i + 1}`]) ?? '-').join(''));
+  }
+  for (const [id, a] of hist) {
+    const h = sevHosp[id]; if (!h?.f) continue;
+    if (a.length >= 100) h.s = Array.from({ length: 27 }, (_, k) => (a.every((f) => f[k] === h.f[k]) ? '1' : '0')).join(''); // 기록이 100번 미만이면 판단하지 않는다
+  }
+  const before = times.filter((t) => { const d = parseKST(latestAt) - parseKST(t); return d >= 25 * 60e3 && d <= 35 * 60e3; }).at(-1);
+  if (before) { const old = new Map(snaps.get(before).map((r) => [r.hpid, num(r.hvec)])); for (const r of latest) { const o = old.get(r.hpid), v = num(r.hvec); if (o != null && v != null && v - o <= -5 && sevHosp[r.hpid]) sevHosp[r.hpid].d = 1; } }
+}
 for (const m of activeMsgs) ((sevHosp[m.hpid] ??= {}).m ??= []).push({ c: m.code, d: m.dept, t: m.msg, s: m.start, e: m.end });
 // 수술실·중환자실·장비 칸 (가용병상 API, 활용가이드의 칸 이름 그대로). 빈칸은 싣지 않는다
 const resRows = latestAt ? readDir('beds', 1, ['collected_at', 'hpid', ...RES_KEYS])[0]?.rows.filter((r) => r.collected_at === latestAt) ?? [] : []; // 가장 최근 파일만 한 번 더 읽는다

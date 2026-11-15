@@ -109,3 +109,17 @@ test('병원이 알린 자원: 질환에 맞는 칸만, 빈칸은 빼고, 0 이�
   assert.deepEqual(resources(undefined, diseaseById.mi), []);
   assert.deepEqual(resources({ hv42: 'N', hvoc: -1 }, diseaseById.delivery).map((x) => [x.text, x.low]), [['분만실 가용 표시 아님', true], ['수술실 -1', true]]);
 });
+
+test('표시가 바뀔 확률: 24시간 그대로인 항목과 그렇지 않은 항목을 나눈다', async () => {
+  const { flipProb2, stability, SEV_FLIP, diseaseById } = await import('../engine/disease.mjs');
+  assert.equal(flipProb2(0, 1, 1), 0);
+  assert.ok(Math.abs(flipProb2(60, 1, 0) - 695 / 3266782) < 1e-12);
+  assert.ok(Math.abs(flipProb2(60, 0, 1) - 849 / 509645) < 1e-12);
+  assert.ok(SEV_FLIP.unstable > 5 * SEV_FLIP.stable);
+  assert.ok(flipProb2(30, 1, 1) > flipProb2(30, 2, 0) && flipProb2(30, 0, 0) === 0);
+  const s = '0'.repeat(27).split(''); s[2] = '1'; s[3] = '1'; const h = { s: s.join('') };
+  assert.deepEqual(stability(h, diseaseById.ich), { stable: 2, unstable: 0 }); // 항목 3·4
+  assert.deepEqual(stability(h, diseaseById.mi), { stable: 0, unstable: 1 });
+  assert.deepEqual(stability({ ...h, d: 1 }, diseaseById.ich), { stable: 0, unstable: 2 }); // 병상 급감이면 모두 불안정
+  assert.deepEqual(stability(undefined, diseaseById.ich), { stable: 0, unstable: 2 }); // 정보가 없으면 조심스럽게
+});

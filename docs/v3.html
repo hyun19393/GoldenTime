@@ -307,7 +307,7 @@
             <li><b>불가 표시</b>: 지금 그 질환이 '불가능'으로 표시된 곳. 계산에서 빼요.</li>
           </ul>
           <p class="eq">가능 확인 병원의 거절 확률 = 1 − (1 − 병상 거절 확률) × (1 − 도착 전에 표시가 '불가능'으로 바뀔 확률)</p>
-          <p class="def">(병상 거절 확률: 아래 2번 · 표시가 바뀔 확률: 1분에 약 0.0007%로 계산. 2026-11-01~11-14 기록에서 '가능'이 60분 뒤 '불가능'이 된 비율이 0.042%(1,200 / 2,875,904)였고 시간에 비례했어요. 병상과 표시가 서로 독립이라고 가정해요.)</p>
+          <p class="def">(병상 거절 확률: 아래 2번 · 표시가 바뀔 확률: 표시가 24시간 넘게 그대로이고 병상이 급히 줄지 않을 때는 1분에 약 0.00035%, 24시간 안에 바뀌었거나 30분 사이 병상이 5개 이상 줄었을 때는 1분에 약 0.0028%로 계산. 2026-10-25~11-15 기록에서 '가능'이 60분 뒤 '불가능'이 된 비율이 각각 0.021%(695 / 3,266,782), 0.167%(849 / 509,645)였고 시간에 비례했어요. 병상과 표시가 서로 독립이라고 가정해요.)</p>
           <ul>
             <li><b>왜 '불가능'은 빼나요</b>: 같은 기록에서 '불가능'은 30분 뒤에도 99.5%가 그대로였어요.</li>
             <li><b>왜 메시지를 보나요</b>: 응급실 전체에 받기 어렵다는 메시지가 걸린 동안에도 병상 수가 0 이하인 때는 10.7%뿐이었어요. 병상 수만으로는 이런 거절을 알 수 없어요.</li>
@@ -412,7 +412,7 @@ import { parseKST, kstHour } from './engine/time.mjs';
 import { haversineM } from './engine/geo.mjs';
 import { ranks, spearman } from './engine/stats.mjs';
 import { SEVERE, MSG_TO_SEVERE } from './engine/codes.mjs';
-import { DISEASES, diseaseById, assess, flipProb, itemLabel, resources } from './engine/disease.mjs';
+import { DISEASES, diseaseById, assess, flipProb2, stability, itemLabel, resources } from './engine/disease.mjs';
 
 const PROXY = 'https://goldentime-proxy.gt-er-map.workers.dev';
 const NEAR_M = 9500;       // 다중 목적지 길찾기 반경(10km)보다 조금 안쪽
@@ -619,8 +619,9 @@ function probAt(id, leadMin) {
     leadMin: leadMin + sinceObsMin(),
     hourKST: kstHour(obsMs),
   }).p;
-  const n = sev ? disease.items.length : 0;
-  return n ? 1 - (1 - pBed) * (1 - flipProb(leadMin + sevAgeMin(), n)) : pBed;
+  if (!sev || !disease.items.length) return pBed;
+  const st = stability(sev.hosp[id], disease); // 표시가 24시간 넘게 그대로인 항목과 그렇지 않은 항목을 나눠 센다
+  return 1 - (1 - pBed) * (1 - flipProb2(leadMin + sevAgeMin(), st.stable, st.unstable));
 }
 
 // ---------- 중계 서버
@@ -958,9 +959,10 @@ function detailHtml(r) {
   if (r.chain?.length > 1) out.push('<div><b>여기서 받아 주지 않으면</b><ol class="chain">' + r.chain.slice(1).map((s) => `<li>${esc(s.name)} <span class="meta">${min1(s.travelMin)}분 더 · 거절 확률 ${pct(s.p)}</span></li>`).join('') +
     '</ol>' + (r.unresolved > 0.05 ? `<span class="meta">세 곳 모두 거절될 확률 ${pct(r.unresolved)}</span>` : '') + '</div>');
   if (j.tier !== 'ok') out.push(`<div><b>${tierName(j.tier)}</b>: ${esc(j.why.join(' · '))}</div>`);
-  // 수술실·중환자실·장비: 병원이 공공데이터에 알린 값 그대로. 순위·확률에는 쓰지 않는다
+  if (j.tier === 'ok' && sev && disease.items.length) { const st = stability(sev.hosp[r.id], disease); out.push(`<div class="meta">${st.unstable ? "'가능' 표시가 최근 24시간 안에 바뀌었거나 병상이 급히 줄고 있어요. 도착 전에 바뀔 가능성을 더 크게 계산했어요." : "'가능' 표시가 24시간 넘게 그대로예요."}</div>`); }
+  // 수술실·중환자실·장비: 병원이 공공데이터에 알린 값 그대로. 순위·확률에는 쓰지 않는다 (2026-11-15 기록 검증에서 유의한 관계 없음)
   const res = resources(sev?.hosp[r.id]?.r, disease);
-  if (res.length) out.push(`<div><b>병원이 알린 자원</b> <span class="meta">참고용 · 순위 계산에는 쓰지 않아요</span><div class="res">${res.map((x) => `<span class="tag ${x.low ? 'low' : 'gray'}">${esc(x.text)}</span>`).join('')}</div></div>`);
+  if (res.length) out.push(`<div><b>병원이 알린 자원</b> <span class="meta">참고용 · 순위 계산에는 쓰지 않아요</span><div class="res">${res.map((x) => `<span class="tag gray">${esc(x.text)}</span>`).join('')}</div></div>`);
   const line = (m) => `<li${m.block ? ' class="blk"' : ''}>${m.contact ? '<span class="tag call">사전 연락</span>' : ''}<span class="meta">${esc(msgKind(m).replace(/^([^\[].*)$/, '[$1]'))}</span> ${esc(m.t)} <span class="meta">(${esc(m.s)} ~ ${esc(m.e)})</span></li>`;
   if (j.rel.length) out.push(`<div><b>관련 메시지 ${j.rel.length}건</b><ul>${j.rel.map(line).join('')}</ul></div>`);
   if (j.other.length) out.push(`<details><summary>이 병원의 다른 메시지 ${j.other.length}건</summary><ul>${j.other.map(line).join('')}</ul></details>`);
