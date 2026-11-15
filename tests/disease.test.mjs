@@ -123,3 +123,20 @@ test('표시가 바뀔 확률: 24시간 그대로인 항목과 그렇지 않은 
   assert.deepEqual(stability({ ...h, d: 1 }, diseaseById.ich), { stable: 0, unstable: 2 }); // 병상 급감이면 모두 불안정
   assert.deepEqual(stability(undefined, diseaseById.ich), { stable: 0, unstable: 2 }); // 정보가 없으면 조심스럽게
 });
+
+test('진료과 메시지가 분명히 수용 불가라고 적으면 불가 표시, 조건·대상이 좁으면 확인 필요', async () => {
+  const { assess, isExplicitNo, diseaseById } = await import('../engine/disease.mjs');
+  const W = ['산부인과', '소아청소년과', '신경외과', '소화기내과', '환자', '관련', '및'];
+  for (const t of ['[소아청소년과] 진료불가', 'NICU 부재, 고위험산모실 부재 등으로 모든 산모 수용 불가', '시술불가', '불가능메세지등록', '[소아청소년과] 응급실 진료 불가'])
+    assert.ok(isExplicitNo(t, W), t);
+  for (const t of ['[신경외과] 경증 두부외상 수용 불가능', '소아청소년과 24개월미만 진료불가', '신경외과 - 주말/공휴일 진료불가', '위장관출혈 Part 전문의 부재로 수용 불가', '소아신경분과 의료진 인력부족으로 관련 환자 진료불가', '야간(18:00 ~ 08:00까지 불가능)', 'CPR 외 수용불가', '수용 가능'])
+    assert.ok(!isExplicitNo(t, W), t);
+  const Y = 'Y'.repeat(28);
+  const h = { f: Y, m: [{ c: 'Y000', d: '산부인과', t: 'NICU 부재, 고위험산모실 부재 등으로 모든 산모 수용 불가' }] };
+  assert.equal(assess(h, diseaseById.delivery).tier, 'no');
+  assert.equal(assess(h, diseaseById.mi).tier, 'ok'); // 관계없는 질환은 그대로
+  const h2 = { f: Y, m: [{ c: 'Y000', d: '신경외과', t: '[신경외과] 경증 두부외상 수용 불가능' }] };
+  assert.equal(assess(h2, diseaseById.ich).tier, 'check');
+  const h3 = { f: Y, m: [{ c: 'Y000', d: '비뇨의학과', t: '[비뇨의학과] 응급수술 불가능(고환염전, 신장외상 등)' }] };
+  assert.notEqual(assess(h3, diseaseById.trauma).tier, 'no'); // 낱말로만 걸린 다른 진료과 메시지는 불가로 보지 않는다
+});

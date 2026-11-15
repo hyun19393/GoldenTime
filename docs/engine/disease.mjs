@@ -88,6 +88,22 @@ export const isContact = (text) => { const t = String(text ?? '').replace(/전�
 // 받기 어렵다는 뜻의 낱말이 있는 글 ('24시간 진료 가능' 같은 안내 글과 구분)
 const NEG_RE = /불가|포화|과밀|자제|제한|부족|부재|없음|여석|중단|지연|만\s*(진료\s*)?가능|어려|고장|점검|공사|over|full/i;
 export const isNegative = (text) => NEG_RE.test(String(text ?? ''));
+// 받지 못한다고 분명히 적은 글 (2026-11-15 사용자 결정: 진료과·낱말로 고른 메시지가 이렇게 적혀 있으면 '불가 표시')
+// 대상을 좁히는 말(경증·단순·○개월 미만·신환·특정 병명 등)이나 시간 조건이 있으면 일부 환자만 못 받는다는 뜻이므로 '확인 필요'에 둔다.
+// 그래서 진료과 이름·사유('인력부재로' 등)·괄호 꼬리표·'모든 ○○'을 지운 뒤 '(수용·진료·시술…) 불가'만 남는 글만 분명한 것으로 본다.
+const NO_ONLY_RE = /^(응급실\s*)?(진료|수용|이송|처치|수술|응급\s*수술|시술|입원|분만|환자\s*수용|환자\s*진료)?\s*(이\s*)?불가(능)?(합니다|함)?(메(세|시)지\s*등록)?$/;
+const STRIP_RES = [
+  /\[[^\]]*\]|\([^)]*\)|\*+|[.,·:!~-]/g, // 괄호 꼬리표·기호
+  /[가-힣A-Za-z]*\s*(부재|부족|사정|공백)\s*(등)?\s*(으로|로|인해|관계로)?/g, // 사유 ('○○ 부재로' — 바로 앞 낱말 하나만 지운다)
+  /모든\s*[가-힣]+/g, // '모든 산모' = 대상 전체
+];
+export const isExplicitNo = (text, deptWords = []) => {
+  let t = String(text ?? '');
+  for (const re of STRIP_RES) t = t.replace(re, ' ');
+  for (const w of deptWords) if (w) t = t.split(w).join(' ');
+  t = t.replace(/\s+/g, ' ').trim();
+  return NO_ONLY_RE.test(t) || NO_ONLY_RE.test(t.replace(/\s/g, ''));
+};
 // 진료과 칸이 '응급실'인 메시지 중, 글이 특정 진료과·질환만 말하는 것 (응급실 전체 대상이 아님)
 const TOPIC_RE = /안과|산부인과|산과|부인과|산모|소아|신생아|미숙아|NICU|stroke|정신|내과|이비인후과|성형|피부과|치과|비뇨|정형외과|신경과|신경외과|흉부외과|대동맥|담낭|내시경|뇌출혈|뇌졸중|AMI|ECMO|중독|외상|화상|투석|안면|얼굴/i;
 
@@ -118,14 +134,16 @@ export function assess(h, d) {
   const noItems = d.items.filter((n) => flag(n) === 'N');
   const unknownItems = d.items.filter((n) => flag(n) !== 'Y' && flag(n) !== 'N');
   const rel = [], other = [], contact = [];
-  let itemMsg = 0, blockMsg = 0;
+  let itemMsg = 0, blockMsg = 0; const explicitNo = [];
   for (const m of h?.m ?? []) {
     const scope = scopeOf(m, d);
     if (!scope) { other.push(m); continue; }
     const accepts = scope !== 'item' && !!d.accept?.test(m.t); // 이 환자는 받는다는 글 → 막는 메시지·사전 연락으로 세지 않는다
     const c = !accepts && isContact(m.t);
     const block = scope === 'item' || (!accepts && (c || isNegative(m.t)));
-    rel.push({ ...m, scope, contact: c, block });
+    const no = !accepts && !c && (scope === 'dept' || (scope === 'word' && d.depts.includes(m.d))) && isExplicitNo(m.t, [m.d, ...d.depts, '환자', '관련', '및']);
+    if (no) explicitNo.push(m);
+    rel.push({ ...m, scope, contact: c, block, no });
     if (c) contact.push(m);
     if (scope === 'item') itemMsg++;
     else if (block) blockMsg++;
@@ -134,6 +152,7 @@ export function assess(h, d) {
   let tier = 'ok';
   if (flag(28) === 'N') { tier = 'no'; why.push("응급실 '불가능' 표시"); }
   if (noItems.length) { tier = 'no'; why.push(...noItems.map((n) => `${itemLabel(n)} '불가능' 표시`)); }
+  if (explicitNo.length) { tier = 'no'; why.push(`수용 불가 메시지 ${explicitNo.length}건`); }
   if (tier !== 'no') {
     if (unknownItems.length) { tier = 'check'; why.push(d.items.length > 1 && unknownItems.length < d.items.length ? '일부 항목 정보 없음' : '질환 정보 없음'); }
     if (itemMsg) { tier = 'check'; why.push(`이 질환 메시지 ${itemMsg}건`); }
