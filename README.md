@@ -23,11 +23,11 @@
 | `engine/model.mjs` | 거절 확률 통계표 만들기, 확률 계산 |
 | `engine/effective.mjs` | 실효 도착 시간 계산 |
 | `engine/geo.mjs` · `engine/stats.mjs` | 직선 거리 계산, 순위 상관 (웹앱 거리 비교) |
-| `engine/disease.mjs` | 질환별 안내 규칙 (v3 베타): 질환 목록, 메시지 범위·사전 연락 판단, 가능 확인 · 확인 필요 · 불가 표시 나누기 |
+| `engine/disease.mjs` | 질환별 안내 규칙 (웹앱 v3): 질환 목록, 메시지 범위·사전 연락 판단, 가능 확인 · 확인 필요 · 불가 표시 나누기 |
 | `scripts/validate.mjs` | 앞 기간으로 만든 통계가 뒤 기간을 얼마나 맞히는지 검증 |
 | `scripts/build-web.mjs` | 웹앱용 파일 만들기: `docs/model.json`(거절 통계표), `docs/validation.json`(정확도 점검), `docs/engine/`(계산 코드 복사) |
-| `docs/app.html` | 응급실 추천 웹앱 (카카오 지도, 출발지 → 실효 도착 시간 순위·경로) |
-| `docs/v3.html` | 웹앱 v3 베타: 의심 질환을 고르면 그 질환 '가능' 표시와 수용 불가 메시지로 병원을 가능 확인 · 확인 필요 · 불가 표시로 나눠 추천 (`docs/severe.json`, `engine/disease.mjs`) |
+| `docs/app.html` | 응급실 추천 웹앱 v3 (기본): 의심 질환을 고르면 그 질환 '가능' 표시와 수용 불가 메시지로 병원을 가능 확인 · 확인 필요 · 불가 표시로 나눠 추천 (`docs/severe.json`, `engine/disease.mjs`). 질환을 고르지 않으면 병상만으로 실효 도착 시간 순위 |
+| `docs/v2.html` | 이전 웹앱 v2 (보관용, 질환 선택 없음). `docs/v3.html`은 예전 주소로 들어온 사람을 `app.html`로 넘겨 주는 페이지 |
 | `proxy/worker.js` | 중계 서버 (Cloudflare Workers): 카카오 키를 숨기고 웹앱의 길찾기 요청만 대신 호출. 카카오 호출 횟수를 D1에 날짜·종류별로 세어 `/usage`로 알려 줌(웹앱 상단 '오늘 길찾기 사용량' 바) |
 | `data/` | 수집 데이터 (날짜별 CSV) |
 | `tests/` | 자동 검사 (`npm test`) |

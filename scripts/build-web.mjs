@@ -1,4 +1,4 @@
-// 웹앱(docs/app.html)이 읽을 파일을 만든다. 수집할 때마다 GitHub Actions에서 실행된다.
+// 웹앱(docs/app.html = v3, docs/v2.html = 이전 판)이 읽을 파일을 만든다. 수집할 때마다 GitHub Actions에서 실행된다.
 //   docs/model.json   거절 확률 통계표 (지금까지 모은 가용병상 기록 전체)
 //   docs/validation.json  정확도 점검 (앞 70% 기간으로 만든 통계표가 뒤 30% 기간을 얼마나 맞히는지)
 //   docs/engine/      계산 코드(engine/)를 브라우저에서 그대로 쓰도록 복사
@@ -10,7 +10,7 @@ import { loadSnapshots } from './load.mjs';
 import { buildModel } from '../engine/model.mjs';
 import { evaluateSplit } from '../engine/validate.mjs';
 
-// 웹앱(app.html·v3.html)·현황판(index.html)이 실제로 불러오는 계산 코드만 복사한다. codes.mjs·disease.mjs는 v3 베타(질환별 안내)가 쓴다.
+// 웹앱(app.html·v2.html)·현황판(index.html)이 실제로 불러오는 계산 코드만 복사한다. codes.mjs·disease.mjs는 v3(app.html, 질환별 안내)가 쓴다.
 export const ENGINE_FILES = ['model.mjs', 'effective.mjs', 'time.mjs', 'geo.mjs', 'stats.mjs', 'causes.mjs', 'codes.mjs', 'disease.mjs'];
 
 export function main(args = {}) {
