@@ -387,6 +387,11 @@
   details::details-content { block-size: 0; overflow: clip; transition: block-size .32s var(--ease), content-visibility .32s allow-discrete; }
   details[open]::details-content { block-size: auto; }
 
+  /* 사용자 모드 맨 아래 '계산 방법 보기' (수집 현황판의 거절 확률 계산 방법으로 이동) */
+  .calc-link { margin: 20px 0 0; text-align: center; }
+  .calc-link .btn { min-width: 200px; }
+  .calc-link .hint { margin: 8px 0 0; }
+
   /* 접근성 설정 */
   @media (prefers-reduced-transparency: reduce) {
     .topbar.scrolled, .dock { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
@@ -585,6 +590,10 @@
       </div>
       <footer>지도: 카카오맵 · 길찾기: 카카오모빌리티 · 병상·질환 표시·메시지: 국립중앙의료원 공공데이터</footer>
     </div>
+  </div>
+  <div class="calc-link user">
+    <a class="btn" href="./#/prob/method">계산 방법 보기</a>
+    <p class="hint">수집 현황판의 '거절 확률 → 계산 방법'으로 가요</p>
   </div>
   </main>
   <footer class="legal">© 2025–2026 hyun19393. All rights reserved. 무단 복제·사용 금지 (저작권법 제136조: 7년 이하 징역 또는 1억 원 이하 벌금)</footer>
@@ -1419,13 +1428,23 @@ addEventListener('scroll', onScroll, { passive: true }); onScroll();
 // 추천 카드의 버튼을 지나 아래로 내려갔을 때만 보인다(검색 직후 맨 위에서는 안 보임, 같은 버튼을 두 번 보이지 않게). 사전 연락 창이 펴져 있을 때도 숨긴다
 const dockMQ = matchMedia('(max-width: 880px)');
 let dockFor = null, heroPast = false;
-const dockIO = 'IntersectionObserver' in window
-  ? new IntersectionObserver((es) => { for (const e of es) heroPast = !e.isIntersecting && e.boundingClientRect.bottom <= (e.rootBounds ? e.rootBounds.top : 110); dockSync(); }, { rootMargin: '-110px 0px 0px 0px' }) : null;
+// 스크롤·화면 크기가 바뀔 때마다 한 프레임에 한 번, 추천 카드 버튼 줄이 위쪽 막대 아래 선을 지났는지 직접 잰다
+// (IntersectionObserver는 화면 아래 → 화면 위로 한 번에 건너뛰는 이동(End 키·주소 이동)을 놓쳐서 쓰지 않음)
+let dockRaf = 0;
+const dockCheck = () => {
+  dockRaf = 0;
+  const acts = dockFor ? $('compare').querySelector('.cmp.best .acts') : null;
+  heroPast = !!acts && acts.getBoundingClientRect().bottom <= $('topbar').getBoundingClientRect().bottom;
+  dockSync();
+};
+const dockQueue = () => { if (!dockRaf) dockRaf = requestAnimationFrame(dockCheck); };
+addEventListener('scroll', dockQueue, { passive: true });
+addEventListener('resize', dockQueue);
 $('dockNavi').innerHTML = IC.navi + '길안내';
 $('dockTel').innerHTML = IC.phone;
 function dockSet(r) {
   dockFor = r ? r.id : null;
-  heroPast = false; dockIO?.disconnect();
+  heroPast = false;
   if (r) {
     const h = byId[r.id];
     $('dockName').textContent = r.name;
@@ -1434,17 +1453,15 @@ function dockSet(r) {
     $('dockNavi').setAttribute('aria-label', `${r.name} 카카오맵 길안내`);
     $('dockTel').hidden = !h.tel;
     if (h.tel) { $('dockTel').href = telHref(h.tel); $('dockTel').setAttribute('aria-label', `${r.name} 전화 ${h.tel}`); }
-    const acts = $('compare').querySelector('.cmp.best .acts');
-    if (acts) dockIO?.observe(acts);
   }
-  dockSync();
+  dockSync(); dockQueue();
 }
 function dockSync() {
   const on = !!dockFor && dockMQ.matches && heroPast && !$('resultCard').hidden && !document.body.classList.contains('calling');
   $('dock').classList.toggle('show', on);
   document.body.classList.toggle('docked', on);
 }
-dockMQ.addEventListener?.('change', dockSync);
+dockMQ.addEventListener?.('change', dockQueue);
 
 // ---------- 시작
 refreshQuota();
