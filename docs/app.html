@@ -6,7 +6,7 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>골든타임 경로</title>
-<meta name="description" content="의심 질환을 받아 줄 수 있다고 알린 서울·인천·경기 응급실 중에서 도착 시 거절 가능성까지 계산해 추천하는 탐구용 웹앱 (v3 베타)">
+<meta name="description" content="의심 질환을 받아 줄 수 있다고 알린 서울·인천·경기 응급실 중에서 도착 시 거절 가능성까지 계산해 추천하는 탐구용 웹앱 (v3)">
 <style>
   /* 디자인 토큰 — Figma '골든타임 v3 웹앱 디자인'의 색 변수·글자 스타일과 같은 값 (어두운 화면 값은 코드에서 정함)
      *-fill = 흰 글자를 올리는 바탕색, --ok/--low = 지도 점·막대의 신호색, *-ink = 옅은 바탕 위 글자색 */
@@ -318,6 +318,87 @@
   }
   @media (prefers-reduced-transparency: reduce) { .topbar { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; } }
   @media (max-width: 360px) { .tb-row h1 { font-size: 20px; } .seg button { padding: 0 9px; } .b119 { padding: 0 12px; } }
+
+  /* ===== v3.2 디자인: iOS 27(Liquid Glass 다듬기)과 One UI 9(떠 있는 알약·더 둥근 카드)의 원칙을 따름 (아이콘·글꼴 파일·상표는 쓰지 않음)
+     1) 토대: 둥글기·간격 변수. 카드 안 요소의 둥글기 = 카드 둥글기 − 카드 가장자리까지 거리(동심 모서리), 조작 버튼·입력칸은 알약 모양
+     2) 유리 층: 조작·이동 요소(위쪽 막대·모드 전환·아래쪽 막대)에만. 가장자리는 어둡게, 위쪽에 반짝이는 선. 스크롤하면 위쪽 막대가 생김
+        '투명도 줄이기'·'대비 높이기' 설정이면 불투명하게
+     3) 내용 층: 카드는 유리 없이 불투명, 순위는 한 묶음 안에 가는 선으로 나눈 목록
+     4) 움직임: 누름 반응, 펼침(자세히 보기·메시지)이 부드럽게, 화살표가 돌아감. '동작 줄이기' 설정이면 끔 */
+  :root { --r-card: 26px; --pad: 20px; --r-row: 14px; --r-blk: 20px; --spring: cubic-bezier(.34, 1.3, .64, 1);
+    --g-bg: rgba(250, 250, 252, .66); --g-bar: rgba(242, 243, 247, .78); --g-edge: rgba(0, 0, 0, .12); --g-hi: rgba(255, 255, 255, .95); --g-shadow: 0 10px 30px rgba(20, 23, 31, .16);
+    --card-edge: rgba(20, 23, 31, .04); interpolate-size: allow-keywords; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --g-bg: rgba(30, 32, 38, .66); --g-bar: rgba(11, 12, 15, .74); --g-edge: rgba(0, 0, 0, .6); --g-hi: rgba(255, 255, 255, .16); --g-shadow: 0 10px 30px rgba(0, 0, 0, .5); --card-edge: rgba(255, 255, 255, .06); } }
+  :root[data-theme="dark"] { --g-bg: rgba(30, 32, 38, .66); --g-bar: rgba(11, 12, 15, .74); --g-edge: rgba(0, 0, 0, .6); --g-hi: rgba(255, 255, 255, .16); --g-shadow: 0 10px 30px rgba(0, 0, 0, .5); --card-edge: rgba(255, 255, 255, .06); }
+
+  /* 1·3) 카드·블록 */
+  .card, .cmp, .quota, #map { border-radius: var(--r-card); box-shadow: 0 0 0 .5px var(--card-edge), var(--shadow); }
+  .card { padding: var(--pad); }
+  .cmp.best { padding: var(--pad); box-shadow: 0 0 0 .5px var(--card-edge), var(--shadow), inset 0 0 0 1.5px var(--accent); }
+  .core, .warn, .gain .note { border-radius: var(--r-blk); }
+  .card > details .eq { border-radius: var(--r-row); }
+  select, input[type=search] { border-radius: 999px; padding-left: 18px; }
+  select { padding-right: 44px; background-position: right 16px center; }
+  .tag { min-height: 26px; }
+  /* 순위 목록: 한 묶음 안에서 가는 선으로 나눔 (선은 양옆을 12px 띄움). 고른 줄은 동심 모서리로 칠함 */
+  ol.hl { margin: 4px -8px 0; }
+  ol.hl > li { position: relative; border-radius: var(--r-row); transition: background-color .2s ease, transform .2s var(--ease); }
+  ol.hl > li + li { margin-top: 0; }
+  ol.hl > li + li::before { content: ''; position: absolute; top: 0; left: 12px; right: 12px; height: 0; border-top: .5px solid var(--line); transition: opacity .2s ease; }
+  ol.hl > li.sel::before, ol.hl > li.sel + li::before { opacity: 0; }
+  @media (hover: hover) { ol.hl > li:hover::before, ol.hl > li:hover + li::before { opacity: 0; } }
+  ol.hl > li:active:not(:has(.detail:active)) { transform: scale(.985); }
+
+  /* 2) 유리 층 */
+  .topbar { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; transition: background-color .25s ease, box-shadow .25s ease; }
+  .topbar.scrolled { background: var(--g-bar); -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px); box-shadow: 0 .5px 0 var(--g-edge), 0 8px 20px -14px rgba(0, 0, 0, .35); }
+  .seg { box-shadow: inset 0 0 0 .5px var(--card-edge); }
+  .seg-thumb { box-shadow: inset 0 1px 0 var(--g-hi), 0 0 0 .5px var(--g-edge), 0 2px 8px rgba(0, 0, 0, .14); transition: transform .42s var(--spring); }
+  .b119 { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 2px 8px rgba(194, 53, 45, .3); }
+  .primary { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22); }
+  button:active:not(:disabled), .btn:active { transform: scale(.96); }
+
+  /* 떠 있는 아래쪽 막대 (휴대폰·태블릿): 추천 카드의 버튼이 화면 밖으로 나가면 나타남 */
+  .dock { position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 35; max-width: 560px; margin: 0 auto;
+    display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 18px; border-radius: 999px;
+    background: var(--g-bg); -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px);
+    box-shadow: inset 0 1px 0 var(--g-hi), 0 0 0 .5px var(--g-edge), var(--g-shadow);
+    opacity: 0; transform: translateY(24px) scale(.96); visibility: hidden; pointer-events: none;
+    transition: opacity .2s ease, transform .2s var(--ease), visibility 0s .2s; }
+  .dock.show { opacity: 1; transform: none; visibility: visible; pointer-events: auto; transition: opacity .25s ease, transform .45s var(--spring), visibility 0s; }
+  .dock-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .dock-txt b { font-size: 15px; line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dock-txt span { font-size: 13px; line-height: 18px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dock .btn { flex: none; min-height: 48px; }
+  .dock .dock-tel { width: 48px; padding: 0; }
+  .dock[hidden] { display: none; }
+  @media (min-width: 881px) { .dock { display: none; } }
+  body.docked .wrap { padding-bottom: 104px; }
+  body.docked :is(.call-pill, .fail-badge) { bottom: calc(84px + env(safe-area-inset-bottom)); }
+
+  /* 4) 펼치는 칸: 화살표(›)가 돌아가고 내용이 부드럽게 펼쳐짐. 누르는 높이는 44px 이상 */
+  details > summary { list-style: none; display: flex; align-items: center; gap: 8px; min-height: 44px; }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::after { content: ''; flex: none; width: 7px; height: 7px; margin: 0 4px 2px 2px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg); transition: transform .3s var(--ease); opacity: .7; }
+  details[open] > summary::after { transform: rotate(45deg); margin-bottom: 4px; }
+  .card > details > summary { justify-content: space-between; min-height: 48px; }
+  details::details-content { block-size: 0; overflow: clip; transition: block-size .32s var(--ease), content-visibility .32s allow-discrete; }
+  details[open]::details-content { block-size: auto; }
+
+  /* 접근성 설정 */
+  @media (prefers-reduced-transparency: reduce) {
+    .topbar.scrolled, .dock { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  }
+  @media (prefers-contrast: more) {
+    .topbar.scrolled, .dock { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 0 0 1px var(--ink); }
+    ol.hl > li + li::before { border-top-color: var(--muted); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    ol.hl > li, ol.hl > li::before, .seg-thumb, .dock, .dock.show, details > summary::after, details::details-content { transition: none; }
+    ol.hl > li:active, button:active:not(:disabled), .btn:active { transform: none; }
+  }
 </style>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=42a491bd43887127ca6b4bf69b731aaf&libraries=services&autoload=false"></script>
 </head>
@@ -525,6 +606,11 @@
   <div class="acts"><a class="btn danger" id="callTel">전화 연결</a><button type="button" id="callOk">확인</button></div>
 </div>
 <button type="button" class="call-pill off" id="callPill" aria-label="사전 연락 안내 다시 보기" hidden></button>
+<nav class="dock" id="dock" aria-label="추천 병원 바로 가기">
+  <div class="dock-txt"><b id="dockName"></b><span id="dockTime"></span></div>
+  <a class="btn primary" id="dockNavi" target="_blank" rel="noopener noreferrer"></a>
+  <a class="btn dock-tel" id="dockTel"></a>
+</nav>
 
 <script type="module">
 import { makeRejectProb, STALE_MIN } from './engine/model.mjs';
@@ -986,6 +1072,7 @@ async function setOrigin(o) {
 function clearLists() {
   for (const id of ['list', 'checkList', 'noList']) $(id).innerHTML = '';
   for (const id of ['resultCard', 'listCard', 'distCard', 'checkBox', 'noBox']) $(id).hidden = true;
+  dockSet(null);
 }
 
 // 병원 한 줄에 붙이는 표시: 병상 · 질환 판단 · 메시지
@@ -1044,6 +1131,7 @@ function render() {
   if (checks[0] && checks[0].id !== nearest.id && (!best || checks[0].travelMin < best.travelMin)) tiles.push(moveBox('확인하면 갈 수 있는 가까운 곳', checks[0]));
   $('compare').innerHTML = hero(known ? '추천 · 가능 확인된 곳' : '추천 · 병상 기준', best) + tiles.map((t) => t.replace('<div class="cmp">', '<div class="cmp dev">')).join('');
   $('compare').classList.toggle('one', tiles.length === 1);
+  dockSet(best);
 
   const say = [];
   if (!best) say.push(`계산한 범위 안에 ${known ? '가능이 확인된' : '막는 메시지가 없는'} 응급실이 없어요. 아래 '확인이 필요한 곳'에 전화로 확인하거나 119에 신고하세요.`);
@@ -1142,6 +1230,7 @@ function callState(st) {
   document.body.classList.toggle('calling', st === 'open');
   $('callWin').classList.toggle('min', st === 'min');
   $('callPill').classList.toggle('off', st !== 'min');
+  dockSync();
 }
 function hideCall() { callFor = null; callState('none'); }
 function showCall(id) {
@@ -1162,7 +1251,8 @@ function reveal(li) {
     const topLim = $('topbar').getBoundingClientRect().bottom + 8;
     const w = $('callWin'), lr = li.getBoundingClientRect();
     const covers = !w.hidden && !w.classList.contains('min') && w.offsetLeft < lr.right && w.offsetLeft + w.offsetWidth > lr.left;
-    const botLim = (covers ? w.offsetTop : innerHeight) - 12;
+    const dk = $('dock').classList.contains('show') ? $('dock').getBoundingClientRect().top : innerHeight;
+    const botLim = Math.min(covers ? w.offsetTop : innerHeight, dk) - 12;
     const ar = (li.querySelector('.detail:not([hidden]) .acts') ?? li).getBoundingClientRect();
     const dy = lr.top < topLim ? lr.top - topLim : ar.bottom > botLim ? Math.min(ar.bottom - botLim, lr.top - topLim) : 0;
     if (Math.abs(dy) > 1) scrollBy({ top: dy, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
@@ -1323,6 +1413,38 @@ const setTbH = () => document.documentElement.style.setProperty('--tb-h', $('top
 setTbH(); if ('ResizeObserver' in window) new ResizeObserver(setTbH).observe($('topbar')); else addEventListener('resize', setTbH);
 const onScroll = () => $('topbar').classList.toggle('scrolled', scrollY > 4);
 addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
+
+// ---------- 떠 있는 아래쪽 막대 (휴대폰·태블릿): 추천 병원의 길안내·전화를 엄지가 닿는 곳에
+// 추천 카드의 버튼이 화면에 보이면 숨긴다(같은 버튼을 두 번 보이지 않게). 사전 연락 창이 펴져 있을 때도 숨긴다
+const dockMQ = matchMedia('(max-width: 880px)');
+let dockFor = null, heroSeen = true;
+const dockIO = 'IntersectionObserver' in window
+  ? new IntersectionObserver((es) => { for (const e of es) heroSeen = e.isIntersecting; dockSync(); }, { rootMargin: '-110px 0px 0px 0px' }) : null;
+$('dockNavi').innerHTML = IC.navi + '길안내';
+$('dockTel').innerHTML = IC.phone;
+function dockSet(r) {
+  dockFor = r ? r.id : null;
+  heroSeen = true; dockIO?.disconnect();
+  if (r) {
+    const h = byId[r.id];
+    $('dockName').textContent = r.name;
+    $('dockTime').textContent = `실효 도착 시간 ${min1(r.effectiveMin)}분`;
+    $('dockNavi').href = naviHref(h);
+    $('dockNavi').setAttribute('aria-label', `${r.name} 카카오맵 길안내`);
+    $('dockTel').hidden = !h.tel;
+    if (h.tel) { $('dockTel').href = telHref(h.tel); $('dockTel').setAttribute('aria-label', `${r.name} 전화 ${h.tel}`); }
+    const acts = $('compare').querySelector('.cmp.best .acts');
+    if (acts) dockIO?.observe(acts);
+  }
+  dockSync();
+}
+function dockSync() {
+  const on = !!dockFor && dockMQ.matches && !heroSeen && !$('resultCard').hidden && !document.body.classList.contains('calling');
+  $('dock').classList.toggle('show', on);
+  document.body.classList.toggle('docked', on);
+}
+dockMQ.addEventListener?.('change', dockSync);
 
 // ---------- 시작
 refreshQuota();
