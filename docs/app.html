@@ -139,6 +139,10 @@
   .detail ul li { margin: 4px 0; overflow-wrap: anywhere; color: var(--muted); }
   .detail ul li.blk { color: var(--ink); }
   .detail .tag { margin-right: 4px; }
+  .detail details.more > summary { font-weight: 600; color: var(--accent); }
+  .detail details.more > * + * { margin-top: 8px; }
+  .detail details.more details > summary { font-weight: 600; color: var(--ink); padding: 13px 0; }
+  .detail details.more .tags { display: flex; flex-wrap: wrap; gap: 6px; }
   details > summary { cursor: pointer; padding: 13px 0; }
 
   /* 지도 */
@@ -348,8 +352,8 @@
       <section class="card">
         <h2><span class="step">1</span><label for="disease">의심 질환</label></h2>
         <select id="disease" aria-describedby="diseaseInfo"></select>
-        <div class="stats dev" id="diseaseStats"></div>
-        <p class="hint dev" id="diseaseInfo"></p>
+        <div class="stats" id="diseaseStats"></div>
+        <p class="hint" id="diseaseInfo"></p>
         <p class="warn" id="diseaseWarn" hidden><b>심정지·중증외상이 의심되면 직접 옮기지 말고 바로 119에 신고하세요.</b> 119 구급대가 이송 병원을 정해요.</p>
       </section>
 
@@ -611,7 +615,6 @@ function rejudge() {
   $('diseaseWarn').hidden = !sev || !['arrest', 'trauma'].includes(disease.id);
   $('diseaseStats').innerHTML = !sev ? '' :
     `<span class="tag ok">${disease.items.length ? '가능 확인' : '막는 메시지 없음'} ${c.ok}곳</span><span class="tag low">확인 필요 ${c.check}곳</span><span class="tag full">불가 표시 ${c.no}곳</span>`;
-  $('diseaseInfo').classList.toggle('dev', !!sev); // 불러오기에 실패하면 사용자 모드에도 알린다
   $('diseaseInfo').textContent = !sev
     ? '질환 표시·메시지를 불러오지 못했어요. 지금은 응급실 병상만으로 계산해요(v2와 같아요).'
     : disease.items.length ? `공공데이터 항목: ${disease.items.map(itemLabel).join(' · ')}` : disease.note || '질환을 고르지 않으면 응급실 병상과 응급실 전체 메시지만으로 계산해요.';
@@ -990,11 +993,21 @@ function tagsHtml(id, since) {
   const h = byId[id], j = judge[id], cls = bedClass(h, since);
   // 기관 종류(권역센터·지역센터·지역기관): 알려 주기만 하고 순위에는 쓰지 않는다
   const out = [`<span class="tag ${cls === 'stale' ? 'gray' : cls}">${bedSpan(h)}${cls === 'stale' && h.hvec != null ? '(오래됨)' : ''}</span>`];
-  if (CLS_SHORT[h.cls]) out.unshift(`<span class="tag gray dev" title="${esc(h.cls)}">${CLS_SHORT[h.cls]}</span>`);
-  if (j.tier === 'ok') { if (sev && disease.items.length) out.push('<span class="tag ok dev">이 질환 \'가능\' 표시</span>'); }
+  const [kind, able, note] = infoChips(id, ' dev');
+  if (kind) out.unshift(kind);
+  if (j.tier === 'ok') { if (able) out.push(able); }
   else for (const w of j.why) out.push(`<span class="tag ${w === '사전 연락 필요' ? 'call' : j.tier === 'no' ? 'full' : 'low'}">${esc(w)}</span>`);
-  if (j.tier === 'ok' && j.rel.length) out.push(`<span class="tag gray dev">안내 메시지 ${j.rel.length}건</span>`);
+  if (note) out.push(note);
   return out.join('');
+}
+// 기관 종류 · 이 질환 '가능' 표시 · 안내 메시지 n건 (개발자 모드는 병원 줄에, 사용자 모드는 '자세히 보기' 안에). 없으면 ''
+function infoChips(id, cls = '') {
+  const h = byId[id], j = judge[id];
+  return [
+    CLS_SHORT[h.cls] ? `<span class="tag gray${cls}" title="${esc(h.cls)}">${CLS_SHORT[h.cls]}</span>` : '',
+    j.tier === 'ok' && sev && disease.items.length ? `<span class="tag ok${cls}">이 질환 '가능' 표시</span>` : '',
+    j.tier === 'ok' && j.rel.length ? `<span class="tag gray${cls}">안내 메시지 ${j.rel.length}건</span>` : '',
+  ];
 }
 
 // 추천 카드의 이유 칩(사용자 모드): 질환을 받을 수 있다고 표시했는지와 남은 병상만
@@ -1107,10 +1120,17 @@ function detailHtml(r) {
   if (j.tier === 'ok' && sev && disease.items.length) { const st = stability(sev.hosp[r.id], disease); out.push(`<div class="meta dev">${st.unstable ? "'가능' 표시가 최근 24시간 안에 바뀌었거나 병상이 급히 줄고 있어요. 도착 전에 바뀔 가능성을 더 크게 계산했어요." : "'가능' 표시가 24시간 넘게 그대로예요."}</div>`); }
   // 수술실·중환자실·장비: 병원이 공공데이터에 알린 값 그대로. 순위·확률에는 쓰지 않는다 (2026-11-15 기록 검증에서 유의한 관계 없음)
   const res = resources(sev?.hosp[r.id]?.r, disease);
-  if (res.length) out.push(`<div class="dev"><b>병원이 알린 자원</b> <span class="meta">참고용 · 순위 계산에는 쓰지 않아요</span><div class="res">${res.map((x) => `<span class="tag gray">${esc(x.text)}</span>`).join('')}</div></div>`);
+  const resHtml = res.length ? `<b>병원이 알린 자원</b> <span class="meta">참고용 · 순위 계산에는 쓰지 않아요</span><div class="res">${res.map((x) => `<span class="tag gray">${esc(x.text)}</span>`).join('')}</div>` : '';
+  if (resHtml) out.push(`<div class="dev">${resHtml}</div>`);
   const line = (m) => `<li${m.block ? ' class="blk"' : ''}>${m.contact ? '<span class="tag call">사전 연락</span>' : ''}<span class="meta">${esc(msgKind(m).replace(/^([^\[].*)$/, '[$1]'))}</span> ${esc(m.t)} <span class="meta">(${esc(m.s)} ~ ${esc(m.e)})</span></li>`;
   if (j.rel.length) out.push(`<div class="dev"><b>관련 메시지 ${j.rel.length}건</b><ul>${j.rel.map(line).join('')}</ul></div>`);
-  if (j.other.length) out.push(`<details class="dev"><summary>이 병원의 다른 메시지 ${j.other.length}건</summary><ul>${j.other.map(line).join('')}</ul></details>`);
+  const otherHtml = j.other.length ? `<details><summary>이 병원의 다른 메시지 ${j.other.length}건</summary><ul>${j.other.map(line).join('')}</ul></details>` : '';
+  if (otherHtml) out.push(otherHtml.replace('<details>', '<details class="dev">'));
+  // 사용자 모드: 칩 · 자원 · 관련 메시지(펼쳐 보기) · 다른 메시지(펼쳐 보기)를 '자세히 보기' 안에. 넣을 것이 없으면 버튼도 없다
+  const chips = infoChips(r.id).filter(Boolean).join('');
+  const more = [chips && `<div class="tags">${chips}</div>`, resHtml && `<div>${resHtml}</div>`,
+    j.rel.length && `<details><summary>관련 메시지 ${j.rel.length}건</summary><ul>${j.rel.map(line).join('')}</ul></details>`, otherHtml].filter(Boolean);
+  if (more.length) out.push(`<details class="user more"><summary>자세히 보기</summary>${more.join('')}</details>`);
   return out.join('');
 }
 
