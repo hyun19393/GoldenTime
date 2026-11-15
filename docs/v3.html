@@ -448,6 +448,7 @@ const bedClass = (h, sinceObs) => {
   if (h.hvec == null || h.ageMin == null || h.ageMin + sinceObs > STALE_MIN) return 'stale';
   return h.hvec <= 0 ? 'full' : h.hvec <= 2 ? 'low' : 'ok';
 };
+const CLS_SHORT = { 권역응급의료센터: '권역센터', 지역응급의료센터: '지역센터', 지역응급의료기관: '지역기관' };
 const bedText = (h) => (h.hvec == null ? '정보 없음' : `남은 병상 ${h.hvec}`);
 
 // ---------- 데이터
@@ -866,7 +867,9 @@ function clearLists() {
 // 병원 한 줄에 붙이는 표시: 병상 · 질환 판단 · 메시지
 function tagsHtml(id, since) {
   const h = byId[id], j = judge[id], cls = bedClass(h, since);
+  // 기관 종류(권역센터·지역센터·지역기관): 알려 주기만 하고 순위에는 쓰지 않는다
   const out = [`<span class="tag ${cls === 'stale' ? 'gray' : cls}">${esc(bedText(h))}${cls === 'stale' && h.hvec != null ? '(오래됨)' : ''}</span>`];
+  if (CLS_SHORT[h.cls]) out.unshift(`<span class="tag gray" title="${esc(h.cls)}">${CLS_SHORT[h.cls]}</span>`);
   if (j.tier === 'ok') { if (sev && disease.items.length) out.push('<span class="tag ok">이 질환 \'가능\' 표시</span>'); }
   else for (const w of j.why) out.push(`<span class="tag ${w === '사전 연락 필요' ? 'call' : j.tier === 'no' ? 'full' : 'low'}">${esc(w)}</span>`);
   if (j.tier === 'ok' && j.rel.length) out.push(`<span class="tag gray">안내 메시지 ${j.rel.length}건</span>`);
