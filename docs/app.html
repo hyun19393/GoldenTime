@@ -434,6 +434,19 @@
   /* 추천 카드의 정보 시각 */
   .hage { margin: 8px 0 0; font-size: 13px; line-height: 18px; color: var(--muted); font-variant-numeric: tabular-nums; }
   @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) { .topbar { animation: none; } }
+  /* ===== 11-16 확인 필요·불가 표시 목록을 추천 순위와 구분: 회색 바탕 칸(확인 필요가 더 진함), 동심 모서리 */
+  #checkBox, #noBox { margin: 16px -8px 0; padding: 2px 8px 6px; border-radius: 18px; }
+  #checkBox { background: #E2E5EA; }
+  #noBox { background: #F1F2F4; }
+  #checkBox h3.lh, #noBox h3.lh { margin-top: 10px; }
+  #checkBox ol.hl > li + li::before { border-top-color: rgba(20, 23, 31, .14); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #checkBox { background: #2A2F38; } :root:not([data-theme="light"]) #noBox { background: #1E2128; } }
+  :root[data-theme="dark"] #checkBox { background: #2A2F38; } :root[data-theme="dark"] #noBox { background: #1E2128; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #checkBox ol.hl > li + li::before { border-top-color: rgba(255, 255, 255, .12); } }
+  /* 자동 연락 창 안내 줄 */
+  .call-win .lead p { margin: 6px 0 0; font-size: 14px; line-height: 21px; }
+  .call-win .lead p:first-child { font-weight: 600; }
+  .call-win .src { display: inline-block; margin-right: 4px; font-size: 13px; color: var(--muted); }
   /* ===== v3.4 (11-16 리서치 7·12번, 키보드)
      병원 줄: 키보드로 초점 → Enter·스페이스로 펼침, 초점 테두리 */
   ol.hl > li .top:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
@@ -670,6 +683,7 @@
 <div class="call-win" id="callWin" role="dialog" aria-labelledby="callTitle" hidden>
   <h3 id="callTitle">가기 전에 병원에 연락이 필요해요</h3>
   <div class="who" id="callName"></div>
+  <div class="lead" id="callLead" hidden></div>
   <ul id="callMsgs"></ul>
   <div class="acts"><a class="btn danger" id="callTel">전화 연결</a><button type="button" id="callOk">확인</button></div>
 </div>
@@ -1258,7 +1272,17 @@ function render() {
     li.querySelector('.top').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(li.dataset.id, true); } });
   }
   renderDist();
+  // 사전 연락이 필요한 병원까지의 이동 시간이 추천 병원의 실효 도착 시간보다 0.5분 넘게 짧으면(여러 곳이면 가장 빠른 곳)
+  // 그 병원의 연락 창을 바로 띄운다. 확인 필요 병원은 받아 줄 확률을 몰라 이동 시간으로 비교한다 (11-16 결정)
+  const key = `${runId}|${disease.id}`;
+  if (best && autoCallKey !== key) {
+    autoCallKey = key;
+    const fast = view.rows.filter((r) => judge[r.id].tier === 'check' && judge[r.id].contact.length && r.travelMin < best.effectiveMin - 0.5)
+      .sort((a, b) => a.travelMin - b.travelMin)[0];
+    if (fast && callFor === null) showCall(fast.id, { fast, best });
+  }
 }
+let autoCallKey = null;
 
 // 병원을 눌렀을 때 펼치는 내용: 거절되면 갈 곳 · 판단 까닭 · 메시지 원문 · 전화
 const msgKind = (m) => (m.c === 'Y000' ? m.d || '응급실' : SEVERE[MSG_TO_SEVERE[m.c]] ?? m.c);
@@ -1313,14 +1337,20 @@ function callState(st) {
   dockSync();
 }
 function hideCall() { callFor = null; callState('none'); }
-function showCall(id) {
+// auto = { fast, best }: 추천 병원의 실효 도착 시간보다 빨리 닿는 '사전 연락' 병원이라 검색 직후 스스로 띄울 때 (문구가 다름)
+function showCall(id, auto = null) {
   const j = judge[id], h = byId[id];
   if (!j?.contact.length) return hideCall();
   callFor = id;
+  $('callTitle').textContent = auto ? '더 빨리 갈 수 있는 병원이 있어요 — 먼저 전화로 확인하세요' : '가기 전에 병원에 연락이 필요해요';
   $('callName').textContent = h.name;
-  $('callMsgs').innerHTML = j.contact.map((m) => `<li>${esc(m.t)}</li>`).join('');
+  $('callName').hidden = !!auto;
+  $('callLead').hidden = !auto;
+  if (auto) $('callLead').innerHTML = `<p>${esc(h.name)}까지 ${min1(auto.fast.travelMin)}분이에요. 추천 병원(${esc(auto.best.name)}, 실효 도착 시간 ${min1(auto.best.effectiveMin)}분)보다 ${min1(auto.best.effectiveMin - auto.fast.travelMin)}분 빨라요.</p>`
+    + '<p>다만 이 병원은 환자를 보내기 전에 연락해 달라고 했어요. 전화로 받아 주는지 먼저 확인하고, 어렵다고 하면 추천 병원으로 가세요.</p>';
+  $('callMsgs').innerHTML = j.contact.map((m) => `<li>${auto ? '<span class="src">병원이 남긴 글</span> ' : ''}${esc(m.t)}</li>`).join('');
   $('callTel').hidden = !h.tel;
-  if (h.tel) { $('callTel').href = telHref(h.tel); $('callTel').innerHTML = IC.phone + esc(`전화 연결 ${h.tel}`); }
+  if (h.tel) { $('callTel').href = telHref(h.tel); $('callTel').innerHTML = IC.phone + esc(`${auto ? '전화로 확인' : '전화 연결'} ${h.tel}`); }
   $('callPill').innerHTML = `${IC.phone}<span>${esc(h.name)}</span><b>연락 안내 보기</b>`;
   callState('open');
 }
