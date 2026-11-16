@@ -286,7 +286,6 @@
   body[data-mode="user"] .detail { margin-top: 12px; }
   /* 실효 도착 시간 이름표·핵심 문구 */
   /* 위쪽 막대(고정) 높이만큼 띄워서, 결과 카드로 이동할 때 카드 윗부분이 막대에 가려지지 않게 */
-  .result, #listCard, ol.hl > li { scroll-margin-top: calc(var(--tb-h, 104px) + 8px); }
   .htime .hlabel { display: block; font-size: 13px; line-height: 18px; font-weight: 600; letter-spacing: 0; color: var(--muted); text-align: right; }
   h2.hrow { justify-content: space-between; align-items: baseline; padding-right: 12px; }
   h2.hrow .colhd { font-size: 13px; line-height: 18px; font-weight: 600; color: var(--muted); }
@@ -392,6 +391,53 @@
   .calc-link { margin: 20px 0 0; text-align: center; }
   .calc-link .btn { min-width: 200px; }
   .calc-link .hint { margin: 8px 0 0; }
+
+
+  /* ===== v3.3 (11-16 UX 리서치 반영): 애플 스프링 곡선 · 유리 줄이기 · 스크롤 가장자리 · 초점 가림 방지
+     스프링: WWDC23 변환식(질량 1, 강성 (2π/duration)², 감쇠 4π(1−bounce)/duration)으로 미리 계산해 linear()로 넣음
+       --ease: duration 0.4초·bounce 0 (오차 0.1% 안까지 588ms) / --spring: duration 0.35초·bounce 0.1 (428ms, 최대 넘침 0.2%)
+     linear()가 없는 브라우저는 앞에서 정한 cubic-bezier 그대로 */
+  @supports (transition-timing-function: linear(0, 1)) {
+    :root { --ease: linear(0, 0.034, 0.114, 0.215, 0.321, 0.423, 0.517, 0.599, 0.671, 0.732, 0.783, 0.826, 0.86, 0.888, 0.911, 0.93, 0.945, 0.956, 0.966, 0.973, 0.979, 0.984, 0.987, 0.99, 0.992, 0.994, 0.995, 0.996, 0.997, 0.998, 0.998, 0.999, 1); --spring: linear(0, 0.025, 0.086, 0.169, 0.261, 0.355, 0.446, 0.531, 0.608, 0.676, 0.736, 0.787, 0.83, 0.865, 0.895, 0.919, 0.938, 0.954, 0.966, 0.975, 0.983, 0.988, 0.992, 0.995, 0.998, 0.999, 1, 1.001, 1.001, 1.001, 1.002, 1.001, 1); }
+  }
+  :root { --exit: cubic-bezier(.3, 0, .8, .15); } /* 사라질 때: 빨리 떠남(등장보다 짧게) */
+  /* 초점·이동이 위쪽 막대와 아래쪽 막대에 가리지 않게 (WCAG 2.4.11) */
+  /* 위쪽은 html scroll-padding을 쓰지 않음: 붙어 있는 위쪽 막대 안의 버튼(모드 전환)을 누르면 브라우저가 화면을 옮겨 버림 → 요소별 scroll-margin + focusin 코드 */
+  .result, #listCard, ol.hl > li { scroll-margin-top: calc(var(--tb-h, 104px) + 8px); }
+  html:has(body.docked) { scroll-padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+  /* 누름 반응: 짧고 정확하게(100ms) */
+  button, .btn { transition: transform .1s ease-out, background-color .2s ease, opacity .2s ease; }
+  button:active:not(:disabled), .btn:active { transform: scale(.97); }
+  ol.hl > li:active:not(:has(.detail:active)) { transform: scale(.985); transition: transform .1s ease-out, background-color .2s ease; }
+  /* 유리 줄이기: 위·아래 막대 두 곳만, 흐림 12px·채도 140%, 바탕은 더 불투명하게 (iOS 27 방향) */
+  :root { --g-bg: rgba(250, 250, 252, .82); --g-bar: rgba(242, 243, 247, .86); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --g-bg: rgba(30, 32, 38, .82); --g-bar: rgba(11, 12, 15, .84); } }
+  :root[data-theme="dark"] { --g-bg: rgba(30, 32, 38, .82); --g-bar: rgba(11, 12, 15, .84); }
+  .topbar.scrolled, .dock { -webkit-backdrop-filter: saturate(140%) blur(12px); backdrop-filter: saturate(140%) blur(12px); }
+  /* 스크롤 가장자리: 0~80px 스크롤하는 동안 위쪽 막대 바탕·선이 서서히 생김(켜고 끄기 대신). 흐림 값은 움직이지 않음 */
+  @supports (animation-timeline: scroll()) {
+    .topbar { -webkit-backdrop-filter: saturate(140%) blur(12px); backdrop-filter: saturate(140%) blur(12px);
+      animation: tb-edge linear both; animation-timeline: scroll(root); animation-range: 0 80px; }
+    @keyframes tb-edge { from { background-color: transparent; box-shadow: 0 .5px 0 transparent; }
+      to { background-color: var(--g-bar); box-shadow: 0 .5px 0 var(--g-edge), 0 8px 20px -14px rgba(0, 0, 0, .35); } }
+  }
+  /* 모드 손잡이·아래쪽 막대: 약한 스프링으로 나타나고, 사라질 때는 짧게 */
+  .seg-thumb { transition: transform .43s var(--spring); }
+  .dock { transition: opacity .2s var(--exit), transform .2s var(--exit), visibility 0s .2s; }
+  .dock.show { transition: opacity .25s ease-out, transform .43s var(--spring), visibility 0s; }
+  /* 사전 연락 창: 등장 0.43초 스프링, 접힘 0.2초 */
+  .call-win { overscroll-behavior: contain; transition: opacity .3s ease-out, transform .43s var(--spring), visibility 0s; }
+  .call-win.min { transition: opacity .2s var(--exit), transform .2s var(--exit), visibility 0s .2s; }
+  .dist-wrap, .fail-box { overscroll-behavior: contain; }
+  /* 펼치는 칸: 0.59초 스프링(튕김 없음) */
+  details::details-content { transition: block-size .59s var(--ease), content-visibility .59s allow-discrete; }
+  /* 추천 카드의 정보 시각 */
+  .hage { margin: 8px 0 0; font-size: 13px; line-height: 18px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) { .topbar { animation: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    button, .btn, ol.hl > li, .seg-thumb, .dock, .dock.show, .call-win, .call-win.min, details::details-content { transition: none; }
+    ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none; }
+  }
 
   /* 접근성 설정 */
   @media (prefers-reduced-transparency: reduce) {
@@ -988,7 +1034,11 @@ function clearFail() { $('failDlg').hidden = true; $('failBadge').hidden = true;
 $('failClose').addEventListener('click', closeFail);
 $('failBadge').addEventListener('click', () => { $('failBadge').hidden = true; $('failDlg').hidden = false; $('failClose').focus(); });
 $('failRetry').addEventListener('click', () => { clearFail(); if (origin) setOrigin(origin); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('failDlg').hidden) closeFail(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (!$('failDlg').hidden) closeFail();
+  else if (document.body.classList.contains('calling')) { callState('min'); $('callPill').focus({ preventScroll: true }); }
+});
 
 function failHtml(o, fails, err) {
   const items = [];
@@ -1125,7 +1175,7 @@ function render() {
   // 추천 카드: 병원 이름 · 실효 도착 시간(크게) · 길안내와 전화
   const hero = (k, r) => (r
     ? `<div class="cmp best"><span class="tag accent">${k}</span><div class="hero"><div><div class="hname">${esc(r.name)}</div>` +
-      `<div class="meta dev">거절 확률 ${pct(r.pReject)}</div><div class="hwhy user">${whyChips(r.id)}</div></div><div class="htime"><span class="hlabel">실효 도착 시간</span>${min1(r.effectiveMin)}<small>분</small></div></div>${actsHtml(byId[r.id])}</div>`
+      `<div class="meta dev">거절 확률 ${pct(r.pReject)}</div><div class="hwhy user">${whyChips(r.id)}</div></div><div class="htime"><span class="hlabel">실효 도착 시간</span>${min1(r.effectiveMin)}<small>분</small></div></div>${actsHtml(byId[r.id])}<p class="hage">병상 정보 ${Math.round(sinceObsMin())}분 전 기준</p></div>`
     : `<div class="cmp best"><span class="tag gray">${k}</span><div class="n">해당 없음</div></div>`);
   const moveBox = (k, r) => (r
     ? `<div class="cmp"><div class="k">${k}</div><div class="v">${min1(r.travelMin)}분 이동</div><div class="n">${esc(r.name)}</div>${tierChip(r.id)}</div>`
@@ -1234,7 +1284,12 @@ function detailHtml(r) {
 // ---------- 사전 연락 창: 관련 메시지에 '사전 연락'이 필요한 글이 있는 병원을 눌렀을 때만 띄운다
 // 상태: none(없음) · open(창이 펴짐) · min(작은 표시). 확인 → min, '자세히 보기' → open. 줄고 커지는 움직임은 CSS가 맡는다
 let callFor = null;
+// 연락 창이 펴지면 방문 기록에 한 칸을 더해, 휴대폰 '뒤로 가기'가 페이지를 떠나지 않고 창만 접게 한다
+let callHist = false;
+addEventListener('popstate', () => { if (!callHist) return; callHist = false; if (document.body.classList.contains('calling')) callState('min'); });
 function callState(st) {
+  if (st === 'open' && !callHist) { history.pushState({ gtCall: 1 }, ''); callHist = true; }
+  else if (st !== 'open' && callHist) { callHist = false; history.back(); }
   $('callWin').hidden = st === 'none'; $('callPill').hidden = st === 'none';
   document.body.classList.toggle('calling', st === 'open');
   $('callWin').classList.toggle('min', st === 'min');
@@ -1462,6 +1517,15 @@ function dockSync() {
   document.body.classList.toggle('docked', on);
 }
 dockMQ.addEventListener?.('change', dockQueue);
+// 키보드 초점이 위쪽 막대·아래쪽 막대에 가리면 그만큼 화면을 옮긴다 (WCAG 2.4.11, CSS scroll-padding만으로는 화면 안의 요소는 옮겨 주지 않음)
+addEventListener('focusin', (e) => {
+  const el = e.target;
+  if (!(el instanceof Element) || el.closest('#topbar, #dock, #callWin, #callPill, #failDlg, #failBadge')) return;
+  const r = el.getBoundingClientRect(), top = $('topbar').getBoundingClientRect().bottom + 8;
+  const bot = ($('dock').classList.contains('show') ? $('dock').getBoundingClientRect().top : innerHeight) - 8;
+  if (r.bottom > bot && r.top - (r.bottom - bot) >= top) scrollBy(0, r.bottom - bot);
+  else if (r.top < top) scrollBy(0, r.top - top);
+});
 
 // ---------- 시작
 refreshQuota();
