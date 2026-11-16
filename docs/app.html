@@ -434,6 +434,21 @@
   /* 추천 카드의 정보 시각 */
   .hage { margin: 8px 0 0; font-size: 13px; line-height: 18px; color: var(--muted); font-variant-numeric: tabular-nums; }
   @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) { .topbar { animation: none; } }
+  /* ===== v3.4 (11-16 리서치 7·12번, 키보드)
+     병원 줄: 키보드로 초점 → Enter·스페이스로 펼침, 초점 테두리 */
+  ol.hl > li .top:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
+  /* 큰 제목 접힘: 스크롤 0~80px 동안 위쪽 막대 제목이 1 → 0.82배로 작아짐. 높이는 바꾸지 않음(transform만) */
+  .tb-row h1 { transform-origin: left center; transition: transform .43s var(--ease); }
+  .topbar.scrolled .tb-row h1 { transform: scale(.82); }
+  @supports (animation-timeline: scroll()) {
+    .tb-row h1, .topbar.scrolled .tb-row h1 { transform: none; transition: none; animation: tb-title linear both; animation-timeline: scroll(root); animation-range: 0 80px; }
+    @keyframes tb-title { from { transform: scale(1); } to { transform: scale(.82); } }
+  }
+  /* 화면 밖 무거운 칸은 보일 때 그림(개발자 모드의 거리 비교·계산 방법) */
+  .card.last.dev { content-visibility: auto; contain-intrinsic-size: auto 600px; }
+  @media (prefers-reduced-motion: reduce) {
+    .tb-row h1, .topbar.scrolled .tb-row h1 { animation: none; transition: none; transform: none; }
+  }
   @media (prefers-reduced-motion: reduce) {
     button, .btn, ol.hl > li, .seg-thumb, .dock, .dock.show, .call-win, .call-win.min, details::details-content { transition: none; }
     ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none; }
@@ -1225,7 +1240,7 @@ function render() {
 
   let nth = 0;
   const item = (r, head, meta, cls = '') => `<li data-id="${esc(r.id)}" style="--i:${Math.min(nth++, 12)}"${cls ? ` class="${cls}"` : ''}>
-      <div class="top"><span class="name" title="${esc(byId[r.id].fullName)}">${head}</span>${meta}</div>
+      <div class="top" role="button" tabindex="0" aria-expanded="false"><span class="name" title="${esc(byId[r.id].fullName)}">${head}</span>${meta}</div>
       <div class="meta dev">직선 ${km(r.straightM)} · 도로 ${km(r.roadM)}</div>
       <div class="tags">${tagsHtml(r.id, since)}</div>
       <div class="detail" hidden></div>
@@ -1240,7 +1255,11 @@ function render() {
   $('noList').innerHTML = nos.slice(0, SHOW.no).map((r) => item(r, esc(r.name), moveMeta(r), 'dim')).join('');
   $('noMeta').textContent = more(nos.length, SHOW.no);
   $('noBox').hidden = !nos.length;
-  for (const li of document.querySelectorAll('ol.hl > li')) li.addEventListener('click', (e) => { if (!e.target.closest('.detail')) select(li.dataset.id, true); });
+  for (const li of document.querySelectorAll('ol.hl > li')) {
+    li.addEventListener('click', (e) => { if (!e.target.closest('.detail')) select(li.dataset.id, true); });
+    // 키보드: 병원 줄(.top)에서 Enter·스페이스로 펼치기 (버튼과 같게)
+    li.querySelector('.top').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(li.dataset.id, true); } });
+  }
   renderDist();
 }
 
@@ -1362,6 +1381,7 @@ async function select(id, fromList = false) {
   for (const li of document.querySelectorAll('ol.hl > li')) {
     const on = li.dataset.id === id;
     li.classList.toggle('sel', on);
+    li.querySelector('.top')?.setAttribute('aria-expanded', String(on));
     const c = li.querySelector('.detail');
     c.hidden = !on;
     if (on) c.innerHTML = detailHtml(r);
