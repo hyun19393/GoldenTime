@@ -39,11 +39,10 @@ export const itemLabel = (n) => SEVERE[`MKioskTy${n}`];
 
 // 질환 목록. items = 공공데이터 항목 번호(MKioskTy n), depts = 관련 진료과(메시지의 진료과 칸·글과 맞춰 봄), words = 메시지 글에서 찾는 낱말
 // depts·words는 '관련 메시지'를 고르려고 정해 둔 규칙이다(가정). 걸리지 않은 메시지도 병원을 누르면 모두 보여 준다.
-// accept = 이 낱말이 있으면 '이 환자는 받는다'는 글로 본다 (심정지: 'CPR만 가능', 'CPR 외 수용불가' 등. 'CPR 포함 수용불가'는 제외)
+// accept = 이 낱말이 있으면 '이 환자는 받는다'는 글로 본다 (11-16 심정지·중증외상·골절 삭제 뒤 지금 쓰는 질환은 없음)
 // words는 정규식 조각으로 합쳐 한 번에 찾는다(대소문자 구분 없음)
 const D = (id, group, label, items, depts = [], words = [], note = '', accept = null) =>
   ({ id, group, label, items, depts, words, wordRe: words.length ? new RegExp(words.join('|'), 'i') : null, note, accept });
-const NO_DATA = '이 경우는 병원별 수용 가능 정보가 공공데이터에 없어요. 응급실 병상과 병원 메시지만으로 계산해요.';
 export const DISEASES = [
   D('none', '', '모름 · 고르지 않음', []),
   D('mi', '심장·큰 혈관', '심근경색', [1], ['순환기내과', '심장혈관흉부외과', '흉부외과', '내과'], ['심근경색', 'AMI', 'CAG', '흉통', '심혈관']),
@@ -73,9 +72,6 @@ export const DISEASES = [
   D('eye', '그 밖', '안과 응급수술', [25], ['안과'], ['안과', '안외상']),
   D('ir', '그 밖', '영상의학 혈관중재 (성인)', [26], ['영상의학과'], ['색전', '혈관조영', '혈관중재']),
   D('irC', '그 밖', '영상의학 혈관중재 (영유아)', [27], ['영상의학과', '소아청소년과'], ['색전', '혈관조영', '혈관중재']),
-  D('arrest', '공공데이터에 질환 정보가 없는 경우', '심정지', [], [], ['CPR', '심정지'], NO_DATA, /CPR(?!\s*포함)/i),
-  D('trauma', '공공데이터에 질환 정보가 없는 경우', '중증외상 (교통사고·추락·깔림 등)', [], [], ['(^|[^비])외상'], NO_DATA), // '비외상'은 빼고 찾는다
-  D('fracture', '공공데이터에 질환 정보가 없는 경우', '골절', [], ['정형외과'], ['골절'], NO_DATA),
 ];
 export const diseaseById = Object.fromEntries(DISEASES.map((d) => [d.id, d]));
 
@@ -180,7 +176,6 @@ export const DISEASE_RES = {
   abd: ['hvoc', 'hv3'], gall: ['hvoc', 'hv3'], gi: ['hv2'], giC: ['hv32'], intus: ['hvoc', 'hv32'], bronch: ['hv2'], bronchC: ['hv32'],
   delivery: ['hv42', 'hvoc'], obOp: ['hvoc', 'hv42'], gynOp: ['hvoc'], lbw: ['hvncc', 'hvincuayn', 'hvventisoayn'],
   burn: ['hv43'], replant: ['hvoc'], replantX: ['hvoc'], hd: ['hvicc'], crrt: ['hvcrrtayn', 'hvicc'], psy: [], eye: ['hvoc'], ir: ['hvangioayn'], irC: ['hvangioayn', 'hv32'],
-  arrest: ['hvicc', 'hvecmoayn', 'hvhypoayn'], trauma: ['hvoc', 'hv39', 'hv60', 'hv9', 'hvctayn'], fracture: ['hvoc'],
 };
 export const RES_KEYS = Object.keys(RES);
 /** 병원 자원 r(severe.json의 r)에서 질환 d에 맞는 것만. 값이 없는 칸은 뺀다. → [{key, label, text, low}] (low: 0 이하이거나 가용 표시 아님) */

@@ -501,7 +501,6 @@
         <select id="disease" aria-describedby="diseaseInfo"></select>
         <div class="stats" id="diseaseStats"></div>
         <p class="hint" id="diseaseInfo"></p>
-        <p class="warn" id="diseaseWarn" hidden><b>심정지·중증외상이 의심되면 직접 옮기지 말고 바로 119에 신고하세요.</b> 119 구급대가 이송 병원을 정해요.</p>
       </section>
 
       <section class="card">
@@ -574,7 +573,6 @@
             <li><b>메시지를 고르는 규칙</b>: 그 질환 항목의 메시지는 공공데이터 코드로 정확히 찾아요. 응급실 메시지는 진료과 칸과 글 속 낱말로 '관련 있음'을 고르는데, 이것은 <b>정해 둔 규칙</b>이라 틀릴 수 있어요. 그래서 병원을 누르면 그 병원의 메시지를 모두 원문으로 보여 줘요.</li>
             <li><b>사전 연락 창</b>: 관련 메시지에 '사전 문의', '문의 후 이송', '수용 여부 확인' 같은 글이 있으면, 그 병원을 눌렀을 때 전화 연결 창을 띄워요. 확인을 누르면 왼쪽 아래 작은 표시로 부드럽게 줄고, '자세히 보기'를 누르면 다시 커져요. 창 바탕은 반투명이지만 뒤에 무엇이 있어도 글자가 또렷하게(대비 7:1 이상) 보이도록 밝은 화면 70%, 어두운 화면 82% 불투명으로 맞췄어요.</li>
             <li><b>길안내</b>: 병원을 누르면 나오는 '카카오맵 길안내'는 카카오맵을 새 창으로 열어요. 병원 이름과 좌표만 넘기고, 출발지는 넘기지 않아요.</li>
-            <li><b>질환 정보가 없는 경우</b>: 심정지·중증외상·골절은 공공데이터에 병원별 수용 가능 표시가 없어요. 병상과 메시지(글 속 'CPR', '외상', '골절')만으로 계산하니, 받아 줄 수 있다는 뜻이 아니에요.</li>
             <li><b>'정보미제공'은 추측하지 않아요</b>: 응급실의 약 60%(작은 병원일수록 많음)는 질환 표시를 내지 않아요. 수술실·장비 정보로 짐작하지 않고 '확인 필요'로 둬요.</li>
             <li><b>후보 고르기</b>: 가까운 '가능 확인' 병원이 6곳보다 적으면 더 먼 '가능 확인' 병원을 가까운 순서로 채워요. 드문 질환은 먼 병원이 나올 수 있어요.</li>
           </ul>
@@ -768,7 +766,6 @@ function rejudge() {
   const c = { ok: 0, check: 0, no: 0 };
   for (const h of ers) c[judge[h.id].tier]++;
   $('disease').disabled = !sev;
-  $('diseaseWarn').hidden = !sev || !['arrest', 'trauma'].includes(disease.id);
   $('diseaseStats').innerHTML = !sev ? '' :
     `<span class="tag ok">${disease.items.length ? '가능 확인' : '막는 메시지 없음'} ${c.ok}곳</span><span class="tag low">확인 필요 ${c.check}곳</span><span class="tag full">불가 표시 ${c.no}곳</span>`;
   $('diseaseInfo').textContent = !sev
@@ -1033,7 +1030,7 @@ function initMap() {
 // ---------- 계산
 // results = '가능 확인' 병원의 실효 도착 시간 순위, view = 화면에 쓰는 모든 병원 줄({ rows: 도로 시간 순, byId })
 let results = null, view = null, origin = null, runId = 0, selectedId = null;
-// 질환 표시가 있는 질환을 골랐을 때만 '가능 확인'이라고 부른다. 표시가 없는 경우(고르지 않음·심정지·중증외상·골절)는 병상과 메시지만 본 것이다
+// 질환 표시가 있는 질환을 골랐을 때만 '가능 확인'이라고 부른다. 표시가 없는 경우(고르지 않음)는 병상과 메시지만 본 것이다
 const hasItems = () => !!sev && disease.items.length > 0;
 const tierName = (t) => (t === 'ok' ? (hasItems() ? '가능 확인' : '병상 기준') : t === 'check' ? '확인 필요' : '불가 표시');
 

@@ -54,7 +54,7 @@ test('받기 어렵다는 글과 안내 글 구분', () => {
 });
 
 test('메시지 범위: 응급실 전체 · 관련 진료과 · 낱말 · 관계없음', () => {
-  const { ich, mi, none, trauma, abd } = diseaseById;
+  const { ich, mi, none, abd } = diseaseById;
   assert.equal(scopeOf(msg('Y000', '응급실', '응급실 포화'), none), 'er');
   assert.equal(scopeOf(msg('Y000', '병상 또는 장비', '중환자실 full bed'), ich), 'er');
   assert.equal(scopeOf(msg('Y000', '응급실', '[안과] 응급 안과 적출에 준하는 상황의 경우, 안과 당직 문의 후 수용 여부 확인'), ich), null); // 응급실 칸이지만 안과 이야기
@@ -63,8 +63,6 @@ test('메시지 범위: 응급실 전체 · 관련 진료과 · 낱말 · 관계
   assert.equal(scopeOf(msg('Y000', '감염내과', '감염내과 - 신환 수용 불가'), mi), null); // '감염내과'를 '내과'로 잡지 않는다
   assert.equal(scopeOf(msg('Y000', '응급실', '금일 내과 당직의 부재로 내과환자는 입원 불가합니다.'), mi), 'dept');
   assert.equal(scopeOf(msg('Y000', '성형외과', '성형외과 진료 불가능'), ich), null);
-  assert.equal(scopeOf(msg('Y000', '응급실', '중증외상불가'), trauma), 'word');
-  assert.equal(scopeOf(msg('Y000', '외과', '[복부응급수술(비외상)]Appendicitis 신환 수용 불가'), trauma), null); // '비외상'은 외상이 아니다
   assert.equal(scopeOf(msg('Y000', '외과', '[복부응급수술(비외상)]Appendicitis 신환 수용 불가'), abd), 'word');
 });
 
@@ -81,12 +79,8 @@ test('응급실 전체 메시지: 받기 어렵다는 글이면 확인 필요, �
   assert.deepEqual(call.why, ['관련 메시지 1건', '사전 연락 필요']);
 });
 
-test("심정지: 'CPR만 가능'은 받는다는 글이라 막지 않고, 'CPR 포함 수용불가'는 확인 필요", () => {
-  const a = diseaseById.arrest;
-  assert.equal(assess({ m: [msg('Y000', '응급실', '침상 및 모니터 부족으로 CPR만 가능합니다')] }, a).tier, 'ok');
-  assert.equal(assess({ m: [msg('Y000', '응급실', '병실 및 중환자실 포화로 CPR은 수용 가능, f/u 은 미리 전화 부탁드립니다.')] }, a).contact.length, 0);
-  assert.equal(assess({ m: [msg('Y000', '응급실', 'CPR 포함 수용불가 / 응급실 과밀화')] }, a).tier, 'check');
-  assert.equal(assess({ m: [msg('Y000', '응급실', '침상 및 모니터 부족으로 CPR만 가능합니다')] }, diseaseById.none).tier, 'check'); // 다른 환자에게는 막는 글
+test("'CPR만 가능' 같은 응급실 글은 다른 환자에게는 받기 어렵다는 글", () => {
+  assert.equal(assess({ m: [msg('Y000', '응급실', '침상 및 모니터 부족으로 CPR만 가능합니다')] }, diseaseById.none).tier, 'check');
 });
 
 test('가능 → 불가능 바뀔 확률: 시간에 비례하고 항목이 많으면 조금 커진다', () => {
@@ -105,7 +99,7 @@ test('병원이 알린 자원: 질환에 맞는 칸만, 빈칸은 빼고, 0 이�
   const r = { hvoc: 3, hv6: 0, hvctayn: 'Y', hvangioayn: 'N1' };
   assert.deepEqual(resources(r, diseaseById.ich).map((x) => [x.text, x.low]),
     [['CT 가용', false], ['혈관촬영기 가용 표시 아님', true], ['수술실 3', false], ['신경외과 중환자실 0', true]]);
-  assert.deepEqual(resources(r, diseaseById.trauma).map((x) => x.key), ['hvoc', 'hvctayn']); // 값이 없는 칸은 안 보인다
+  assert.deepEqual(resources(r, diseaseById.abd).map((x) => x.key), ['hvoc']); // 값이 없는 칸(hv3)은 안 보인다
   assert.deepEqual(resources(undefined, diseaseById.mi), []);
   assert.deepEqual(resources({ hv42: 'N', hvoc: -1 }, diseaseById.delivery).map((x) => [x.text, x.low]), [['분만실 가용 표시 아님', true], ['수술실 -1', true]]);
 });
@@ -137,6 +131,4 @@ test('진료과 메시지가 분명히 수용 불가라고 적으면 불가 표�
   assert.equal(assess(h, diseaseById.mi).tier, 'ok'); // 관계없는 질환은 그대로
   const h2 = { f: Y, m: [{ c: 'Y000', d: '신경외과', t: '[신경외과] 경증 두부외상 수용 불가능' }] };
   assert.equal(assess(h2, diseaseById.ich).tier, 'check');
-  const h3 = { f: Y, m: [{ c: 'Y000', d: '비뇨의학과', t: '[비뇨의학과] 응급수술 불가능(고환염전, 신장외상 등)' }] };
-  assert.notEqual(assess(h3, diseaseById.trauma).tier, 'no'); // 낱말로만 걸린 다른 진료과 메시지는 불가로 보지 않는다
 });
