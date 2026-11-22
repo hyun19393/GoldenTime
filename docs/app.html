@@ -538,6 +538,250 @@
   .nob { display: flex; width: 100%; min-height: 52px; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 4px; border: 0; background: none; color: var(--ink); font: inherit; font-size: 17px; font-weight: 700; cursor: pointer; text-align: left; }
   #noCount { flex: none; font-size: 15px; font-weight: 600; color: var(--muted); }
   body[data-mode="user"] #noBox:not(.open) #noList { display: none; }
+  /* ===== 11-23 사용자 모드: 지도 + 시트 (디자인 캔버스 3차 시안 반영). 개발자 모드는 그대로
+     휴대폰(폭 880px 이하): 지도를 화면 전체에 깔고 내용은 아래 시트. PC(881px 이상): 왼쪽 시트(폭 400px)
+     화면 높이 740px 이하 = 키 작은 휴대폰(이름·시간 한 줄), 600px 이하 = 아주 작은 휴대폰(강조 카드 한 줄 등), 폭 340px 이하 = 길안내 버튼 글자 줄임
+     주요 버튼은 시트 아래에 고정, 스크롤되는 곳은 아래쪽을 흐리게(더 있다는 표시) */
+  #uApp { --u-ink: #191F28; --u-ink2: #333D4B; --u-sub: #4E5968; --u-sub2: #6B7684; --u-sheet: #FFFFFF; --u-surf: #F2F4F6; --u-line: #F2F4F6; --u-line2: #E5E8EB; --u-handle: #D1D6DB;
+    --u-blue: #1B64DA; --u-btn: #1B64DA; --u-blue-bg: #E8F3FF; --u-green: #0B7A55; --u-amber: #9A5200; --u-amber-bg: #FFF4E5; --u-amber-ink: #5A3B00; --u-arr-bg: #FFFFFF;
+    --u-red: #D22030; --u-err: #C2352D; --u-shadow: rgba(25, 31, 40, .10);
+    color: var(--u-ink); font-size: 16px; line-height: 24px; letter-spacing: -0.01em; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #uApp { --u-ink: #F2F4F6; --u-ink2: #D1D6DB; --u-sub: #B0B8C1; --u-sub2: #8B95A1; --u-sheet: #1E2129; --u-surf: #2A2F38; --u-line: #2A2F38; --u-line2: #3A404B; --u-handle: #5A6170;
+    --u-blue: #6FA5FF; --u-btn: #2F6FE0; --u-blue-bg: #23324D; --u-green: #4FD39A; --u-amber: #FFB55C; --u-amber-bg: #3A2E1E; --u-amber-ink: #FFD9A8; --u-arr-bg: #4A3A24; --u-err: #FF8A7F; --u-shadow: rgba(0, 0, 0, .4); } }
+  :root[data-theme="dark"] #uApp { --u-ink: #F2F4F6; --u-ink2: #D1D6DB; --u-sub: #B0B8C1; --u-sub2: #8B95A1; --u-sheet: #1E2129; --u-surf: #2A2F38; --u-line: #2A2F38; --u-line2: #3A404B; --u-handle: #5A6170;
+    --u-blue: #6FA5FF; --u-btn: #2F6FE0; --u-blue-bg: #23324D; --u-green: #4FD39A; --u-amber: #FFB55C; --u-amber-bg: #3A2E1E; --u-amber-ink: #FFD9A8; --u-arr-bg: #4A3A24; --u-err: #FF8A7F; --u-shadow: rgba(0, 0, 0, .4); }
+  /* 페이지 틀: 사용자 모드에서는 예전 카드 화면을 숨기고 지도만 화면 전체에 깐다 */
+  html:has(> body[data-mode="user"]) { overflow: hidden; }
+  body[data-mode="user"] { overflow: hidden; height: 100vh; height: 100dvh; }
+  body[data-mode="user"] :is(.topbar, .intro, .layout > div:first-child, .calc-link, .wrap > footer.legal, .mapcol > .legend, .mapcol > footer, .dock, #callWin, #callPill, .pin) { display: none !important; }
+  body[data-mode="user"] .wrap { max-width: none; padding: 0; }
+  body[data-mode="user"] .mapcol { position: fixed; inset: 0; z-index: 0; }
+  body[data-mode="user"] #map { height: 100%; border-radius: 0; box-shadow: none; background: #E8EEF2; }
+  body[data-mode="user"] .fail-badge { top: calc(84px + env(safe-area-inset-top)); bottom: auto; }
+  .eff.move small { font: inherit; color: inherit; }
+  /* 지도 위 말풍선 (지도 바탕이 밝으므로 어두운 화면에서도 밝은 색 그대로) */
+  .u-bub { min-height: 0; padding: 4px 9px; border: 0; border-radius: 10px; background: #FFFFFF; color: #0B7A55; font: 800 13px/18px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", system-ui, "Noto Sans KR", sans-serif; white-space: nowrap; box-shadow: 0 1px 6px rgba(25, 31, 40, .18); cursor: pointer; }
+  .u-bub.chk { color: #9A5200; }
+  .u-best { min-height: 0; padding: 0; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 0; cursor: pointer; box-shadow: none; }
+  .u-best b { padding: 7px 12px; border-radius: 12px; background: #1B64DA; color: #FFFFFF; font: 800 14px/18px -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", system-ui, "Noto Sans KR", sans-serif; white-space: nowrap; box-shadow: 0 3px 10px rgba(27, 100, 218, .3); }
+  .u-best i { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 7px solid #1B64DA; }
+  .u-best s { width: 12px; height: 12px; margin-top: 2px; border-radius: 50%; background: #1B64DA; border: 3px solid #FFFFFF; box-sizing: border-box; }
+  .u-me { width: 36px; height: 36px; border-radius: 50%; background: rgba(27, 100, 218, .16); display: grid; place-items: center; pointer-events: none; }
+  .u-me::after { content: ''; width: 18px; height: 18px; border-radius: 50%; background: #1B64DA; border: 3px solid #FFFFFF; box-sizing: border-box; }
+  .u-bub:focus-visible, .u-best:focus-visible { outline: 3px solid #1B64DA; outline-offset: 2px; }
+  body[data-mode="dev"] :is(.u-bub, .u-best, .u-me) { display: none; }
+  /* 위쪽 머리줄: 고르기 전에는 '골든타임·모드·119', 결과에서는 '질환·출발지·바꾸기·119' */
+  #uApp .u-top { position: fixed; z-index: 20; top: calc(14px + env(safe-area-inset-top)); left: 16px; right: 16px; display: flex; align-items: center; gap: 10px; }
+  #uApp .u-pill { flex: 1; min-width: 0; height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 6px 0 18px; border-radius: 28px; background: var(--u-sheet); box-shadow: 0 2px 12px var(--u-shadow); }
+  #uApp .u-brand > b { flex: 1; min-width: 0; font-size: 18px; line-height: 24px; font-weight: 800; letter-spacing: -0.03em; white-space: nowrap; }
+  #uApp .u-ct { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  #uApp .u-ct b { font-size: 16px; line-height: 21px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #uApp .u-ct span { font-size: 13px; line-height: 18px; color: var(--u-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #uApp .u-chg { flex: none; min-height: 44px; height: 44px; padding: 0 16px; border: 0; border-radius: 22px; background: var(--u-blue-bg); color: var(--u-blue); font-size: 15px; font-weight: 700; }
+  #uApp .u-119 { width: 56px; height: 56px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--u-red); color: #FFFFFF; font-size: 16px; font-weight: 800; text-decoration: none; box-shadow: 0 2px 10px rgba(210, 32, 48, .3); }
+  #uApp:is([data-st="pick"], [data-st="find"]) .u-cond, #uApp:is([data-st="res"], [data-st="list"]) .u-brand { display: none; }
+  /* 시트 */
+  #uApp .u-sheet { position: fixed; z-index: 10; left: 0; right: 0; bottom: 0; box-sizing: border-box; display: flex; flex-direction: column; max-height: calc(100vh - 240px); max-height: calc(100dvh - 240px);
+    padding: 0 20px; background: var(--u-sheet); border-radius: 24px 24px 0 0; box-shadow: 0 -4px 20px rgba(25, 31, 40, .08); }
+  #uApp .u-handle { flex: none; height: 24px; min-height: 24px; margin: 0 -20px; padding: 0; border: 0; border-radius: 24px 24px 0 0; background: none; display: grid; place-items: center; cursor: pointer; touch-action: none; }
+  #uApp .u-handle::before { content: ''; width: 36px; height: 4px; border-radius: 2px; background: var(--u-handle); }
+  #uApp:is([data-st="pick"], [data-st="find"]) .u-handle { pointer-events: none; }
+  #uApp .u-pane { display: none; flex: 1 1 auto; min-height: 0; flex-direction: column; }
+  #uApp[data-st="pick"] .u-pick, #uApp[data-st="find"] .u-find, #uApp[data-st="res"] .u-res, #uApp[data-st="list"] .u-list { display: flex; }
+  #uApp .u-scr { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -20px; padding: 0 20px 20px;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
+  #uApp .u-bar { flex: none; margin: 0 -20px; padding: 10px 20px calc(16px + env(safe-area-inset-bottom)); border-top: 1px solid var(--u-line); background: var(--u-sheet); display: flex; flex-direction: column; gap: 4px; }
+  #uApp .u-h { margin: 12px 0 0; font-size: 22px; line-height: 31px; font-weight: 800; letter-spacing: -0.03em; }
+  #uApp .u-sub { margin: 4px 0 0; font-size: 15px; line-height: 22px; color: var(--u-sub); }
+  #uApp .u-st { margin: 8px 0 0; display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px; color: var(--u-ink); }
+  #uApp .u-st:not(.busy):not(.err) { display: none; }
+  #uApp .u-st.err { color: var(--u-err); font-weight: 600; }
+  #uApp .u-st.busy::before { content: ''; flex: none; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--u-line2); border-top-color: var(--u-blue); animation: spin .8s linear infinite; }
+  /* 질환 고르기 */
+  #uApp .u-dq { position: relative; margin-top: 16px; }
+  #uApp .u-dq svg { position: absolute; left: 14px; top: 14px; width: 20px; height: 20px; color: var(--u-sub2); pointer-events: none; }
+  #uApp .u-dq input { height: 48px; padding: 0 16px 0 44px; border: 0; border-radius: 14px; background: var(--u-surf); color: var(--u-ink); font-size: 16px; }
+  #uApp .u-opts { margin-top: 8px; display: flex; flex-direction: column; }
+  #uApp .u-grp { margin: 10px 0 2px; font-size: 13px; line-height: 19px; font-weight: 700; color: var(--u-sub); }
+  #uApp .u-opt { position: relative; min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 -12px; padding: 0 12px; border-radius: 14px; font-size: 17px; line-height: 24px; font-weight: 600; cursor: pointer; }
+  #uApp .u-opt input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+  #uApp .u-opt i { flex: none; width: 22px; height: 22px; box-sizing: border-box; border-radius: 50%; border: 2px solid var(--u-handle); display: grid; place-items: center; color: #FFFFFF; }
+  #uApp .u-opt i svg { width: 14px; height: 14px; visibility: hidden; }
+  #uApp .u-opt.on { background: var(--u-blue-bg); color: var(--u-blue); font-weight: 800; }
+  #uApp .u-opt.on i { border: 0; background: var(--u-blue); }
+  #uApp .u-opt.on i svg { visibility: visible; }
+  #uApp .u-opt.off { opacity: .45; cursor: default; }
+  #uApp .u-opt:has(input:focus-visible) { outline: 3px solid var(--u-blue); outline-offset: -3px; }
+  #uApp .u-note { margin: 2px 0 6px; font-size: 14px; line-height: 20px; color: var(--u-sub); }
+  #uApp .u-all { min-height: 52px; padding: 0; border: 0; border-radius: 0; background: none; color: var(--u-blue); font-size: 16px; font-weight: 700; justify-content: flex-start; gap: 2px; }
+  #uApp .u-go { width: 100%; min-height: 56px; height: 56px; border: 0; border-radius: 16px; background: var(--u-btn); color: #FFFFFF; font-size: 17px; font-weight: 700; gap: 8px; }
+  #uApp .u-go svg { width: 20px; height: 20px; }
+  #uApp .u-alt { width: 100%; min-height: 44px; height: 44px; margin-bottom: -4px; border: 0; background: none; color: var(--u-sub); font-size: 15px; font-weight: 600; }
+  #uApp .u-findbox { margin-top: 12px; }
+  #uApp .u-findbox .row { margin-top: 0; }
+  #uApp .u-hint { margin: 10px 0 0; font-size: 14px; line-height: 20px; color: var(--u-sub); }
+  /* 결과: 범례 · 강조 카드 · 추천 병원 · 정보 줄 */
+  #uApp .u-leg { margin: 12px 0 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; line-height: 18px; color: var(--u-sub); }
+  #uApp .u-leg span { display: inline-flex; align-items: center; gap: 6px; }
+  #uApp .u-leg i { width: 10px; height: 10px; border-radius: 50%; }
+  #uApp .u-fc { width: 100%; min-height: 0; margin-top: 14px; padding: 14px 14px 14px 16px; border: 0; border-radius: 16px; background: var(--u-amber-bg); color: var(--u-ink); display: flex; align-items: center; justify-content: flex-start; gap: 12px; text-align: left; white-space: normal; font-size: 15px; }
+  #uApp .u-fc[hidden] { display: none; }
+  #uApp .u-fc .t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  #uApp .u-fc .t b { font-size: 15px; line-height: 22px; font-weight: 800; }
+  #uApp .u-fc .t span { font-size: 14px; line-height: 20px; font-weight: 400; color: var(--u-amber-ink); }
+  #uApp .u-fc .a { width: 40px; height: 40px; flex: none; border-radius: 50%; background: var(--u-arr-bg); color: var(--u-amber); display: grid; place-items: center; }
+  #uApp .u-fc .a svg { width: 20px; height: 20px; }
+  #uApp .u-ok { margin: 16px 0 0; display: flex; align-items: center; gap: 6px; font-size: 15px; line-height: 22px; font-weight: 600; color: var(--u-sub); }
+  #uApp .u-ok svg { width: 18px; height: 18px; flex: none; }
+  #uApp .u-ok circle { fill: var(--u-green); } #uApp .u-ok path { stroke: var(--u-sheet); }
+  #uApp .u-near { margin: 2px 0 0; font-size: 14px; line-height: 20px; color: var(--u-sub); }
+  #uApp .u-near:empty { display: none; }
+  #uApp .u-hero { margin-top: 4px; }
+  #uApp .u-hn { margin: 0; min-width: 0; font-size: 26px; line-height: 35px; font-weight: 800; letter-spacing: -0.03em; overflow-wrap: anywhere; }
+  #uApp .u-ht { display: flex; flex-direction: column; align-items: flex-start; margin-top: 6px; }
+  #uApp .u-tm { display: flex; align-items: baseline; gap: 2px; color: var(--u-blue); }
+  #uApp .u-num { font-size: 56px; line-height: 60px; font-weight: 800; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+  #uApp .u-unit { font-size: 22px; font-weight: 800; }
+  #uApp .u-tl { display: flex; align-items: center; font-size: 15px; font-weight: 700; color: var(--u-ink2); white-space: nowrap; }
+  #uApp .u-q { width: 32px; height: 32px; min-height: 32px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--u-sub2); }
+  #uApp .u-q svg { width: 18px; height: 18px; }
+  #uApp .u-what { margin: 6px 0 0; font-size: 14px; line-height: 20px; color: var(--u-sub); }
+  #uApp .u-dl { margin: 10px 0 0; }
+  #uApp .u-dl > div { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--u-line); }
+  #uApp .u-dl dt { font-size: 15px; color: var(--u-sub); }
+  #uApp .u-dl dd { margin: 0; display: flex; align-items: center; gap: 4px; font-size: 15px; font-weight: 700; text-align: right; }
+  #uApp .u-dl dd.ok { color: var(--u-green); } #uApp .u-dl dd.no { color: var(--u-err); }
+  #uApp .u-dl dd svg { width: 16px; height: 16px; flex: none; }
+  #uApp .u-more { width: 100%; min-height: 48px; padding: 0; border: 0; border-radius: 0; background: none; color: var(--u-sub); font-size: 15px; font-weight: 700; gap: 4px; }
+  #uApp .u-more svg { width: 18px; height: 18px; }
+  #uApp .u-more-s { display: none; margin-top: 4px; border-top: 1px solid var(--u-line); }
+  #uApp .u-more-n { margin-top: 4px; }
+  #uApp .u-acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  #uApp .u-acts.one { grid-template-columns: 1fr; }
+  #uApp .u-acts a { height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 17px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+  #uApp .u-acts a svg { width: 20px; height: 20px; flex: none; }
+  #uApp .u-acts a[hidden] { display: none; }
+  #uApp .u-nav { background: var(--u-btn); color: #FFFFFF; }
+  #uApp .u-tel { background: var(--u-blue-bg); color: var(--u-blue); }
+  #uApp .u-nav .ns { display: none; }
+  /* 목록 (시트를 끝까지 올린 상태) */
+  #uApp .u-less { display: none; min-height: 44px; margin-top: 8px; padding: 0; border: 0; border-radius: 0; background: none; color: var(--u-blue); font-size: 15px; font-weight: 700; justify-content: flex-start; gap: 2px; }
+  #uApp .u-nobest { margin: 12px 0 0; padding: 12px 14px; border-radius: 14px; background: var(--u-amber-bg); color: var(--u-amber-ink); font-size: 15px; line-height: 22px; }
+  #uApp #listCard { margin: 0; padding: 0; background: none; border-radius: 0; box-shadow: none; animation: none; }
+  #uApp #listCard h2.hrow { margin: 16px 0 0; padding-right: 0; font-size: 20px; line-height: 28px; font-weight: 800; letter-spacing: -0.02em; }
+  #uApp #listCard h2.hrow .colhd, #uApp #checkBox h3.lh .colhd { font-size: 13px; font-weight: 600; color: var(--u-sub); }
+  #uApp #listCard .sdot.ok, #uApp #listCard .sdot.low { display: none; }
+  #uApp .u-cnt { margin-left: 4px; color: var(--u-blue); font-weight: 800; }
+  #uApp .u-cnt.am { color: var(--u-amber); }
+  #uApp #listCard .capt { margin: 4px 0 8px; font-size: 15px; line-height: 22px; color: var(--u-sub); }
+  #uApp ol.hl > li { padding: 14px 12px; }
+  #uApp ol.hl > li.sel { background: var(--u-blue-bg); }
+  #uApp ol.hl .name { font-size: 17px; line-height: 25px; }
+  #uApp ol.hl .eff { font-size: 17px; line-height: 25px; font-weight: 800; color: var(--u-ink); }
+  #uApp #list > li:first-child .eff { color: var(--u-blue); }
+  #uApp ol.hl .tags .tag.plain::before { content: ','; margin: 0 4px 0 -6px; color: var(--u-sub); }
+  #uApp #checkBox, #uApp #noBox { margin: 16px -20px 0; padding: 4px 20px 0; border-radius: 0; background: none; border-top: 8px solid var(--u-surf); }
+  #uApp #checkBox h3.lh { margin-top: 12px; padding-right: 0; font-size: 20px; line-height: 28px; font-weight: 800; }
+  #uApp #checkBox .hint { font-size: 15px; line-height: 22px; color: var(--u-sub); }
+  #uApp #checkBox ol.hl > li + li::before { border-top-color: var(--u-line2); }
+  #uApp :is(#checkList, #noList) .tags .tag.bed { display: none; }
+  #uApp :is(#checkList, #noList) .tags .tag::before { content: none !important; }
+  #uApp #checkList .tags .tag:is(.low, .full) { color: var(--u-amber); }
+  #uApp #checkList > li { padding-right: 68px; }
+  #uApp #checkList .eff.move { font-size: 17px; font-weight: 800; color: var(--u-ink); }
+  #uApp #checkList .eff.move small { font-size: 14px; font-weight: 600; color: var(--u-sub); }
+  #uApp #checkList .tags a.tag.tel { position: absolute; right: 12px; top: 14px; width: 44px; height: 44px; min-height: 44px; margin: 0; padding: 0; border-radius: 50%; background: var(--u-blue-bg); color: var(--u-blue); justify-content: center; font-size: 0; }
+  #uApp #checkList .tags a.tag.tel svg { width: 20px; height: 20px; }
+  #uApp .nob { min-height: 56px; padding: 6px 0; font-size: 17px; color: var(--u-ink); }
+  #uApp #noCount { font-size: 15px; color: var(--u-sub); }
+  #uApp .detail .acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #uApp .detail .acts > * { min-height: 48px; }
+  /* 맨 아래: 자료 출처 · 소개 · 저작권 */
+  #uApp .u-foot { margin: 24px -20px 0; padding: 16px 20px 4px; border-top: 8px solid var(--u-surf); font-size: 13px; line-height: 19px; color: var(--u-sub); }
+  #uApp .u-foot p { margin: 0 0 10px; }
+  #uApp .u-intro { margin: 0 0 12px; padding: 14px 16px; border-radius: 16px; background: var(--u-surf); }
+  #uApp .u-intro .h { margin: 0; font-size: 15px; line-height: 22px; font-weight: 700; color: var(--u-ink); }
+  #uApp .u-intro p:not(.h) { margin: 4px 0 0; font-size: 14px; line-height: 20px; }
+  #uApp .u-intro a { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; color: var(--u-blue); font-size: 14px; font-weight: 700; text-decoration: none; }
+  /* 전화 확인 창: 아래에서 올라오는 창. 제목·버튼은 고정, 가운데만 스크롤 */
+  #uApp .u-dim { position: fixed; inset: 0; z-index: 39; background: rgba(25, 31, 40, .5); }
+  #uApp .u-call { position: fixed; z-index: 40; left: 0; right: 0; bottom: 0; box-sizing: border-box; max-height: 100vh; max-height: 100dvh; display: flex; flex-direction: column;
+    padding: 10px 20px calc(24px + env(safe-area-inset-bottom)); background: var(--u-sheet); border-radius: 24px 24px 0 0; outline: none; }
+  #uApp :is(.u-call, .u-dim)[hidden] { display: none; }
+  #uApp .u-grab { flex: none; width: 36px; height: 4px; border-radius: 2px; background: var(--u-handle); align-self: center; }
+  #uApp .u-ct2 { margin: 24px 0 0; font-size: 22px; line-height: 31px; font-weight: 800; letter-spacing: -0.03em; }
+  #uApp .u-cs { margin: 4px 0 0; font-size: 17px; line-height: 25px; color: var(--u-sub); }
+  #uApp .u-call .u-scr { padding-bottom: 16px; }
+  #uApp .u-cmp { margin-top: 20px; padding: 4px 16px; border-radius: 16px; background: var(--u-surf); }
+  #uApp .u-cmp[hidden] { display: none; }
+  #uApp .u-cmp hr { margin: 0; border: 0; height: 1px; background: var(--u-line2); }
+  #uApp .u-cr { min-height: 64px; display: flex; align-items: center; gap: 12px; padding: 8px 0; box-sizing: border-box; }
+  #uApp .u-cr > div:first-child { flex: 1; min-width: 0; }
+  #uApp .u-cr b { display: block; font-size: 16px; line-height: 23px; font-weight: 700; }
+  #uApp .u-cr span { display: block; font-size: 14px; line-height: 20px; color: var(--u-sub); }
+  #uApp .u-cr > div:last-child { flex: none; text-align: right; }
+  #uApp .u-cr > div:last-child b { font-size: 20px; line-height: 26px; font-weight: 800; }
+  #uApp .u-cr > div:last-child span { font-size: 13px; line-height: 18px; }
+  #uApp .u-cr .am { color: var(--u-amber); } #uApp .u-cr .bl { color: var(--u-blue); }
+  #uApp .u-cd { margin: 16px 2px 0; font-size: 16px; line-height: 25px; color: var(--u-ink2); }
+  #uApp .u-cd b { font-weight: 800; color: var(--u-ink); }
+  #uApp .u-msg { margin: 14px 0 0; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--u-line2); }
+  #uApp .u-msg[hidden] { display: none; }
+  #uApp .u-msg figcaption { font-size: 13px; line-height: 19px; font-weight: 700; color: var(--u-sub); }
+  #uApp .u-msg p { margin: 4px 0 0; font-size: 15px; line-height: 22px; overflow-wrap: anywhere; }
+  #uApp .u-cb { flex: none; display: grid; grid-template-columns: 5fr 8fr; gap: 8px; margin-top: 6px; }
+  #uApp .u-cb.one { grid-template-columns: 1fr; }
+  #uApp .u-cb > * { height: 56px; min-height: 56px; border: 0; border-radius: 16px; font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; white-space: nowrap; }
+  #uApp .u-cb > button { background: var(--u-surf); color: var(--u-ink2); }
+  #uApp .u-cb > a { background: var(--u-btn); color: #FFFFFF; }
+  #uApp .u-cb > a[hidden] { display: none; }
+  #uApp .u-cb svg { width: 20px; height: 20px; }
+  #uApp .u-cnum { flex: none; margin: 10px 0 0; text-align: center; font-size: 14px; line-height: 20px; color: var(--u-sub); }
+  #uApp .u-cnum:empty { display: none; }
+  #uApp :is(button, a, input):focus-visible { outline: 3px solid var(--u-blue); outline-offset: 2px; }
+  /* 키 작은 휴대폰 (화면 높이 740px 이하): 이름·시간 한 줄, 지도는 화면의 40% 이상 */
+  @media (max-width: 880px) and (max-height: 740px) {
+    #uApp .u-sheet { max-height: max(60vh, calc(100vh - 300px)); max-height: max(60dvh, calc(100dvh - 300px)); }
+    #uApp .u-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+    #uApp .u-hn { margin: 0 0 6px; font-size: 24px; line-height: 32px; }
+    #uApp .u-ht { flex: none; align-items: flex-end; margin-top: 0; }
+    #uApp .u-num { font-size: 48px; line-height: 52px; }
+    #uApp .u-unit { font-size: 20px; }
+    #uApp .u-tl { margin-right: -6px; }
+    #uApp .u-more-s { display: flex; }
+    #uApp .u-more-n { display: none; }
+  }
+  /* 아주 작은 휴대폰 (화면 높이 600px 이하): 첫 화면은 질환 목록을 넓게, 강조 카드는 한 줄, 전화 확인 창은 제목을 작게 */
+  @media (max-width: 880px) and (max-height: 600px) {
+    #uApp:is([data-st="pick"], [data-st="find"]) .u-sheet { max-height: calc(100vh - 160px); max-height: calc(100dvh - 160px); }
+    #uApp .u-pick .u-h, #uApp .u-find .u-h { margin-top: 6px; }
+    #uApp .u-leg { margin-top: 8px; }
+    #uApp .u-fc { margin-top: 10px; padding: 8px 8px 8px 14px; }
+    #uApp .u-fc .t span { display: none; }
+    #uApp .u-fc .a { width: 32px; height: 32px; }
+    #uApp .u-ok { margin-top: 10px; }
+    #uApp .u-num { font-size: 44px; line-height: 48px; }
+    #uApp .u-ct2 { margin-top: 14px; font-size: 20px; line-height: 28px; }
+    #uApp .u-cs { font-size: 15px; line-height: 22px; }
+    #uApp .u-cmp { margin-top: 14px; }
+  }
+  /* 폭이 좁은 휴대폰 (340px 이하): 길안내 버튼 글자를 줄인다 */
+  @media (max-width: 340px) { #uApp .u-nav .nl { display: none; } #uApp .u-nav .ns { display: inline; } }
+  /* 목록 상태(휴대폰): 시트를 머리줄 아래까지 올린다 (119는 늘 보이게) */
+  @media (max-width: 880px) { #uApp[data-st="list"] .u-sheet { top: calc(80px + env(safe-area-inset-top)); max-height: none; } }
+  /* PC: 지도는 화면 전체, 시트는 왼쪽 (폭 400px) */
+  @media (min-width: 881px) {
+    #uApp .u-top { left: 16px; right: auto; width: 400px; top: 16px; }
+    #uApp .u-sheet { left: 16px; right: auto; top: 88px; bottom: 16px; width: 400px; max-height: none; border-radius: 24px; box-shadow: 0 4px 24px rgba(25, 31, 40, .16); }
+    #uApp .u-handle { display: none; }
+    #uApp .u-pane > .u-h:first-child, #uApp .u-res .u-scr, #uApp .u-list .u-scr { padding-top: 8px; }
+    #uApp .u-bar { padding-bottom: 16px; border-radius: 0 0 24px 24px; }
+    #uApp .u-less { display: inline-flex; }
+    #uApp .u-call { left: 50%; right: auto; top: 50%; bottom: auto; width: 440px; max-height: calc(100vh - 48px); max-height: calc(100dvh - 48px); transform: translate(-50%, -50%); border-radius: 24px; padding-bottom: 24px; }
+    #uApp .u-grab { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { #uApp .u-st.busy::before { animation: none; } }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=42a491bd43887127ca6b4bf69b731aaf&libraries=services&autoload=false"></script>
 </head>
@@ -598,11 +842,11 @@
       </section>
 
       <section class="card" id="listCard" hidden>
-        <h2 class="hrow"><span class="dev">추천 순위</span><span class="user"><i class="sdot ok" aria-hidden="true"></i>바로 갈 수 있는 곳</span><span class="colhd">실효 도착 시간</span></h2>
+        <h2 class="hrow"><span class="dev">추천 순위</span><span class="user"><i class="sdot ok" aria-hidden="true"></i>바로 갈 수 있는 곳<b class="u-cnt" id="okCnt"></b></span><span class="colhd">실효 도착 시간</span></h2>
         <p class="capt dev" id="listMeta">실효 도착 시간 순</p><p class="capt user" id="listAge"></p>
         <ol id="list" class="hl"></ol>
         <div id="checkBox" hidden>
-          <h3 class="lh"><span class="dev">확인이 필요한 곳</span><span class="user"><i class="sdot low" aria-hidden="true"></i>전화로 먼저 확인할 곳</span> <span class="meta dev" id="checkMeta"></span><span class="colhd user">이동 시간만</span></h3>
+          <h3 class="lh"><span class="dev">확인이 필요한 곳</span><span class="user"><i class="sdot low" aria-hidden="true"></i>전화로 먼저 확인할 곳<b class="u-cnt am" id="chkCnt"></b></span> <span class="meta dev" id="checkMeta"></span><span class="colhd user">이동 시간</span></h3>
           <p class="hint user" style="margin-top:2px">받아 줄지 알 수 없어 확률을 붙이지 않았어요. 가기 전에 전화로 물어보세요.</p>
           <p class="hint dev" style="margin-top:2px">받아 줄지 공공데이터로 알 수 없어 확률을 붙이지 않았어요. 가까운 순서(도로 이동 시간)로 보여 줘요.</p>
           <ol id="checkList" class="hl"></ol>
@@ -759,6 +1003,110 @@
   <a class="btn dock-tel" id="dockTel"></a>
 </nav>
 
+<!-- 11-23 사용자 모드: 지도 + 시트 (디자인 캔버스 3차 시안). 계산·검색은 아래 코드를 그대로 쓰고 화면만 새로 그린다. 개발자 모드에서는 숨김 -->
+<div id="uApp" class="user" data-st="pick">
+  <header class="u-top" id="uTop">
+    <div class="u-pill u-brand" id="uBrand"><b>골든타임</b></div>
+    <div class="u-pill u-cond">
+      <div class="u-ct"><b id="uDis"></b><span id="uFrom"></span></div>
+      <button type="button" class="u-chg" id="uChange">바꾸기</button>
+    </div>
+    <a class="u-119" href="tel:119" aria-label="119에 전화">119</a>
+  </header>
+  <section class="u-sheet" id="uSheet" aria-label="응급실 찾기">
+    <button type="button" class="u-handle" id="uHandle" aria-label="다른 병원 모두 보기" aria-expanded="false" tabindex="-1" aria-hidden="true"></button>
+
+    <div class="u-pane u-pick">
+      <h1 class="u-h" id="uQ">어떤 질환이 의심되나요?</h1>
+      <p class="u-sub">잘 모르면 '모름'을 고르세요.</p>
+      <p class="u-st" role="status" aria-live="polite"></p>
+      <div class="u-scr">
+        <div class="u-dq"><label for="uDq" class="sr">질환 이름으로 찾기</label>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="uDq" type="search" placeholder="질환 이름으로 찾기" autocomplete="off"></div>
+        <div class="u-opts" id="uOpts" role="radiogroup" aria-labelledby="uQ"></div>
+        <button type="button" class="u-all" id="uAll"></button>
+        <p class="u-note" id="uInfo" hidden></p>
+        <div class="u-foot"><div class="u-intro"><p class="h">가장 가까운 응급실이 아니라, 받아 줄 응급실에 가장 빨리 닿는 곳을 찾아요.</p><p>실효 도착 시간은 이동 시간에, 거절될 확률만큼 다른 병원으로 다시 가는 시간을 더한 값이에요. 거절될 확률은 그동안 모은 기록의 통계로 계산해요.</p><a href="./#/prob/method">계산 방법 보기 ›</a></div>
+          <p>병상·질환 표시·메시지는 국립중앙의료원 공공데이터, 지도는 카카오맵, 길찾기는 카카오모빌리티 자료예요.</p><p>© 2025–2026 hyun19393 · 무단 복제·사용 금지</p><p>© 2025–2026 hyun19393. All rights reserved. 무단 복제·사용 금지 (저작권법 제136조: 7년 이하 징역 또는 1억 원 이하 벌금)</p></div>
+      </div>
+      <div class="u-bar">
+        <button type="button" class="u-go" id="uGo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><span id="uGoT">현재 위치에서 찾기</span></button>
+        <button type="button" class="u-alt" id="uAlt">다른 곳에서 출발할래요</button>
+      </div>
+    </div>
+
+    <div class="u-pane u-find">
+      <h1 class="u-h">어디에서 출발하나요?</h1>
+      <p class="u-sub">주소나 장소 이름을 검색하세요.</p>
+      <p class="u-st" role="status" aria-live="polite"></p>
+      <div class="u-scr">
+        <div class="u-findbox" id="uFindBox"></div>
+        <p class="u-hint">지도를 눌러 골라도 돼요. 출발지 좌표는 길찾기에만 쓰고 저장하지 않아요.</p>
+      </div>
+      <div class="u-bar">
+        <button type="button" class="u-go" id="uGo2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><span id="uGo2T">현재 위치에서 찾기</span></button>
+        <button type="button" class="u-alt" id="uBack">질환 다시 고르기</button>
+      </div>
+    </div>
+
+    <div class="u-pane u-res">
+      <div class="u-scr">
+        <p class="u-leg" aria-label="지도 표시: 파랑 추천 병원, 초록 받을 수 있는 곳, 주황 전화로 확인할 곳"><span><i style="background:#1B64DA"></i>추천</span><span><i style="background:#0B7A55"></i>받을 수 있음</span><span><i style="background:#B25E00"></i>전화로 확인</span></p>
+        <button type="button" class="u-fc" id="uFast" aria-haspopup="dialog" hidden><span class="t"><b>더 빨리 닿는 병원이 있어요</b><span id="uFastS"></span><span>받아 줄지 몰라요. 눌러서 확인하세요.</span></span><span class="a" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span></button>
+        <p class="u-ok"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M17 8.5 10.5 15 7 11.5" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="uOkT"></span></p>
+        <p class="u-near" id="uNear"></p>
+        <div class="u-hero">
+          <h2 class="u-hn" id="uName"></h2>
+          <div class="u-ht">
+            <div class="u-tm"><span class="u-num" id="uNum"></span><span class="u-unit">분</span></div>
+            <div class="u-tl">실효 도착 시간<button type="button" class="u-q" id="uWhat" aria-label="실효 도착 시간이 뭔가요?" aria-expanded="false" aria-controls="uWhatT"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"/><path d="M12 17h.01"/></svg></button></div>
+          </div>
+        </div>
+        <p class="u-what" id="uWhatT" hidden>이동 시간에, 거절될 확률만큼 다른 병원으로 다시 가는 시간을 더한 값이에요. 거절될 확률은 그동안 모은 기록의 통계로 계산해요.</p>
+        <dl class="u-dl" id="uDl"></dl>
+        <p class="u-near" id="uNote"></p>
+        <button type="button" class="u-more u-more-s" id="uMoreS">다른 병원 모두 보기<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg></button>
+      </div>
+      <div class="u-bar">
+        <div class="u-acts" id="uActs">
+          <a class="u-nav" id="uNavi" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 22 2l-9 19-2-8-8-2z"/></svg><span class="nl">카카오맵 길안내</span><span class="ns">길안내</span></a>
+          <a class="u-tel" id="uTel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>전화</a>
+        </div>
+        <button type="button" class="u-more u-more-n" id="uMoreN">다른 병원 모두 보기<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg></button>
+      </div>
+    </div>
+
+    <div class="u-pane u-list">
+      <div class="u-scr" id="uListScr">
+        <button type="button" class="u-less" id="uLess"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>추천 병원 보기</button>
+        <p class="u-nobest" id="uNoBest" hidden></p>
+        <div id="uListBox"></div>
+        <div class="u-foot"><p>병상·질환 표시·메시지는 국립중앙의료원 공공데이터, 지도는 카카오맵, 길찾기는 카카오모빌리티 자료예요.</p>
+          <div class="u-intro"><p class="h">가장 가까운 응급실이 아니라, 받아 줄 응급실에 가장 빨리 닿는 곳을 찾아요.</p><p>실효 도착 시간은 이동 시간에, 거절될 확률만큼 다른 병원으로 다시 가는 시간을 더한 값이에요. 거절될 확률은 그동안 모은 기록의 통계로 계산해요.</p><a href="./#/prob/method">계산 방법 보기 ›</a></div>
+          <p>© 2025–2026 hyun19393 · 무단 복제·사용 금지</p><p>© 2025–2026 hyun19393. All rights reserved. 무단 복제·사용 금지 (저작권법 제136조: 7년 이하 징역 또는 1억 원 이하 벌금)</p></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="u-dim" id="uDim" hidden></div>
+  <section class="u-call" id="uCall" role="dialog" aria-modal="true" aria-labelledby="uCt" aria-describedby="uCd" tabindex="-1" hidden>
+    <div class="u-grab" aria-hidden="true"></div>
+    <h2 class="u-ct2" id="uCt"></h2>
+    <p class="u-cs" id="uCs"></p>
+    <div class="u-scr">
+      <div class="u-cmp" id="uCmp" hidden></div>
+      <p class="u-cd" id="uCd"></p>
+      <figure class="u-msg" id="uMsg" hidden><figcaption>병원이 남긴 글</figcaption><div id="uMsgL"></div></figure>
+    </div>
+    <div class="u-cb" id="uCb">
+      <button type="button" id="uCallX">닫기</button>
+      <a id="uCallTel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>전화로 확인하기</a>
+    </div>
+    <p class="u-cnum" id="uCnum"></p>
+  </section>
+</div>
+
 <script type="module">
 import { makeRejectProb, STALE_MIN } from './engine/model.mjs';
 import { evaluate } from './engine/effective.mjs';
@@ -790,6 +1138,7 @@ const setStatus = (msg, state = '') => {
   const busy = state === 'busy';
   $('gps').disabled = busy; $('gps').setAttribute('aria-busy', busy);
   $('gpsText').textContent = busy ? '찾는 중…' : '현재 위치로 찾기';
+  uStatus(msg, state);
 };
 
 // 화면에 보이는 병원 이름: 앞에 붙은 법인 이름('의료법인○○의료재단', '학교법인○○학원' 등)을 뗀다. 남는 글이 너무 짧으면 그대로 둔다
@@ -1102,6 +1451,8 @@ function initMap() {
   map = new kakao.maps.Map($('map'), { center: new kakao.maps.LatLng(37.45, 127.0), level: 10 });
   map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
   kakao.maps.event.addListener(map, 'click', (e) => {
+    // 사용자 모드 결과·목록 화면에서 지도를 누르면 출발지를 바꾸지 않는다(잘못 눌러 다시 계산되지 않게). 목록이 펴져 있으면 접는다 (11-23)
+    if (isUser() && view && !['pick', 'find'].includes(uSt())) { if (uSt() === 'list') uState('res'); return; }
     const ll = e.latLng;
     setOrigin({ lat: ll.getLat(), lon: ll.getLng(), label: '지도에서 고른 곳' });
   });
@@ -1159,6 +1510,9 @@ async function setOrigin(o, refold = true) {
   hideCall();
   if (originMarker) originMarker.setMap(null);
   originMarker = new kakao.maps.Marker({ position: LL(o), map, zIndex: 5 });
+  if (uMe) uMe.setMap(null);
+  { const el = document.createElement('div'); el.className = 'u-me'; uMe = new kakao.maps.CustomOverlay({ position: LL(o), content: el, zIndex: 1 }); uMe.setMap(map); }
+  if (isUser()) originMarker.setMap(null);
   if (routeLine) routeLine.setMap(null);
   clearGeoLines();
   for (const el of Object.values(pins)) el.classList.remove('sel');
@@ -1210,7 +1564,7 @@ async function setOrigin(o, refold = true) {
     render();
     // 휴대폰처럼 좁은 화면에서는 결과(비교 카드)가 보이게 내려 준다
     const rc = $('resultCard').getBoundingClientRect();
-    if (rc.top < $('topbar').getBoundingClientRect().bottom || rc.bottom > innerHeight) $('resultCard').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    if (!isUser() && (rc.top < $('topbar').getBoundingClientRect().bottom || rc.bottom > innerHeight)) $('resultCard').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
     select((results[0] ?? rows.find((r) => judge[r.id].tier === 'check') ?? rows[0]).id, false, false);
   } catch (e) {
     results = null; view = null;
@@ -1227,6 +1581,7 @@ function clearLists() {
   for (const id of ['resultCard', 'listCard', 'distCard', 'checkBox', 'noBox']) $(id).hidden = true;
   document.body.classList.remove('folded'); // 결과가 없으면 입력 칸·상태 줄을 다시 보여 준다
   dockSet(null);
+  uClearMap(); $('uFast').hidden = true;
 }
 
 // 판단 까닭을 쉬운 말로 (11-22 결정: '질환 정보 없음' → '○○ 가능 여부 미공개', '관련 메시지 n건' → '병원 공지 n건')
@@ -1242,7 +1597,7 @@ function plainWhy(w) {
 function tagsHtml(id, since) {
   const h = byId[id], j = judge[id], cls = bedClass(h, since);
   // 기관 종류(권역센터·지역센터·지역기관): 알려 주기만 하고 순위에는 쓰지 않는다
-  const out = [`<span class="tag ${cls === 'stale' ? 'gray' : cls}">${bedSpan(h)}${cls === 'stale' && h.hvec != null ? '(오래됨)' : ''}</span>`];
+  const out = [`<span class="tag bed ${cls === 'stale' ? 'gray' : cls}">${bedSpan(h)}${cls === 'stale' && h.hvec != null ? '(오래됨)' : ''}</span>`];
   const [kind, able, note] = infoChips(id, ' dev');
   if (kind) out.unshift(kind);
   if (j.tier === 'ok') { if (able) out.push(able); }
@@ -1347,14 +1702,14 @@ function render() {
       <div class="detail" hidden></div>
     </li>`;
   const more = (n, shown) => (n > shown ? `· 가까운 ${shown}곳만 보여 줘요(모두 ${n}곳)` : `· ${n}곳`);
-  $('list').innerHTML = results.slice(0, SHOW.ok).map((r, i) => item(r, `<span class="rk">${i + 1}<i class="rkd">. </i></span><span>${esc(r.name)}</span>`,
+  $('list').innerHTML = results.slice(0, SHOW.ok).map((r, i) => item(r, `<span class="rk">${i + 1}<i class="rkd">. </i></span><span>${brk(r.name)}</span>`,
     `<span class="eff">${min1(r.effectiveMin)}분</span></div><div class="meta dev">이동 ${min1(r.travelMin)}분${r.extraMin >= 0.05 ? ` + 거절될 때 대비 ${min1(r.extraMin)}분` : ''} · 거절 확률 ${pct(r.pReject)}`,
-    '', i === 0 ? '<span class="tag plain user">위 추천 병원</span>' : '')).join('');
-  const moveMeta = (r) => `<span class="eff move">이동 ${min1(r.travelMin)}분</span>`;
-  $('checkList').innerHTML = checks.slice(0, SHOW.check).map((r) => item(r, esc(r.name), moveMeta(r))).join('');
+    '', i === 0 ? '<span class="tag plain user">추천 병원</span>' : '')).join('');
+  const moveMeta = (r) => `<span class="eff move"><small>이동 </small>${min1(r.travelMin)}분</span>`;
+  $('checkList').innerHTML = checks.slice(0, SHOW.check).map((r) => item(r, brk(r.name), moveMeta(r))).join('');
   $('checkMeta').textContent = more(checks.length, SHOW.check);
   $('checkBox').hidden = !checks.length;
-  $('noList').innerHTML = nos.slice(0, SHOW.no).map((r) => item(r, esc(r.name), moveMeta(r), 'dim')).join('');
+  $('noList').innerHTML = nos.slice(0, SHOW.no).map((r) => item(r, brk(r.name), moveMeta(r), 'dim')).join('');
   $('noMeta').textContent = more(nos.length, SHOW.no);
   $('noBox').hidden = !nos.length;
   $('noCount').dataset.n = nos.length; noOpen(false);
@@ -1375,6 +1730,8 @@ function render() {
     if (fast) showCall(fast.id, { fast, best });
     else if (callAuto) hideCall();
   }
+  uRender();
+  if (isUser()) uState(results.length ? 'res' : 'list');
 }
 let autoCallKey = null;
 
@@ -1460,13 +1817,15 @@ function callState(st) {
   $('callPill').classList.toggle('off', st !== 'min');
   dockSync();
 }
-function hideCall() { callFor = null; callAuto = null; callState('none'); }
+function hideCall() { callFor = null; callAuto = null; callState('none'); uCallClose(); }
 let callAuto = null;
 // 두 시간이 같은 정수로 보이면(예: 15분과 15분) 둘 다 소수 첫째 자리까지 보여 준다 (11-22 결정)
 const min2 = (a, b) => (+min1(a) === +min1(b) ? [a.toFixed(1), b.toFixed(1)] : [min1(a), min1(b)]);
 // auto = { fast, best }: 추천 병원의 실효 도착 시간보다 빨리 닿는 '확인 필요' 병원이라 검색 직후 스스로 띄울 때 (11-22 결정: 사전 연락 글이 없어도 띄운다)
 // user = 사람이 병원을 눌렀을 때 (검색 직후 추천 병원을 스스로 고를 때는 false)
 function showCall(id, auto = null, user = true) {
+  // 사용자 모드: 검색 직후 스스로 띄우지 않고 강조 카드로 알린다(카드를 누르면 창). 사전 연락 글이 있는 병원을 누르면 바로 창 (11-23 디자인 결정)
+  if (isUser()) { if (!auto && user && judge[id]?.contact.length) uCallOpen(id, null); return; }
   const j = judge[id], h = byId[id];
   // 스스로 띄운 창이 있을 때: 그 병원을 눌러도 그대로, 사전 연락 글이 없는 다른 병원을 누르면 닫지 않고 작은 표시로 줄여 안내를 다시 볼 수 있게 한다.
   // 검색 직후 추천 병원을 스스로 고를 때는 건드리지 않는다 (11-22: 이 순서 때문에 창이 뜨자마자 닫히던 문제)
@@ -1561,7 +1920,7 @@ async function select(id, fromList = false, user = true) {
   for (const tr of $('distTable').querySelectorAll('tr[data-id]')) tr.classList.toggle('sel', tr.dataset.id === id);
   showCall(id, null, user);
   const selLi = document.querySelector('ol.hl > li.sel');
-  if (selLi && (fromList || callFor === id)) reveal(selLi);
+  if (selLi && (fromList || callFor === id)) { if (isUser()) uReveal(selLi); else reveal(selLi); }
 
   const h = byId[id];
   const my = runId;
@@ -1569,7 +1928,7 @@ async function select(id, fromList = false, user = true) {
   drawGeoLines(origin, h);
   const geoBounds = new kakao.maps.LatLngBounds();
   [LL(origin), LL(h)].forEach((p) => geoBounds.extend(p));
-  map.setBounds(geoBounds, 40, 40, 40, 40);
+  map.setBounds(geoBounds, ...fitPad());
   try {
     const route = (await routeTo(origin, h)).routes?.[0];
     if (my !== runId || selectedId !== id || route?.result_code !== 0) return;
@@ -1583,7 +1942,7 @@ async function select(id, fromList = false, user = true) {
     routeLine.setMap(map);
     const bounds = new kakao.maps.LatLngBounds();
     path.forEach((p) => bounds.extend(p));
-    map.setBounds(bounds, 40, 40, 40, 40);
+    map.setBounds(bounds, ...fitPad());
   } catch { /* 경로 선은 없어도 계산 결과는 그대로 */ } finally {
     refreshQuota(); // 경로 선 그리기도 자동차 길찾기 1번
   }
@@ -1623,10 +1982,245 @@ $('gps').addEventListener('click', () => {
   setStatus('현재 위치 확인 중…', 'busy');
   navigator.geolocation.getCurrentPosition(
     (p) => { map.setCenter(new kakao.maps.LatLng(p.coords.latitude, p.coords.longitude)); setOrigin({ lat: p.coords.latitude, lon: p.coords.longitude, label: '현재 위치' }); },
-    (err) => { setStatus(err.code === 1 ? '위치 권한이 꺼져 있어요. 아래에 주소나 장소 이름을 검색해 주세요.' : '현재 위치를 찾지 못했어요. 아래에 주소나 장소 이름을 검색해 주세요.', true); $('q').focus({ preventScroll: true }); },
+    (err) => { setStatus(err.code === 1 ? '위치 권한이 꺼져 있어요. 아래에 주소나 장소 이름을 검색해 주세요.' : '현재 위치를 찾지 못했어요. 아래에 주소나 장소 이름을 검색해 주세요.', true); if (isUser()) uState('find'); $('q').focus({ preventScroll: true }); },
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
   );
 });
+
+// ---------- 11-23 사용자 모드: 지도 + 시트 (디자인 캔버스 3차 시안)
+// 계산·검색·길찾기는 위의 코드를 그대로 쓰고, 사용자 모드 화면만 새로 그린다. 상태: pick(질환 고르기) · find(출발지 검색) · res(추천 병원) · list(모든 병원)
+// 검색 칸·검색 결과·병원 목록·모드 전환은 같은 요소를 모드에 따라 옮겨 쓴다(이벤트·계산 코드를 둘로 나누지 않게)
+function isUser() { return document.body.dataset.mode === 'user'; }
+const reduceMo = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+// 긴 병원 이름은 '대학교·의과대학·의료원' 뒤에서만 줄을 바꾼다 (한국어는 낱말 단위 줄바꿈, 11-23)
+const brk = (n) => esc(n).replace(/(대학교|의과대학|의료원)(?=\S)/g, '$1<wbr>');
+const uSt = () => $('uApp').dataset.st;
+const U_QUICK = ['mi', 'aortaT', 'stroke']; // 첫 화면에 보이는 질환 (신체 부위 순서, 11-22 결정). 고른 질환이 여기 없으면 함께 보인다
+const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+const CHEV_R = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+let uAllOpen = false, uFastR = null, uOv = [], uMe = null;
+
+function uGoLabel() { return origin && origin.label !== '현재 위치' ? `${origin.label}에서 다시 찾기` : '현재 위치에서 찾기'; }
+// 상태 줄(계산 중·오류)을 시트에도 보여 주고, 계산 중에는 찾기 버튼을 잠근다
+function uStatus(msg, state) {
+  for (const el of document.querySelectorAll('#uApp .u-st')) { el.textContent = msg; el.className = 'u-st' + (state ? ` ${state}` : ''); }
+  const busy = state === 'busy';
+  for (const id of ['uGo', 'uGo2']) { $(id).disabled = busy; $(id).setAttribute('aria-busy', String(busy)); }
+  $('uGoT').textContent = busy ? '찾는 중…' : uGoLabel();
+  $('uGo2T').textContent = busy ? '찾는 중…' : '현재 위치에서 찾기';
+}
+function uState(st) {
+  $('uApp').dataset.st = st;
+  const h = $('uHandle'), on = st === 'res' || st === 'list';
+  h.tabIndex = on ? 0 : -1;
+  h.setAttribute('aria-hidden', String(!on));
+  h.setAttribute('aria-label', st === 'list' ? '추천 병원 보기' : '다른 병원 모두 보기');
+  h.setAttribute('aria-expanded', String(st === 'list'));
+  if (st === 'pick') uPickRender();
+  if (!$('uGo').disabled) $('uGoT').textContent = uGoLabel();
+}
+
+// 질환 고르기: '모름' + 자주 고르는 질환(신체 부위 순서) + '모두 보기'. 이름으로 찾으면 27개 전체에서 고른다
+function uPickRender() {
+  const q = $('uDq').value.replace(/\s+/g, '');
+  const cur = disease.id, locked = !!ers && !sev; // 질환 표시를 못 읽었으면 '모름'만 고를 수 있다
+  let ds = DISEASES.slice(1);
+  if (q) ds = ds.filter((d) => (d.label + d.group).replace(/\s+/g, '').includes(q));
+  else if (!uAllOpen) ds = ds.filter((d) => U_QUICK.includes(d.id) || d.id === cur);
+  const opt = (d) => { const on = d.id === cur, off = locked && d.id !== 'none';
+    return `<label class="u-opt${on ? ' on' : ''}${off ? ' off' : ''}"><input type="radio" name="uDis" value="${esc(d.id)}"${on ? ' checked' : ''}${off ? ' disabled' : ''}><span>${esc(d.label)}</span><i aria-hidden="true">${CHECK_SVG}</i></label>`; };
+  let html = q ? '' : opt(DISEASES[0]);
+  if (!q && cur === 'none') html += `<p class="u-note">${esc(locked ? $('diseaseInfo').textContent : '질환을 고르지 않으면 응급실 병상과 응급실 전체 메시지만으로 계산해요.')}</p>`;
+  let g = null;
+  for (const d of ds) { if (d.group !== g) { g = d.group; html += `<p class="u-grp" aria-hidden="true">${esc(g)}</p>`; } html += opt(d); }
+  if (q && !ds.length) html = `<p class="u-note">'${esc($('uDq').value.trim())}'에 맞는 질환이 없어요. 잘 모르면 '모름'을 고르세요.</p>` + opt(DISEASES[0]);
+  $('uOpts').innerHTML = html;
+  $('uAll').hidden = !!q || uAllOpen;
+  $('uAll').innerHTML = `${DISEASES.length - 1}개 질환 모두 보기${CHEV_R}`;
+  $('uInfo').hidden = !(locked && cur !== 'none');
+  $('uInfo').textContent = locked ? $('diseaseInfo').textContent : '';
+}
+function uPickDisease(id) {
+  $('disease').value = id;
+  disease = diseaseById[id] ?? DISEASES[0];
+  if (ers) { rejudge(); drawPins(); }
+  uPickRender();
+  $('uOpts').querySelector('input:checked')?.focus({ preventScroll: true });
+}
+$('uOpts').addEventListener('change', (e) => { if (e.target.name === 'uDis') uPickDisease(e.target.value); });
+$('uDq').addEventListener('input', uPickRender);
+$('uAll').addEventListener('click', () => { uAllOpen = true; uPickRender(); $('uOpts').querySelector('input:checked, input')?.focus({ preventScroll: true }); });
+$('uGo').addEventListener('click', () => { if (origin && origin.label !== '현재 위치') setOrigin(origin); else $('gps').click(); });
+$('uGo2').addEventListener('click', () => $('gps').click());
+$('uAlt').addEventListener('click', () => { uState('find'); $('q').focus({ preventScroll: true }); });
+$('uBack').addEventListener('click', () => uState('pick'));
+$('uChange').addEventListener('click', () => { uCallClose(); uState('pick'); $('uOpts').querySelector('input:checked')?.focus({ preventScroll: true }); });
+
+// 결과 화면: 강조 카드 · 추천 병원 · 정보 줄 · 버튼, 지도 말풍선
+function uRender() {
+  const since = sinceObsMin(), best = results[0], nearest = view.rows[0], known = hasItems();
+  const checks = view.rows.filter((r) => judge[r.id].tier === 'check');
+  // 강조 카드: '확인 필요' 병원까지 이동 시간이 추천 병원의 실효 도착 시간보다 0.5분 넘게 짧으면(전화번호 있는 곳, 가장 빠른 곳). 개발자 모드 자동 창과 같은 기준
+  const fast = best && checks.filter((r) => byId[r.id].tel && r.travelMin < best.effectiveMin - 0.5).sort((a, b) => a.travelMin - b.travelMin)[0];
+  uFastR = fast ? { fast, best } : null;
+  $('uFast').hidden = !fast;
+  if (fast) $('uFastS').innerHTML = `${brk(fast.name)}, 이동 ${min2(fast.travelMin, best.effectiveMin)[0]}분`;
+  $('uDis').textContent = sev ? dShort() : '병상만';
+  $('uFrom').textContent = `${origin.label}에서 출발`;
+  $('uNote').textContent = $('condNote').textContent;
+  $('okCnt').textContent = Math.min(results.length, SHOW.ok) || '';
+  $('chkCnt').textContent = Math.min(checks.length, SHOW.check) || '';
+  $('uNoBest').hidden = !!best;
+  $('uNoBest').textContent = best ? '' : `계산한 범위 안에 ${known ? '받을 수 있다고 확인된' : '막는 메시지가 없는'} 응급실이 없어요. 아래 '전화로 먼저 확인할 곳'에 전화로 확인하거나 119에 신고하세요.`;
+  $('uLess').hidden = !best;
+  if (best) {
+    const h = byId[best.id], cls = bedClass(h, since), age = Math.round(since);
+    $('uOkT').textContent = known ? '받을 수 있는 곳 중 가장 빨리 닿아요' : '막는 메시지가 없는 곳 중 가장 빨리 닿아요';
+    let near = '';
+    if (nearest.id !== best.id) {
+      const jn = judge[nearest.id];
+      if (jn.tier === 'ok') { const g = nearest.effectiveMin - best.effectiveMin; near = g < 0.5 ? '' : `가장 가까운 ${nearest.name}보다 ${min1(g)}분 빨라요.`; }
+      else if (jn.tier === 'no') near = `가장 가까운 ${nearest.name}${eun(nearest.name)} 지금 받을 수 없다고 표시돼 있어요.`;
+      else if (fast?.id !== nearest.id) near = `가장 가까운 ${nearest.name}${eun(nearest.name)} 전화로 확인이 필요해요.`;
+    }
+    if (sev && !disease.items.length && disease.id !== 'none') near += `${near ? ' ' : ''}이 질환은 병원별 수용 정보가 없어, 병상과 메시지만 보고 추천했어요.`;
+    $('uNear').textContent = near;
+    $('uName').innerHTML = brk(best.name);
+    $('uNum').textContent = min1(best.effectiveMin);
+    const bed = h.hvec == null ? '정보 없음' : h.hvec <= 0 ? '없음' : `${h.hvec}개`;
+    const rows = [];
+    if (known) rows.push(`<div><dt>${esc(dShort())} 치료</dt><dd class="ok">${CHECK_SVG.replace('<svg ', '<svg aria-hidden="true" ')}받을 수 있어요</dd></div>`);
+    rows.push(`<div><dt>남은 병상</dt><dd${cls === 'full' ? ' class="no"' : ''}>${esc(bed)}${cls === 'stale' && h.hvec != null ? ' (오래된 정보)' : ''}</dd></div>`);
+    rows.push(`<div><dt>병상 정보</dt><dd>${age < 1 ? '방금 전' : `${age}분 전`}</dd></div>`);
+    $('uDl').innerHTML = rows.join('');
+    $('uNavi').href = naviHref(h);
+    $('uNavi').setAttribute('aria-label', `${best.name} 카카오맵 길안내`);
+    $('uTel').hidden = !h.tel;
+    if (h.tel) { $('uTel').href = telHref(h.tel); $('uTel').setAttribute('aria-label', `${best.name} 전화 ${h.tel}`); }
+    $('uActs').classList.toggle('one', !h.tel);
+  }
+  uBubbles(best, checks);
+}
+// 지도 말풍선: 추천(파랑) · 받을 수 있는 곳 4곳(초록, 실효 도착 시간) · 전화로 확인할 곳 3곳(주황, 이동 시간). 누르면 그 병원을 보여 준다
+function uClearMap() { for (const o of uOv) o.setMap(null); uOv = []; }
+function uBubbles(best, checks) {
+  uClearMap();
+  if (!map) return;
+  const add = (r, html, cls, z, yAnchor, label) => {
+    const el = document.createElement('button');
+    el.type = 'button'; el.className = cls; el.innerHTML = html; el.setAttribute('aria-label', label);
+    el.addEventListener('click', (e) => { e.stopPropagation(); uShow(r.id); });
+    const ov = new kakao.maps.CustomOverlay({ position: LL(byId[r.id]), content: el, xAnchor: 0.5, yAnchor, zIndex: z, clickable: true });
+    ov.setMap(map); uOv.push(ov);
+  };
+  for (const r of checks.slice(0, 3)) add(r, `이동 ${min1(r.travelMin)}분`, 'u-bub chk', 3, 0.5, `${r.name}, 이동 ${min1(r.travelMin)}분, 전화로 확인할 곳`);
+  for (const r of results.slice(1, 5)) add(r, `${min1(r.effectiveMin)}분`, 'u-bub', 3, 0.5, `${r.name}, 실효 도착 ${min1(r.effectiveMin)}분`);
+  if (best) add(best, `<b>${min1(best.effectiveMin)}분</b><i></i><s></s>`, 'u-best', 4, 1, `추천 병원 ${best.name}, 실효 도착 ${min1(best.effectiveMin)}분`);
+}
+// 말풍선·목록에서 병원 하나를 보여 준다: 추천 병원이면 결과 화면, 아니면 목록에서 펼친다
+function uShow(id) {
+  const isBest = results?.[0]?.id === id;
+  uState(isBest ? 'res' : 'list');
+  select(id, !isBest);
+}
+function uReveal(li) {
+  requestAnimationFrame(() => requestAnimationFrame(() => { if (li.isConnected) li.scrollIntoView({ block: 'nearest', behavior: reduceMo() ? 'auto' : 'smooth' }); }));
+}
+// 지도에 경로를 맞출 때 머리줄·시트에 가리지 않게 여백을 둔다 (휴대폰: 아래 시트, PC: 왼쪽 시트)
+function fitPad() {
+  if (!isUser()) return [40, 40, 40, 40];
+  const top = $('uTop').getBoundingClientRect().bottom + 24, s = $('uSheet').getBoundingClientRect();
+  if (innerWidth > 880) return [40, 60, 40, s.right + 40];
+  const bottom = innerHeight - s.top + 24;
+  return innerHeight - top - bottom < 60 ? [top, 40, 40, 40] : [top, 40, bottom, 40];
+}
+function uOpenList() { uState('list'); const h = $('listCard').querySelector('h2'); h.tabIndex = -1; h.focus({ preventScroll: true }); $('uListScr').scrollTop = 0; }
+$('uMoreS').addEventListener('click', uOpenList);
+$('uMoreN').addEventListener('click', uOpenList);
+$('uLess').addEventListener('click', () => { uState('res'); $('uName').tabIndex = -1; $('uName').focus({ preventScroll: true }); });
+$('uWhat').addEventListener('click', () => { const on = $('uWhat').getAttribute('aria-expanded') !== 'true'; $('uWhat').setAttribute('aria-expanded', String(on)); $('uWhatT').hidden = !on; });
+$('uFast').addEventListener('click', () => { if (uFastR) uCallOpen(uFastR.fast.id, uFastR); });
+// 손잡이: 누르면 목록 펴기·접기, 위·아래로 끌어도 된다
+{
+  let y0 = null;
+  const h = $('uHandle');
+  h.addEventListener('pointerdown', (e) => { y0 = e.clientY; });
+  h.addEventListener('pointerup', (e) => {
+    if (y0 == null || !view) return; const dy = e.clientY - y0; y0 = null;
+    if (Math.abs(dy) > 30) uState(dy < 0 ? 'list' : 'res'); else uState(uSt() === 'list' ? 'res' : 'list');
+  });
+  h.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && view) { e.preventDefault(); uState(uSt() === 'list' ? 'res' : 'list'); } });
+}
+
+// 전화 확인 창 (아래에서 올라오는 창). auto = { fast, best }: 강조 카드를 눌렀을 때. 없으면 사전 연락 글이 있는 병원을 눌렀을 때
+let uCallFrom = null, uCallHist = false, uBackPending = 0;
+function uCallOpen(id, auto) {
+  const j = judge[id], h = byId[id];
+  if (!j || !h) return;
+  const contact = j.contact.length > 0;
+  $('uCt').textContent = auto ? '더 빨리 갈 수 있는 병원이 있어요' : '가기 전에 병원에 연락이 필요해요';
+  $('uCs').innerHTML = auto ? '먼저 전화로 받아 주는지 확인하세요.' : `${brk(h.name)}${eun(h.name)} 환자를 보내기 전에 연락해 달라고 했어요.`;
+  $('uCmp').hidden = !auto;
+  if (auto) {
+    const [a, b] = min2(auto.fast.travelMin, auto.best.effectiveMin);
+    const row = (n, s, t, l, c) => `<div class="u-cr"><div><b>${n}</b><span>${s}</span></div><div><b class="${c}">${t}</b><span>${l}</span></div></div>`;
+    $('uCmp').innerHTML = row(brk(h.name), '받아 줄지 몰라요', `${a}분`, '이동 시간', 'am') + '<hr>' + row(brk(auto.best.name), '추천 병원', `${b}분`, '실효 도착 시간', 'bl');
+  }
+  const why = j.why.filter((w) => w !== '사전 연락 필요').map(plainWhy).join(', ');
+  $('uCd').innerHTML = auto
+    ? `받아 주면 <b>${min1(auto.best.effectiveMin - auto.fast.travelMin)}분 빨리</b> 닿아요. ` + (contact ? '이 병원은 환자를 보내기 전에 연락해 달라고 했어요. ' : `이 병원은 ${why ? `${esc(why)} 때문에 ` : ''}받아 줄지 알 수 없어요. `) + '어렵다고 하면 추천 병원으로 가세요.'
+    : '전화로 받아 주는지 먼저 확인하세요.';
+  const msgs = contact ? j.contact : j.rel.filter((m) => m.block);
+  $('uMsg').hidden = !msgs.length;
+  $('uMsgL').innerHTML = msgs.map((m) => `<p>${esc(m.t)}</p>`).join('');
+  $('uCallTel').hidden = !h.tel;
+  $('uCb').classList.toggle('one', !h.tel);
+  $('uCnum').textContent = h.tel ?? '';
+  if (h.tel) { $('uCallTel').href = telHref(h.tel); $('uCallTel').setAttribute('aria-label', `${h.name}에 전화로 확인, ${h.tel}`); }
+  if ($('uCall').hidden) {
+    uCallFrom = document.activeElement;
+    if (!uCallHist) { history.pushState({ gtU: 1 }, ''); uCallHist = true; }
+  }
+  $('uDim').hidden = false; $('uCall').hidden = false;
+  for (const id of ['uTop', 'uSheet']) $(id).inert = true;
+  document.querySelector('.mapcol').inert = true;
+  $('uCall').querySelector('.u-scr').scrollTop = 0;
+  $('uCall').focus({ preventScroll: true });
+}
+function uCallClose(fromPop = false) {
+  if ($('uCall').hidden) return;
+  $('uCall').hidden = true; $('uDim').hidden = true;
+  for (const id of ['uTop', 'uSheet']) $(id).inert = false;
+  document.querySelector('.mapcol').inert = false;
+  if (uCallHist) { uCallHist = false; if (!fromPop) { uBackPending++; history.back(); } }
+  if (uCallFrom?.isConnected) uCallFrom.focus({ preventScroll: true });
+  uCallFrom = null;
+}
+addEventListener('popstate', () => { if (uBackPending) { uBackPending--; return; } if (uCallHist) { uCallHist = false; uCallClose(true); } });
+$('uCallX').addEventListener('click', () => uCallClose());
+$('uDim').addEventListener('click', () => uCallClose());
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !isUser() || !$('failDlg').hidden) return;
+  if (!$('uCall').hidden) uCallClose(); else if (uSt() === 'list' && view) uState('res');
+});
+
+// 모드를 바꿀 때: 같이 쓰는 요소(검색 칸·검색 결과·병원 목록·모드 전환)를 옮기고 지도 크기를 다시 잰다
+const U_MOVE = [['modeSeg', 'uBrand'], ['searchForm', 'uFindBox'], ['places', 'uFindBox'], ['listCard', 'uListBox']];
+const uHome = {};
+function uMode() {
+  const user = isUser();
+  for (const [id, to] of U_MOVE) {
+    const el = $(id);
+    if (!uHome[id]) uHome[id] = [el.parentNode, el.nextSibling];
+    if (user) { if (el.parentNode !== $(to)) $(to).appendChild(el); }
+    else { const [p, n] = uHome[id]; if (el.parentNode !== p) p.insertBefore(el, n && n.parentNode === p ? n : null); }
+  }
+  if (user) { if (callFor || !$('callWin').hidden) hideCall(); scrollTo(0, 0); uState(view ? (results.length ? 'res' : 'list') : (uSt() === 'find' ? 'find' : 'pick')); }
+  else uCallClose();
+  originMarker?.setMap(user ? null : map);
+  if (map) requestAnimationFrame(() => { const c = map.getCenter?.(); map.relayout(); if (c) map.setCenter(c); });
+}
+{ let raf = 0; addEventListener('resize', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; if (map && isUser()) map.relayout(); }); }); }
 
 // ---------- 화면 모드: 사용자(간단) · 개발자(계산 근거까지). 고른 모드는 이 브라우저에만 기억한다
 // 모드를 바꿀 때 기준점: 위쪽 막대 바로 아래에 보이는 병원 줄이나 카드 (모드에 따라 사라지는 부분이면 그 바깥 칸)
@@ -1650,9 +2244,10 @@ function topAnchor() {
   return best && { el: best, top: bestTop };
 }
 function setMode(mode, animate = true) {
-  const a = topAnchor(); // 화면 전환 효과가 시작되기 전에 잡아야 한다 (효과 중에는 위치 찾기가 막힌다)
+  const a = isUser() ? null : topAnchor(); // 화면 전환 효과가 시작되기 전에 잡아야 한다 (효과 중에는 위치 찾기가 막힌다)
   const apply = () => {
     document.body.dataset.mode = mode;
+    uMode();
     for (const b of $('modeSeg').querySelectorAll('button')) b.setAttribute('aria-checked', String(b.dataset.mode === mode));
     if (a) scrollBy(0, a.el.getBoundingClientRect().top - a.top); // 보던 병원 줄·카드가 같은 자리에 남게
   };
@@ -1703,7 +2298,7 @@ function dockSet(r) {
   dockSync(); dockQueue();
 }
 function dockSync() {
-  const on = !!dockFor && dockMQ.matches && heroPast && !$('resultCard').hidden && !document.body.classList.contains('calling');
+  const on = !isUser() && !!dockFor && dockMQ.matches && heroPast && !$('resultCard').hidden && !document.body.classList.contains('calling');
   $('dock').classList.toggle('show', on);
   document.body.classList.toggle('docked', on);
 }
@@ -1711,7 +2306,7 @@ dockMQ.addEventListener?.('change', dockQueue);
 // 키보드 초점이 위쪽 막대·아래쪽 막대에 가리면 그만큼 화면을 옮긴다 (WCAG 2.4.11, CSS scroll-padding만으로는 화면 안의 요소는 옮겨 주지 않음)
 addEventListener('focusin', (e) => {
   const el = e.target;
-  if (!(el instanceof Element) || el.closest('#topbar, #dock, #callWin, #callPill, #failDlg, #failBadge')) return;
+  if (!(el instanceof Element) || el.closest('#topbar, #dock, #callWin, #callPill, #failDlg, #failBadge, #uApp')) return;
   const r = el.getBoundingClientRect(), top = $('topbar').getBoundingClientRect().bottom + 8;
   const bot = ($('dock').classList.contains('show') ? $('dock').getBoundingClientRect().top : innerHeight) - 8;
   if (r.bottom > bot && r.top - (r.bottom - bot) >= top) scrollBy(0, r.bottom - bot);
@@ -1739,6 +2334,7 @@ try {
   await Promise.all([new Promise((ok) => kakao.maps.load(ok)), loadData()]);
   initMap();
   drawPins();
+  if (isUser() && uSt() === 'pick') uPickRender();
   setStatus('의심 질환을 고르고 출발지를 정하면 추천이 나와요.');
 } catch (e) {
   setStatus(`시작 실패: ${e.message}`, true);
