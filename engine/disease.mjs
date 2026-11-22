@@ -93,6 +93,19 @@ const STRIP_RES = [
   /[가-힣A-Za-z]*\s*(부재|부족|사정|공백)\s*(등)?\s*(으로|로|인해|관계로)?/g, // 사유 ('○○ 부재로' — 바로 앞 낱말 하나만 지운다)
   /모든\s*[가-힣]+/g, // '모든 산모' = 대상 전체
 ];
+// 질환 항목(중증질환 코드)에 걸린 메시지 글의 종류 (2026-11-22 결정 · 10-25~11-22 수집 29일, 표시와 맞춰 본 264,693건 분석)
+//  'no'    : '불가'라고 분명히 적은 글 ('불가능메세지등록', '진료과 사정으로 복부 응급수술 불가', '시설공사로 14병상으로 축소운영. 신환수용 불가.' 등)
+//  'short' : 부족·포화·어려움을 적은 글 ('의료진 부족', 'ICU full bed', 'CRRT 사용중' 등). 같은 글에 병원이 '가능'으로 표시한 때도 있어 글만으로는 단정하지 않는다
+//  null    : 그 밖 — 시각·날짜 조건('야간(18:00~08:00)', '정규시간 외', '11월 19일~21일'), 일부만 가능('외상성 뇌출혈 가능', '외래진료만 가능'),
+//            대상을 좁힘('소아', '필요한 환자'), 전원(병원 사이 옮기기), 'ERCP 불가'(담낭 질환은 ERCP 말고도 치료가 있어 단정 못 함), 시술 중·점검 등
+const ITEM_COND_RE = /야간|주말|공휴일|휴일|정규|시간|요일|매주|격주|한달|당직|익일|\d{1,2}:\d{2}|\d+시|\d+월|\d+일|(?<!불)가능|전원|부분|일부|외래|소아|영유아|만(진료|수용|가능)|필요한|ERCP/i;
+const ITEM_SHORT_RE = /부족|포화|과밀|어려|여석|full|over|사용중|부재|공상/i;
+export const itemMsgKind = (text) => {
+  const t = String(text ?? '').replace(/\s+/g, '');
+  if (!t || ITEM_COND_RE.test(t)) return null;
+  if (/불가/.test(t)) return 'no';
+  return ITEM_SHORT_RE.test(t) ? 'short' : null;
+};
 export const isExplicitNo = (text, deptWords = []) => {
   let t = String(text ?? '');
   for (const re of STRIP_RES) t = t.replace(re, ' ');
@@ -130,27 +143,37 @@ export function assess(h, d) {
   const noItems = d.items.filter((n) => flag(n) === 'N');
   const unknownItems = d.items.filter((n) => flag(n) !== 'Y' && flag(n) !== 'N');
   const rel = [], other = [], contact = [];
-  let itemMsg = 0, blockMsg = 0; const explicitNo = [];
+  let itemMsg = 0, blockMsg = 0, conflict = 0; const explicitNo = [], itemNo = new Set();
   for (const m of h?.m ?? []) {
     const scope = scopeOf(m, d);
     if (!scope) { other.push(m); continue; }
     const accepts = scope !== 'item' && !!d.accept?.test(m.t); // 이 환자는 받는다는 글 → 막는 메시지·사전 연락으로 세지 않는다
     const c = !accepts && isContact(m.t);
     const block = scope === 'item' || (!accepts && (c || isNegative(m.t)));
-    const no = !accepts && !c && (scope === 'dept' || (scope === 'word' && d.depts.includes(m.d))) && isExplicitNo(m.t, [m.d, ...d.depts, '환자', '관련', '및']);
-    if (no) explicitNo.push(m);
+    let no = !accepts && !c && (scope === 'dept' || (scope === 'word' && d.depts.includes(m.d))) && isExplicitNo(m.t, [m.d, ...d.depts, '환자', '관련', '및']);
+    let conf = false;
+    if (scope === 'item' && !c) {
+      // 질환 항목 메시지 (2026-11-22 결정): 그 항목 표시가 '정보미제공'인데 불가·부족 글이 걸려 있으면 '불가 표시'.
+      // 29일 동안 이런 때 바로 앞뒤 표시를 알 수 있었던 경우는 모두 '불가능'이었다. 표시가 '가능'인데 '불가' 글이 있으면 어느 쪽이 맞는지 몰라 '확인 필요'
+      const n = itemOfCode(m.c), k = itemMsgKind(m.t);
+      if (k && flag(n) === '-') { no = true; itemNo.add(n); }
+      else if (k === 'no' && flag(n) === 'Y') conf = true;
+    }
+    if (no && scope !== 'item') explicitNo.push(m);
     rel.push({ ...m, scope, contact: c, block, no });
     if (c) contact.push(m);
-    if (scope === 'item') itemMsg++;
+    if (scope === 'item') { if (conf) conflict++; else if (!no) itemMsg++; }
     else if (block) blockMsg++;
   }
   const why = [];
   let tier = 'ok';
   if (flag(28) === 'N') { tier = 'no'; why.push("응급실 '불가능' 표시"); }
   if (noItems.length) { tier = 'no'; why.push(...noItems.map((n) => `${itemLabel(n)} '불가능' 표시`)); }
+  if (itemNo.size) { tier = 'no'; why.push(...[...itemNo].map((n) => `${itemLabel(n)} 불가 메시지`)); }
   if (explicitNo.length) { tier = 'no'; why.push(`수용 불가 메시지 ${explicitNo.length}건`); }
   if (tier !== 'no') {
     if (unknownItems.length) { tier = 'check'; why.push(d.items.length > 1 && unknownItems.length < d.items.length ? '일부 항목 정보 없음' : '질환 정보 없음'); }
+    if (conflict) { tier = 'check'; why.push("'가능' 표시와 '불가' 메시지가 서로 달라요"); }
     if (itemMsg) { tier = 'check'; why.push(`이 질환 메시지 ${itemMsg}건`); }
     if (blockMsg) { tier = 'check'; why.push(`관련 메시지 ${blockMsg}건`); }
     if (contact.length) why.push('사전 연락 필요');
