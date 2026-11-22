@@ -585,7 +585,7 @@
             <li><b>왜 메시지를 보나요</b>: 응급실 전체에 받기 어렵다는 메시지가 걸린 동안에도 병상 수가 0 이하인 때는 10.7%뿐이었어요. 병상 수만으로는 이런 거절을 알 수 없어요.</li>
             <li><b>질환 항목 메시지로 불가를 판단하는 규칙</b>: 2026-10-25~11-22 수집 기록(표시와 메시지를 맞춰 본 264,693건)에서, 표시가 '정보미제공'인데 '불가'·'부족' 메시지가 걸린 때 바로 앞뒤 표시를 알 수 있었던 경우는 모두 '불가능'이었어요('가능'은 0건). 그래서 이때는 불가 표시로 둬요. 시각·날짜 조건('야간', '정규시간 외', '11월 19일~21일'), 일부만 가능('외상성 뇌출혈 가능'), 대상을 좁힌 글('소아', '필요한 환자'), 전원, 'ERCP 불가'(담낭 질환은 다른 치료가 있어요)는 단정할 수 없어 '확인 필요'로 둬요. 표시가 '가능'인데 '불가' 메시지가 걸린 경우는 같은 기록에서 0.7%였고 어느 쪽이 맞는지 알 수 없어 '확인 필요'로 둬요.</li>
             <li><b>메시지를 고르는 규칙</b>: 그 질환 항목의 메시지는 공공데이터 코드로 정확히 찾아요. 응급실 메시지는 진료과 칸과 글 속 낱말로 '관련 있음'을 고르는데, 이것은 <b>정해 둔 규칙</b>이라 틀릴 수 있어요. 그래서 병원을 누르면 그 병원의 메시지를 모두 원문으로 보여 줘요.</li>
-            <li><b>사전 연락 창</b>: 관련 메시지에 '사전 문의', '문의 후 이송', '수용 여부 확인' 같은 글이 있으면, 그 병원을 눌렀을 때 전화 연결 창을 띄워요. 확인을 누르면 왼쪽 아래 작은 표시로 부드럽게 줄고, '자세히 보기'를 누르면 다시 커져요. 창 바탕은 반투명이지만 뒤에 무엇이 있어도 글자가 또렷하게(대비 7:1 이상) 보이도록 밝은 화면 70%, 어두운 화면 82% 불투명으로 맞췄어요.</li>
+            <li><b>사전 연락 창</b>: 관련 메시지에 '사전 문의', '문의 후 이송', '수용 여부 확인' 같은 글이 있으면, 그 병원을 눌렀을 때 전화 연결 창을 띄워요. 또 '확인 필요' 병원까지의 이동 시간이 추천 병원의 실효 도착 시간보다 0.5분 넘게 짧으면(여러 곳이면 가장 빠른 곳, 전화번호가 있는 곳만) 검색하자마자 그 병원에 전화로 먼저 확인하라는 창을 띄워요. 받아 주면 그 병원이 가장 빨리 닿는 곳이 되기 때문이에요. 확인을 누르면 왼쪽 아래 작은 표시로 부드럽게 줄고, '자세히 보기'를 누르면 다시 커져요. 창 바탕은 반투명이지만 뒤에 무엇이 있어도 글자가 또렷하게(대비 7:1 이상) 보이도록 밝은 화면 70%, 어두운 화면 82% 불투명으로 맞췄어요.</li>
             <li><b>길안내</b>: 병원을 누르면 나오는 '카카오맵 길안내'는 카카오맵을 새 창으로 열어요. 병원 이름과 좌표만 넘기고, 출발지는 넘기지 않아요.</li>
             <li><b>'정보미제공'은 추측하지 않아요</b>: 응급실의 약 60%(작은 병원일수록 많음)는 질환 표시를 내지 않아요. 수술실·장비 정보로 짐작하지 않고 '확인 필요'로 둬요(그 질환 항목에 '불가'·'부족' 메시지가 걸린 경우만 불가 표시).</li>
             <li><b>후보 고르기</b>: 가까운 '가능 확인' 병원이 6곳보다 적으면 더 먼 '가능 확인' 병원을 가까운 순서로 채워요. 드문 질환은 먼 병원이 나올 수 있어요.</li>
@@ -1144,7 +1144,7 @@ async function setOrigin(o) {
     // 휴대폰처럼 좁은 화면에서는 결과(비교 카드)가 보이게 내려 준다
     const rc = $('resultCard').getBoundingClientRect();
     if (rc.top < $('topbar').getBoundingClientRect().bottom || rc.bottom > innerHeight) $('resultCard').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-    select((results[0] ?? rows.find((r) => judge[r.id].tier === 'check') ?? rows[0]).id);
+    select((results[0] ?? rows.find((r) => judge[r.id].tier === 'check') ?? rows[0]).id, false, false);
   } catch (e) {
     results = null; view = null;
     clearLists();
@@ -1214,7 +1214,7 @@ function render() {
   // 비교 칸은 추천과 다른 병원일 때만 (같은 병원을 두 번 보여 주지 않는다)
   const tiles = [];
   if (nearest.id !== best?.id) tiles.push(moveBox('가장 가까운 곳', nearest));
-  if (checks[0] && checks[0].id !== nearest.id && (!best || checks[0].travelMin < best.travelMin)) tiles.push(moveBox('확인하면 갈 수 있는 가까운 곳', checks[0]));
+  if (checks[0] && checks[0].id !== nearest.id && (!best || checks[0].travelMin < best.effectiveMin)) tiles.push(moveBox('확인하면 갈 수 있는 가까운 곳', checks[0]));
   $('compare').innerHTML = hero(known ? '추천 · 가능 확인된 곳' : '추천 · 병상 기준', best) + tiles.map((t) => t.replace('<div class="cmp">', '<div class="cmp dev">')).join('');
   $('compare').classList.toggle('one', tiles.length === 1);
   dockSet(best);
@@ -1230,7 +1230,7 @@ function render() {
     } else say.push(`가장 가까운 ${nearest.name}${eun(nearest.name)} ${jn.tier === 'no' ? '지금 받을 수 없다고 표시돼 있어요' : '받아 줄지 확인이 필요해요'}(${jn.why.join(' · ')}).`);
     const c = checks[0];
     if (sev && !disease.items.length && disease.id !== 'none') say.push('이 질환은 병원별 수용 정보가 없어, 병상과 메시지만 보고 추천했어요.');
-    if (c && c.travelMin < best.travelMin - 0.5) say.push(`${c.name}에 전화해 받아 준다고 하면 ${min1(best.travelMin - c.travelMin)}분 더 빨리 갈 수 있어요.`);
+    if (c && c.travelMin < best.effectiveMin - 0.5) say.push(`${c.name}에 전화해 받아 준다고 하면 추천 병원의 실효 도착 시간보다 ${min1(best.effectiveMin - c.travelMin)}분 더 빨리 갈 수 있어요.`);
   }
   // 사용자 모드 한 줄: 가장 가까운 곳이 추천과 다를 때만, 이유를 짧게
   let short = '';
@@ -1240,10 +1240,10 @@ function render() {
     const g = nearest.effectiveMin - best.effectiveMin; // 개발자 모드 문장과 같은 기준: 0.5분 미만이면 '거의 같음'이라 따로 알리지 않는다
     short = jn.tier === 'ok' ? (g < 0.5 ? '' : `가장 가까운 ${nearest.name}보다 ${min1(g)}분 빨라요`)
       : `가장 가까운 ${nearest.name}${eun(nearest.name)} ${jn.tier === 'no' ? '지금 받을 수 없다고 표시돼 있어요' : '전화로 확인이 필요해요'}`;
-    // 개발자 모드와 같은 계산: 추천 병원보다 0.5분 넘게 가까운 '확인 필요' 병원이 있으면 줄어드는 도로 시간을 알린다 (11-16 결정, A안)
+    // 개발자 모드·자동 창과 같은 기준: '확인 필요' 병원까지 이동 시간이 추천 병원의 실효 도착 시간보다 0.5분 넘게 짧으면 알린다 (11-22 결정, 가안)
     const c = checks[0];
-    if (c && c.travelMin < best.travelMin - 0.5) {
-      const n = min1(best.travelMin - c.travelMin);
+    if (c && c.travelMin < best.effectiveMin - 0.5) {
+      const n = min1(best.effectiveMin - c.travelMin);
       short += (short ? '. ' : '') + (c.id === nearest.id && jn.tier === 'check' ? `전화로 받아 준다고 하면 ${n}분 더 빨리 갈 수 있어요` : `${c.name}에 전화해 받아 준다고 하면 ${n}분 더 빨리 갈 수 있어요`);
     }
   }
@@ -1273,14 +1273,16 @@ function render() {
     li.querySelector('.top').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(li.dataset.id, true); } });
   }
   renderDist();
-  // 사전 연락이 필요한 병원까지의 이동 시간이 추천 병원의 실효 도착 시간보다 0.5분 넘게 짧으면(여러 곳이면 가장 빠른 곳)
-  // 그 병원의 연락 창을 바로 띄운다. 확인 필요 병원은 받아 줄 확률을 몰라 이동 시간으로 비교한다 (11-16 결정)
+  // '확인 필요' 병원까지의 이동 시간이 추천 병원의 실효 도착 시간보다 0.5분 넘게 짧으면(여러 곳이면 가장 빠른 곳) 전화로 먼저 확인하라는 창을 바로 띄운다.
+  // 받아 주면 그 병원이 실효 도착 시간 1순위가 되기 때문. 확인 필요 병원은 받아 줄 확률을 몰라 이동 시간으로 비교한다 (11-16 결정, 11-22 사전 연락 글이 없어도 · 전화번호 있는 곳만)
   const key = `${runId}|${disease.id}`;
-  if (best && autoCallKey !== key) {
+  if (autoCallKey !== key) {
     autoCallKey = key;
-    const fast = view.rows.filter((r) => judge[r.id].tier === 'check' && judge[r.id].contact.length && r.travelMin < best.effectiveMin - 0.5)
+    const fast = best && view.rows.filter((r) => judge[r.id].tier === 'check' && byId[r.id].tel && r.travelMin < best.effectiveMin - 0.5)
       .sort((a, b) => a.travelMin - b.travelMin)[0];
-    if (fast && callFor === null) showCall(fast.id, { fast, best });
+    // 새 결과의 창이 있으면 앞 창을 닫지 않고 내용만 바꾼다(닫으면서 부르는 '뒤로 가기'가 늦게 도착해 새 창을 접어 버린다). 없으면 앞 검색·질환에서 띄운 창을 닫는다
+    if (fast) showCall(fast.id, { fast, best });
+    else if (callAuto) hideCall();
   }
 }
 let autoCallKey = null;
@@ -1327,32 +1329,56 @@ function detailHtml(r) {
 let callFor = null;
 // 연락 창이 펴지면 방문 기록에 한 칸을 더해, 휴대폰 '뒤로 가기'가 페이지를 떠나지 않고 창만 접게 한다
 let callHist = false;
-addEventListener('popstate', () => { if (!callHist) return; callHist = false; if (document.body.classList.contains('calling')) callState('min'); });
+// 창을 접거나 닫을 때 부른 history.back()은 늦게 도착한다. 그 사이 창이 다시 열리면(다시 검색 등) 그 도착이 새 창을 접지 않게 세어 두고,
+// 도착한 뒤 창이 열려 있으면 기록을 다시 넣는다 (11-22: 다시 검색하면 새 창이 바로 접히던 문제)
+let backPending = 0;
+addEventListener('popstate', () => {
+  if (backPending) { backPending--; if (document.body.classList.contains('calling') && !callHist) { history.pushState({ gtCall: 1 }, ''); callHist = true; } return; }
+  if (!callHist) return; callHist = false; if (document.body.classList.contains('calling')) callState('min');
+});
 function callState(st) {
-  if (st === 'open' && !callHist) { history.pushState({ gtCall: 1 }, ''); callHist = true; }
-  else if (st !== 'open' && callHist) { callHist = false; history.back(); }
+  if (st === 'open' && !callHist && !backPending) { history.pushState({ gtCall: 1 }, ''); callHist = true; }
+  else if (st !== 'open' && callHist) { callHist = false; backPending++; history.back(); }
   $('callWin').hidden = st === 'none'; $('callPill').hidden = st === 'none';
   document.body.classList.toggle('calling', st === 'open');
   $('callWin').classList.toggle('min', st === 'min');
   $('callPill').classList.toggle('off', st !== 'min');
   dockSync();
 }
-function hideCall() { callFor = null; callState('none'); }
-// auto = { fast, best }: 추천 병원의 실효 도착 시간보다 빨리 닿는 '사전 연락' 병원이라 검색 직후 스스로 띄울 때 (문구가 다름)
-function showCall(id, auto = null) {
+function hideCall() { callFor = null; callAuto = null; callState('none'); }
+let callAuto = null;
+// 두 시간이 같은 정수로 보이면(예: 15분과 15분) 둘 다 소수 첫째 자리까지 보여 준다 (11-22 결정)
+const min2 = (a, b) => (+min1(a) === +min1(b) ? [a.toFixed(1), b.toFixed(1)] : [min1(a), min1(b)]);
+// auto = { fast, best }: 추천 병원의 실효 도착 시간보다 빨리 닿는 '확인 필요' 병원이라 검색 직후 스스로 띄울 때 (11-22 결정: 사전 연락 글이 없어도 띄운다)
+// user = 사람이 병원을 눌렀을 때 (검색 직후 추천 병원을 스스로 고를 때는 false)
+function showCall(id, auto = null, user = true) {
   const j = judge[id], h = byId[id];
-  if (!j?.contact.length) return hideCall();
-  callFor = id;
+  // 스스로 띄운 창이 있을 때: 그 병원을 눌러도 그대로, 사전 연락 글이 없는 다른 병원을 누르면 닫지 않고 작은 표시로 줄여 안내를 다시 볼 수 있게 한다.
+  // 검색 직후 추천 병원을 스스로 고를 때는 건드리지 않는다 (11-22: 이 순서 때문에 창이 뜨자마자 닫히던 문제)
+  if (!auto && callAuto && (callFor === id || !j?.contact.length)) { if (user && callFor !== id && !$('callWin').classList.contains('min')) callState('min'); return; }
+  if (!j || (!auto && !j.contact.length)) return hideCall();
+  callFor = id; callAuto = auto;
+  const contact = j.contact.length > 0;
   $('callTitle').textContent = auto ? '더 빨리 갈 수 있는 병원이 있어요 — 먼저 전화로 확인하세요' : '가기 전에 병원에 연락이 필요해요';
   $('callName').textContent = h.name;
   $('callName').hidden = !!auto;
   $('callLead').hidden = !auto;
-  if (auto) $('callLead').innerHTML = `<p>${esc(h.name)}까지 ${min1(auto.fast.travelMin)}분이에요. 추천 병원(${esc(auto.best.name)}, 실효 도착 시간 ${min1(auto.best.effectiveMin)}분)보다 ${min1(auto.best.effectiveMin - auto.fast.travelMin)}분 빨라요.</p>`
-    + '<p>다만 이 병원은 환자를 보내기 전에 연락해 달라고 했어요. 전화로 받아 주는지 먼저 확인하고, 어렵다고 하면 추천 병원으로 가세요.</p>';
-  $('callMsgs').innerHTML = j.contact.map((m) => `<li>${auto ? '<span class="src">병원이 남긴 글</span> ' : ''}${esc(m.t)}</li>`).join('');
+  let msgs = j.contact;
+  if (auto) {
+    const [a, b] = min2(auto.fast.travelMin, auto.best.effectiveMin);
+    const why = j.why.filter((w) => w !== '사전 연락 필요').join(' · ');
+    $('callLead').innerHTML = `<p>${esc(h.name)}까지 ${a}분이에요. 추천 병원(${esc(auto.best.name)}, 실효 도착 시간 ${b}분)보다 ${min1(auto.best.effectiveMin - auto.fast.travelMin)}분 빨라요.</p>`
+      + (contact ? '<p>다만 이 병원은 환자를 보내기 전에 연락해 달라고 했어요. 전화로 받아 주는지 먼저 확인하고, 어렵다고 하면 추천 병원으로 가세요.</p>'
+        : `<p>다만 이 병원은 받아 줄지 알 수 없어요${why ? `(${esc(why)})` : ''}. 전화로 받아 주는지 먼저 확인하고, 어렵다고 하면 추천 병원으로 가세요.</p>`);
+    if (!contact) msgs = j.rel.filter((m) => m.block);
+  }
+  $('callMsgs').innerHTML = msgs.map((m) => `<li>${auto ? '<span class="src">병원이 남긴 글</span> ' : ''}${esc(m.t)}</li>`).join('')
+    + (auto && !contact && j.unknownItems.length ? "<li>'가능' 표시가 없어요(정보 미제공)</li>" : '');
   $('callTel').hidden = !h.tel;
   if (h.tel) { $('callTel').href = telHref(h.tel); $('callTel').innerHTML = IC.phone + esc(`${auto ? '전화로 확인' : '전화 연결'} ${h.tel}`); }
-  $('callPill').innerHTML = `${IC.phone}<span>${esc(h.name)}</span><b>연락 안내 보기</b>`;
+  const pill = contact ? '연락 안내 보기' : '확인 안내 보기';
+  $('callPill').innerHTML = `${IC.phone}<span>${esc(h.name)}</span><b>${pill}</b>`;
+  $('callPill').setAttribute('aria-label', `${h.name} ${pill}`);
   callState('open');
 }
 // 고른 줄과 길안내·전화 버튼이 위쪽 막대 아래, 연락 창 위에 오게 화면을 부드럽게 옮긴다 (줄 윗부분이 먼저)
@@ -1402,7 +1428,7 @@ function renderDist() {
   $('distCard').hidden = false;
 }
 
-async function select(id, fromList = false) {
+async function select(id, fromList = false, user = true) {
   const r = view?.byId[id];
   if (!r) return;
   selectedId = id;
@@ -1416,7 +1442,7 @@ async function select(id, fromList = false) {
   }
   for (const [pid, el] of Object.entries(pins)) el.classList.toggle('sel', pid === id);
   for (const tr of $('distTable').querySelectorAll('tr[data-id]')) tr.classList.toggle('sel', tr.dataset.id === id);
-  showCall(id);
+  showCall(id, null, user);
   const selLi = document.querySelector('ol.hl > li.sel');
   if (selLi && (fromList || callFor === id)) reveal(selLi);
 
