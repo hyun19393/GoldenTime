@@ -293,7 +293,7 @@
   .core-h { margin: 0; font-size: 15px; line-height: 22px; font-weight: 700; color: var(--ink); }
   .core-b { margin: 4px 0 0; font-size: 13px; line-height: 19px; color: var(--muted); }
   .legal { margin: 20px 0 8px; font-size: 12px; line-height: 17px; color: var(--muted); }
-  .legal-note { margin: 0 0 6px; font-size: 13px; line-height: 19px; color: var(--muted); } /* 교육·탐구용 안내 (11-16 위쪽 띠에서 옮김) */
+  .legal-note { margin: 0 0 6px; font-size: 13px; line-height: 19px; color: var(--muted); } /* 119 안내 (11-16 위쪽 띠에서 옮김, 11-22 '교육·탐구용' 문구 삭제) */
   /* 사용자 모드: 남는 글씨는 모두 13px 이상 */
   body[data-mode="user"] :is(.copy, .warn, .hint, .capt, .meta, .tag, .legend, footer, .legal, #places li small) { font-size: 13px; line-height: 18px; }
   body[data-mode="user"] .tag { padding: 4px 10px; }
@@ -479,6 +479,66 @@
     ol.hl > li, ol.hl > li::before, .seg-thumb, .dock, .dock.show, details > summary::after, details::details-content { transition: none; }
     ol.hl > li:active, button:active:not(:disabled), .btn:active { transform: none; }
   }
+  /* ---------- 11-22 사용자 모드 가독성 개선 (개발자 모드는 그대로) ---------- */
+  body[data-mode="user"] { font-size: 16px; line-height: 24px; }
+  body[data-mode="user"] :is(.copy, .warn, .hint, .capt, .meta, .tag, .legend, footer, .legal, #places li small) { font-size: 14px; line-height: 20px; }
+  /* ① 검색 뒤에는 질환·출발지 칸을 한 줄로 접는다 */
+  #condBar { display: none; }
+  body[data-mode="user"].folded #condBar { display: flex; align-items: center; gap: 12px; padding: 14px 16px 14px 20px; }
+  body[data-mode="user"].folded :is(.card.inp, .intro .core) { display: none; }
+  #condBar .ct { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  #condBar .ct b { font-size: 17px; line-height: 24px; }
+  #condBar .ct span { font-size: 14px; line-height: 20px; color: var(--muted); overflow-wrap: anywhere; }
+  #condBar .ct .cn:empty { display: none; }
+  #condBar button { flex: none; min-height: 44px; padding: 0 18px; border-radius: 14px; border: 0; background: var(--accent-bg); color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; }
+  /* ② 추천 칸: 이름은 한 줄 통째로, 시간은 크게 아래에, 이유는 한 줄, 버튼 둘은 같은 크기 */
+  .uh-lab { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 14px; line-height: 20px; font-weight: 700; color: var(--accent); }
+  .uh-lab svg { width: 16px; height: 16px; flex: none; }
+  .uh-name { margin: 6px 0 8px; font-size: 24px; line-height: 31px; font-weight: 700; overflow-wrap: anywhere; letter-spacing: -0.01em; }
+  .uh-time { display: flex; align-items: baseline; gap: 4px; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .uh-time b { font-size: 52px; line-height: 54px; letter-spacing: -0.03em; }
+  .uh-time span { font-size: 20px; font-weight: 700; }
+  .uh-lab2 { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 6px; margin-top: 4px; font-size: 15px; font-weight: 700; }
+  .uh-lab2 .what { min-height: 32px; padding: 0 4px; border: 0; background: none; color: var(--accent); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .uh-what { margin: 4px 0 0; font-size: 14px; line-height: 20px; color: var(--muted); }
+  .uh-why { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 12px 0 4px; font-size: 15px; line-height: 22px; font-weight: 600; }
+  .c-ok { color: var(--ok-ink); } .c-low { color: var(--low-ink); } .c-full { color: var(--full); } .c-stale { color: var(--muted); }
+  body[data-mode="user"] .cmp.best .acts { display: grid; grid-template-columns: 1fr 1fr; }
+  body[data-mode="user"] .cmp.best .acts > * { min-height: 52px; justify-content: center; }
+  /* ③ 목록: 순위는 동그라미 번호, 긴 이름은 번호와 떨어지지 않게, 칩 대신 색 글자 한 줄 */
+  .name .rkd { font-style: normal; }
+  body[data-mode="user"] ol.hl .name { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+  body[data-mode="user"] ol.hl .name .rk { flex: none; display: grid; place-items: center; width: 26px; height: 26px; margin: 0; border-radius: 50%; background: var(--neutral-bg); font-size: 14px; line-height: 1; font-weight: 800; }
+  body[data-mode="user"] ol.hl .name .rkd { display: none; }
+  body[data-mode="user"] #list > li:first-child .name .rk { background: var(--accent-fill); color: #fff; }
+  body[data-mode="user"] #list .tags { padding-left: 36px; }
+  body[data-mode="user"] ol.hl .tags { gap: 0 6px; }
+  body[data-mode="user"] ol.hl .tags .tag { padding: 0; background: none; border-radius: 0; font-weight: 600; }
+  body[data-mode="user"] ol.hl .tags .tag:not(.dev) ~ .tag:not(.dev)::before { content: '·'; margin-right: 6px; color: var(--muted); font-weight: 400; }
+  body[data-mode="user"] ol.hl .tags .tag.call { color: var(--full); }
+  body[data-mode="user"] ol.hl .tags .tag.plain { color: var(--muted); font-weight: 500; }
+  body[data-mode="user"] ol.hl .tags a.tag.tel { color: var(--accent); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; margin: -6px 0; }
+  body[data-mode="user"] ol.hl .tags a.tag.tel svg { width: 15px; height: 15px; }
+  .sdot { display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 50%; vertical-align: 1px; }
+  .sdot.ok { background: var(--ok); }
+  .sdot.low { background: var(--low); }
+  .sdot.full { background: var(--full-fill); }
+  body[data-mode="user"] h2.hrow { font-size: 19px; flex-wrap: wrap; column-gap: 12px; }
+  body[data-mode="user"] :is(h2.hrow, #checkBox h3.lh) > * { white-space: nowrap; }
+  body[data-mode="user"] #checkBox h3.lh { flex-wrap: wrap; }
+  body[data-mode="user"] #checkBox h3.lh { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-right: 4px; font-size: 18px; }
+  body[data-mode="user"] #checkBox h3.lh .colhd { font-size: 14px; font-weight: 600; color: var(--muted); }
+  body[data-mode="user"] #checkBox .eff.move { font-size: 16px; font-weight: 700; color: var(--ink); }
+  /* 회색 칸(#E2E5EA) 위 색 글자: 밝은 화면에서만 더 진하게 (대비 4.29 → 5.55, 4.33 → 5.54) */
+  body[data-mode="user"] #checkBox .tags .tag.ok { color: #12663F; }
+  body[data-mode="user"] #checkBox .tags :is(.tag.call, .tag.full) { color: #A8291F; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body[data-mode="user"] #checkBox .tags .tag.ok { color: var(--ok-ink); } :root:not([data-theme="light"]) body[data-mode="user"] #checkBox .tags :is(.tag.call, .tag.full) { color: var(--full); } }
+  :root[data-theme="dark"] body[data-mode="user"] #checkBox .tags .tag.ok { color: var(--ok-ink); }
+  :root[data-theme="dark"] body[data-mode="user"] #checkBox .tags :is(.tag.call, .tag.full) { color: var(--full); }
+  /* ⑤ 지금 받을 수 없는 곳: 처음에는 접어 둔다 */
+  .nob { display: flex; width: 100%; min-height: 52px; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 4px; border: 0; background: none; color: var(--ink); font: inherit; font-size: 17px; font-weight: 700; cursor: pointer; text-align: left; }
+  #noCount { flex: none; font-size: 15px; font-weight: 600; color: var(--muted); }
+  body[data-mode="user"] #noBox:not(.open) #noList { display: none; }
 </style>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=42a491bd43887127ca6b4bf69b731aaf&libraries=services&autoload=false"></script>
 </head>
@@ -509,14 +569,18 @@
 
   <div class="layout">
     <div>
-      <section class="card">
+      <section class="card cond" id="condBar" aria-label="검색 조건">
+        <div class="ct"><b id="condDis"></b><span id="condFrom"></span><span class="cn" id="condNote"></span></div>
+        <button type="button" id="condEdit">바꾸기</button>
+      </section>
+      <section class="card inp">
         <h2><span class="step">1</span><label for="disease">의심 질환</label></h2>
         <select id="disease" aria-describedby="diseaseInfo"></select>
-        <div class="stats" id="diseaseStats"></div>
+        <div class="stats dev" id="diseaseStats"></div>
         <p class="hint" id="diseaseInfo"></p>
       </section>
 
-      <section class="card">
+      <section class="card inp">
         <h2><span class="step">2</span>출발지</h2>
         <button type="button" class="primary wide" id="gps"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Zm0-9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg><span id="gpsText">현재 위치로 찾기</span></button>
         <form class="row" id="searchForm">
@@ -535,17 +599,18 @@
       </section>
 
       <section class="card" id="listCard" hidden>
-        <h2 class="hrow">추천 순위<span class="colhd">실효 도착 시간</span></h2>
+        <h2 class="hrow"><span class="dev">추천 순위</span><span class="user"><i class="sdot ok" aria-hidden="true"></i>바로 갈 수 있는 곳</span><span class="colhd">실효 도착 시간</span></h2>
         <p class="capt dev" id="listMeta">실효 도착 시간 순</p><p class="capt user" id="listAge"></p>
         <ol id="list" class="hl"></ol>
         <div id="checkBox" hidden>
-          <h3 class="lh">확인이 필요한 곳 <span class="meta dev" id="checkMeta"></span></h3>
-          <p class="hint user" style="margin-top:2px">가기 전에 전화로 받아 주는지 물어보세요.</p>
+          <h3 class="lh"><span class="dev">확인이 필요한 곳</span><span class="user"><i class="sdot low" aria-hidden="true"></i>전화로 먼저 확인할 곳</span> <span class="meta dev" id="checkMeta"></span><span class="colhd user">이동 시간만</span></h3>
+          <p class="hint user" style="margin-top:2px">받아 줄지 알 수 없어 확률을 붙이지 않았어요. 가기 전에 전화로 물어보세요.</p>
           <p class="hint dev" style="margin-top:2px">받아 줄지 공공데이터로 알 수 없어 확률을 붙이지 않았어요. 가까운 순서(도로 이동 시간)로 보여 줘요.</p>
           <ol id="checkList" class="hl"></ol>
         </div>
         <div id="noBox" hidden>
-          <h3 class="lh">지금 '불가능'으로 표시된 곳 <span class="meta dev" id="noMeta"></span></h3>
+          <h3 class="lh dev">지금 '불가능'으로 표시된 곳 <span class="meta dev" id="noMeta"></span></h3>
+          <button type="button" class="nob user" id="noToggle" aria-expanded="false" aria-controls="noList"><span><i class="sdot full" aria-hidden="true"></i>지금 받을 수 없는 곳</span><span id="noCount"></span></button>
           <ol id="noList" class="hl"></ol>
         </div>
       </section>
@@ -669,7 +734,7 @@
     <p class="hint">수집 현황판의 '거절 확률 → 계산 방법'으로 가요</p>
   </div>
   </main>
-  <footer class="legal"><p class="legal-note"><b>교육·탐구용이에요.</b> 실제 응급 상황에서는 바로 119에 신고하세요.</p>© 2025–2026 hyun19393. All rights reserved. 무단 복제·사용 금지 (저작권법 제136조: 7년 이하 징역 또는 1억 원 이하 벌금)</footer>
+  <footer class="legal"><p class="legal-note">실제 응급 상황에서는 바로 119에 신고하세요.</p>© 2025–2026 hyun19393. All rights reserved. 무단 복제·사용 금지 (저작권법 제136조: 7년 이하 징역 또는 1억 원 이하 벌금)</footer>
 </div>
 
 <div class="fail-dlg" id="failDlg" role="alertdialog" aria-modal="true" aria-labelledby="failTitle" hidden>
@@ -786,6 +851,7 @@ function rejudge() {
   $('diseaseInfo').textContent = !sev
     ? '질환 표시·메시지를 불러오지 못했어요. 지금은 응급실 병상만으로 계산해요(v2와 같아요).'
     : disease.items.length ? `공공데이터 항목: ${disease.items.map(itemLabel).join(' · ')}` : disease.note || '질환을 고르지 않으면 응급실 병상과 응급실 전체 메시지만으로 계산해요.';
+  $('diseaseInfo').classList.toggle('dev', !!(sev && disease.items.length));
 }
 
 // 페이지를 열어 둔 채 시간이 지나면 병상 정보·통계표·질환 표시를 새로 받는다 (실패하면 갖고 있던 것으로 계산하고 상태 줄에 알린다)
@@ -1085,7 +1151,8 @@ function failHtml(o, fails, err) {
     '<p class="meta">잠시 뒤 \'다시 시도\'를 눌러 보세요. 하루 사용 한도를 넘었다면 다음 날 다시 쓸 수 있어요. 실제 응급 상황이면 바로 119에 신고하세요.</p>';
 }
 
-async function setOrigin(o) {
+// refold: 계산이 끝나면 사용자 모드 입력 칸을 한 줄로 접는다. 질환만 바꿔 다시 계산할 때는 접지 않는다(출발지도 바꿀 수 있게)
+async function setOrigin(o, refold = true) {
   origin = o;
   const my = ++runId;
   results = null; view = null;
@@ -1140,6 +1207,7 @@ async function setOrigin(o) {
     else if (sevAgeMin() > 30) notes.push(`질환 표시가 ${Math.round(sevAgeMin())}분 전 것이에요.`);
     if (model.pairs < 5000) notes.push('거절 통계 기록이 아직 적어 확률이 거칠어요.');
     setStatus([`${o.label} 출발 · ${sev ? disease.label : '병상만'}`, ...notes].join(' · '));
+    fold(o, notes, refold);
     render();
     // 휴대폰처럼 좁은 화면에서는 결과(비교 카드)가 보이게 내려 준다
     const rc = $('resultCard').getBoundingClientRect();
@@ -1158,9 +1226,19 @@ async function setOrigin(o) {
 function clearLists() {
   for (const id of ['list', 'checkList', 'noList']) $(id).innerHTML = '';
   for (const id of ['resultCard', 'listCard', 'distCard', 'checkBox', 'noBox']) $(id).hidden = true;
+  document.body.classList.remove('folded'); // 결과가 없으면 입력 칸·상태 줄을 다시 보여 준다
   dockSet(null);
 }
 
+// 판단 까닭을 쉬운 말로 (11-22 결정: '질환 정보 없음' → '○○ 가능 여부 미공개', '관련 메시지 n건' → '병원 공지 n건')
+const dShort = () => disease.label.replace(/\s*\(.*\)$/, '');
+function plainWhy(w) {
+  if (w === '질환 정보 없음') return `${dShort()} 가능 여부 미공개`;
+  if (w === '일부 항목 정보 없음') return `${dShort()} 일부 항목 미공개`;
+  let m = w.match(/^관련 메시지 (\d+)건$/); if (m) return `병원 공지 ${m[1]}건`;
+  m = w.match(/^이 질환 메시지 (\d+)건$/); if (m) return `${dShort()} 관련 공지 ${m[1]}건`;
+  return w;
+}
 // 병원 한 줄에 붙이는 표시: 병상 · 질환 판단 · 메시지
 function tagsHtml(id, since) {
   const h = byId[id], j = judge[id], cls = bedClass(h, since);
@@ -1169,8 +1247,13 @@ function tagsHtml(id, since) {
   const [kind, able, note] = infoChips(id, ' dev');
   if (kind) out.unshift(kind);
   if (j.tier === 'ok') { if (able) out.push(able); }
-  else for (const w of j.why) out.push(`<span class="tag ${w === '사전 연락 필요' ? 'call' : j.tier === 'no' ? 'full' : 'low'}">${esc(w)}</span>`);
+  else for (const w of j.why) {
+    const c = w === '사전 연락 필요' ? 'call' : j.tier === 'no' ? 'full' : 'low', u = plainWhy(w);
+    out.push(u === w ? `<span class="tag ${c}">${esc(w)}</span>` : `<span class="tag ${c} dev">${esc(w)}</span><span class="tag ${c} user">${esc(u)}</span>`);
+  }
   if (note) out.push(note);
+  // 사용자 모드: '전화로 먼저 확인할 곳'은 줄에서 바로 전화
+  if (j.tier === 'check' && h.tel) out.push(`<a class="tag tel user" href="${esc(telHref(h.tel))}" aria-label="${esc(h.name)} 전화 ${esc(h.tel)}">${IC.phone}전화</a>`);
   return out.join('');
 }
 // 기관 종류 · 이 질환 '가능' 표시 · 안내 메시지 n건 (개발자 모드는 병원 줄에, 사용자 모드는 '자세히 보기' 안에). 없으면 ''
@@ -1198,19 +1281,26 @@ function render() {
   const checks = view.rows.filter((r) => judge[r.id].tier === 'check');
   const nos = view.rows.filter((r) => judge[r.id].tier === 'no');
   const none = (k) => `<div class="cmp"><div class="k">${k}</div><div class="n">해당 없음</div></div>`;
+  const known = hasItems();
   const tierChip = (id) => { const t = judge[id].tier; return `<span class="tag ${t === 'ok' ? 'ok' : t === 'check' ? 'low' : 'full'}">${tierName(t)}</span>`; };
   // 추천 카드: 병원 이름 · 실효 도착 시간(크게) · 길안내와 전화
+  const okTxt = (r) => { const h = byId[r.id], cls = bedClass(h, since), out = [];
+    if (sev && disease.items.length && judge[r.id].tier === 'ok') out.push(`<span class="c-ok">✓ ${esc(dShort())} 받을 수 있음</span>`);
+    out.push(`<span class="c-${cls}">${cls === 'ok' ? '✓ ' : ''}${bedSpan(h)}</span>`); return out.join(''); };
+  const uHero = (r) => `<div class="user"><p class="uh-lab">${known ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>가장 빨리 닿는 곳 · 받을 수 있다고 확인됨' : '가장 빨리 닿는 곳 · 병상 기준'}</p>` +
+    `<div class="uh-name">${esc(r.name)}</div><div class="uh-time"><b>${min1(r.effectiveMin)}</b><span>분</span></div>` +
+    `<div class="uh-lab2">실효 도착 시간<button type="button" class="what" aria-expanded="false" aria-controls="whatTxt">이게 뭔가요?</button></div>` +
+    `<p class="uh-what" id="whatTxt" hidden>이동 시간에, 거절될 확률만큼 다른 병원으로 다시 가는 시간을 더한 값이에요. 거절될 확률은 그동안 모은 기록의 통계로 계산해요.</p><div class="uh-why">${okTxt(r)}</div></div>`;
   const hero = (k, r) => (r
-    ? `<div class="cmp best"><span class="tag accent">${k}</span><div class="hero"><div><div class="hname">${esc(r.name)}</div>` +
+    ? `<div class="cmp best">${uHero(r)}<span class="tag accent dev">${k}</span><div class="hero dev"><div><div class="hname">${esc(r.name)}</div>` +
       `<div class="meta dev">거절 확률 ${pct(r.pReject)}</div><div class="hwhy user">${whyChips(r.id)}</div></div><div class="htime"><span class="hlabel">실효 도착 시간</span>${min1(r.effectiveMin)}<small>분</small></div></div>${actsHtml(byId[r.id])}<p class="hage">병상 정보 ${Math.round(sinceObsMin())}분 전 기준</p></div>`
     : `<div class="cmp best"><span class="tag gray">${k}</span><div class="n">해당 없음</div></div>`);
   const moveBox = (k, r) => (r
     ? `<div class="cmp"><div class="k">${k}</div><div class="v">${min1(r.travelMin)}분 이동</div><div class="n">${esc(r.name)}</div>${tierChip(r.id)}</div>`
     : none(k));
-  const known = hasItems();
   // 정보가 언제 것인지 늘 보여 준다 (공공데이터는 10분마다 바뀜)
   $('listMeta').textContent = `${known ? '가능이 확인된 곳' : '병상 기준'} · 실효 도착 시간 순 · 병상 정보 ${Math.round(sinceObsMin())}분 전`;
-  $('listAge').textContent = `병상 정보 ${Math.round(sinceObsMin())}분 전 기준`;
+  $('listAge').textContent = known ? '받을 수 있다고 확인된 곳만, 빨리 닿는 순서예요.' : '막는 메시지가 없는 곳만, 빨리 닿는 순서예요.'; // 병상 정보 시각은 추천 칸에 (11-22)
   // 비교 칸은 추천과 다른 병원일 때만 (같은 병원을 두 번 보여 주지 않는다)
   const tiles = [];
   if (nearest.id !== best?.id) tiles.push(moveBox('가장 가까운 곳', nearest));
@@ -1251,15 +1341,16 @@ function render() {
   $('resultCard').hidden = false; $('listCard').hidden = false;
 
   let nth = 0;
-  const item = (r, head, meta, cls = '') => `<li data-id="${esc(r.id)}" style="--i:${Math.min(nth++, 12)}"${cls ? ` class="${cls}"` : ''}>
+  const item = (r, head, meta, cls = '', extra = '') => `<li data-id="${esc(r.id)}" style="--i:${Math.min(nth++, 12)}"${cls ? ` class="${cls}"` : ''}>
       <div class="top" role="button" tabindex="0" aria-expanded="false"><span class="name" title="${esc(byId[r.id].fullName)}">${head}</span>${meta}</div>
       <div class="meta dev">직선 ${km(r.straightM)} · 도로 ${km(r.roadM)}</div>
-      <div class="tags">${tagsHtml(r.id, since)}</div>
+      <div class="tags">${tagsHtml(r.id, since)}${extra}</div>
       <div class="detail" hidden></div>
     </li>`;
   const more = (n, shown) => (n > shown ? `· 가까운 ${shown}곳만 보여 줘요(모두 ${n}곳)` : `· ${n}곳`);
-  $('list').innerHTML = results.slice(0, SHOW.ok).map((r, i) => item(r, `${i + 1}. ${esc(r.name)}`,
-    `<span class="eff">${min1(r.effectiveMin)}분</span></div><div class="meta dev">이동 ${min1(r.travelMin)}분${r.extraMin >= 0.05 ? ` + 거절될 때 대비 ${min1(r.extraMin)}분` : ''} · 거절 확률 ${pct(r.pReject)}`)).join('');
+  $('list').innerHTML = results.slice(0, SHOW.ok).map((r, i) => item(r, `<span class="rk">${i + 1}<i class="rkd">. </i></span><span>${esc(r.name)}</span>`,
+    `<span class="eff">${min1(r.effectiveMin)}분</span></div><div class="meta dev">이동 ${min1(r.travelMin)}분${r.extraMin >= 0.05 ? ` + 거절될 때 대비 ${min1(r.extraMin)}분` : ''} · 거절 확률 ${pct(r.pReject)}`,
+    '', i === 0 ? '<span class="tag plain user">위 추천 병원</span>' : '')).join('');
   const moveMeta = (r) => `<span class="eff move">이동 ${min1(r.travelMin)}분</span>`;
   $('checkList').innerHTML = checks.slice(0, SHOW.check).map((r) => item(r, esc(r.name), moveMeta(r))).join('');
   $('checkMeta').textContent = more(checks.length, SHOW.check);
@@ -1267,8 +1358,9 @@ function render() {
   $('noList').innerHTML = nos.slice(0, SHOW.no).map((r) => item(r, esc(r.name), moveMeta(r), 'dim')).join('');
   $('noMeta').textContent = more(nos.length, SHOW.no);
   $('noBox').hidden = !nos.length;
+  $('noCount').dataset.n = nos.length; noOpen(false);
   for (const li of document.querySelectorAll('ol.hl > li')) {
-    li.addEventListener('click', (e) => { if (!e.target.closest('.detail')) select(li.dataset.id, true); });
+    li.addEventListener('click', (e) => { if (!e.target.closest('.detail, a')) select(li.dataset.id, true); });
     // 키보드: 병원 줄(.top)에서 Enter·스페이스로 펼치기 (버튼과 같게)
     li.querySelector('.top').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(li.dataset.id, true); } });
   }
@@ -1324,6 +1416,30 @@ function detailHtml(r) {
   return out.join('');
 }
 
+// 사용자 모드 '지금 받을 수 없는 곳' 펼치기·접기
+function noOpen(on) {
+  $('noBox').classList.toggle('open', on); $('noToggle').setAttribute('aria-expanded', String(on));
+  $('noCount').textContent = on ? '접기' : `${$('noCount').dataset.n ?? ''}곳 보기 ›`;
+}
+$('noToggle').addEventListener('click', () => noOpen(!$('noBox').classList.contains('open')));
+// '실효 도착 시간 — 이게 뭔가요?' 펼치기
+$('compare').addEventListener('click', (e) => {
+  const b = e.target.closest('.what'); if (!b) return;
+  const on = b.getAttribute('aria-expanded') !== 'true'; b.setAttribute('aria-expanded', String(on)); $('whatTxt').hidden = !on;
+});
+// ① 검색 뒤 질환·출발지 칸을 한 줄로 접기 (사용자 모드). '바꾸기'를 누르면 다시 편다
+function fold(o, notes, on = true) {
+  $('condDis').textContent = sev ? dShort() : '병상만';
+  $('condFrom').textContent = `${o.label}에서 출발`;
+  $('condNote').textContent = notes.join(' · ');
+  if (on) document.body.classList.add('folded');
+}
+$('condEdit').addEventListener('click', () => {
+  document.body.classList.remove('folded');
+  if (document.body.classList.contains('calling')) callState('min'); // 펴진 연락 창이 입력 칸을 가리지 않게 작은 표시로
+  scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  $('disease').focus({ preventScroll: true });
+});
 // ---------- 사전 연락 창: 관련 메시지에 '사전 연락'이 필요한 글이 있는 병원을 눌렀을 때만 띄운다
 // 상태: none(없음) · open(창이 펴짐) · min(작은 표시). 확인 → min, '자세히 보기' → open. 줄고 커지는 움직임은 CSS가 맡는다
 let callFor = null;
@@ -1366,7 +1482,7 @@ function showCall(id, auto = null, user = true) {
   let msgs = j.contact;
   if (auto) {
     const [a, b] = min2(auto.fast.travelMin, auto.best.effectiveMin);
-    const why = j.why.filter((w) => w !== '사전 연락 필요').join(' · ');
+    const why = j.why.filter((w) => w !== '사전 연락 필요').map(plainWhy).join(' · ');
     $('callLead').innerHTML = `<p>${esc(h.name)}까지 ${a}분이에요. 추천 병원(${esc(auto.best.name)}, 실효 도착 시간 ${b}분)보다 ${min1(auto.best.effectiveMin - auto.fast.travelMin)}분 빨라요.</p>`
       + (contact ? '<p>다만 이 병원은 환자를 보내기 전에 연락해 달라고 했어요. 전화로 받아 주는지 먼저 확인하고, 어렵다고 하면 추천 병원으로 가세요.</p>'
         : `<p>다만 이 병원은 받아 줄지 알 수 없어요${why ? `(${esc(why)})` : ''}. 전화로 받아 주는지 먼저 확인하고, 어렵다고 하면 추천 병원으로 가세요.</p>`);
@@ -1432,13 +1548,15 @@ async function select(id, fromList = false, user = true) {
   const r = view?.byId[id];
   if (!r) return;
   selectedId = id;
+  const quiet = !user && document.body.dataset.mode === 'user';
   for (const li of document.querySelectorAll('ol.hl > li')) {
-    const on = li.dataset.id === id;
+    const on = li.dataset.id === id, open = on && !quiet;
     li.classList.toggle('sel', on);
-    li.querySelector('.top')?.setAttribute('aria-expanded', String(on));
+    li.querySelector('.top')?.setAttribute('aria-expanded', String(open));
     const c = li.querySelector('.detail');
-    c.hidden = !on;
-    if (on) c.innerHTML = detailHtml(r);
+    c.hidden = !open;
+    if (open) c.innerHTML = detailHtml(r);
+    if (open && li.parentElement.id === 'noList' && !$('noBox').classList.contains('open')) noOpen(true);
   }
   for (const [pid, el] of Object.entries(pins)) el.classList.toggle('sel', pid === id);
   for (const tr of $('distTable').querySelectorAll('tr[data-id]')) tr.classList.toggle('sel', tr.dataset.id === id);
@@ -1617,7 +1735,7 @@ try {
     if (!ers) return;
     rejudge();
     drawPins();
-    if (origin) setOrigin(origin); // 받은 길찾기 결과는 다시 쓰고, 새로 필요한 병원만 받는다
+    if (origin) setOrigin(origin, false); // 받은 길찾기 결과는 다시 쓰고, 새로 필요한 병원만 받는다. 입력 칸은 펴 둔 채로
   });
   await Promise.all([new Promise((ok) => kakao.maps.load(ok)), loadData()]);
   initMap();
