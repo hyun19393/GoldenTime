@@ -585,7 +585,6 @@
     padding: 0 20px; background: var(--u-sheet); border-radius: 24px 24px 0 0; box-shadow: 0 -4px 20px rgba(25, 31, 40, .08); }
   #uApp .u-handle { flex: none; height: 24px; min-height: 24px; margin: 0 -20px; padding: 0; border: 0; border-radius: 24px 24px 0 0; background: none; display: grid; place-items: center; cursor: pointer; touch-action: none; }
   #uApp .u-handle::before { content: ''; width: 36px; height: 4px; border-radius: 2px; background: var(--u-handle); }
-  #uApp:is([data-st="pick"], [data-st="find"]) .u-handle { pointer-events: none; }
   #uApp .u-pane { display: none; flex: 1 1 auto; min-height: 0; flex-direction: column; }
   #uApp[data-st="pick"] .u-pick, #uApp[data-st="find"] .u-find, #uApp[data-st="res"] .u-res, #uApp[data-st="list"] .u-list { display: flex; }
   #uApp .u-scr { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -20px; padding: 0 20px 20px;
@@ -643,7 +642,9 @@
   #uApp .u-num { font-size: 56px; line-height: 60px; font-weight: 800; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
   #uApp .u-unit { font-size: 22px; font-weight: 800; }
   #uApp .u-tl { display: flex; align-items: center; font-size: 15px; font-weight: 700; color: var(--u-ink2); white-space: nowrap; }
-  #uApp .u-q { width: 32px; height: 32px; min-height: 32px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--u-sub2); }
+  #uApp .u-q { width: auto; height: 44px; min-height: 44px; margin-right: -4px; padding: 0 4px; gap: 2px; border: 0; border-radius: 10px; background: none; color: var(--u-ink2); font-size: 15px; font-weight: 700; }
+  #uApp .u-q svg { color: var(--u-sub2); }
+  #uApp .u-tm .u-unit + .u-num { margin-left: 6px; }
   #uApp .u-q svg { width: 18px; height: 18px; }
   #uApp .u-what { margin: 6px 0 0; font-size: 14px; line-height: 20px; color: var(--u-sub); }
   #uApp .u-dl { margin: 10px 0 0; }
@@ -781,6 +782,42 @@
     #uApp .u-grab { display: none; }
   }
   @media (prefers-reduced-motion: reduce) { #uApp .u-st.busy::before { animation: none; } }
+  /* 11-23 저녁: 병원 정보 보내기·다른 지도 앱·알림·시트 내리기·질환 찾기 화면 */
+  #uApp { --u-alert-bg: #FFF0F0; }
+  :root[data-theme="dark"] #uApp { --u-alert-bg: #3A1E22; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #uApp { --u-alert-bg: #3A1E22; } }
+  #uApp .u-what b { color: var(--u-ink); font-weight: 800; }
+  #uApp .u-x { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  #uApp .u-x button { min-height: 44px; height: 44px; padding: 0 14px; border: 0; border-radius: 22px; background: var(--u-surf); color: var(--u-ink2); font-size: 14px; font-weight: 700; gap: 6px; }
+  #uApp .u-x button[hidden] { display: none; }
+  #uApp .u-peek { display: none; margin: 0 0 10px; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 16px; line-height: 24px; }
+  #uApp .u-peek b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
+  #uApp .u-peek span { flex: none; color: var(--u-blue); font-size: 18px; font-weight: 800; }
+  #uApp .u-dqx { display: none; flex: none; min-height: 44px; height: 44px; padding: 0 8px; border: 0; background: none; color: var(--u-blue); font-size: 15px; font-weight: 700; order: 2; }
+  #uApp.busy :is(.u-opts, .u-dq, .u-all, .u-findbox) { opacity: .5; }
+  #uApp .u-alert { position: fixed; z-index: 25; left: 16px; right: 16px; top: calc(80px + env(safe-area-inset-top)); display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 6px 10px 16px; border-radius: 16px; background: var(--u-alert-bg); box-shadow: 0 4px 16px rgba(25, 31, 40, .16); }
+  #uApp .u-alert[hidden] { display: none; }
+  #uApp .u-alert p { flex: 1 1 180px; margin: 0; font-size: 15px; line-height: 22px; font-weight: 700; color: var(--u-err); }
+  #uApp #uAlertGo { min-height: 44px; height: 44px; padding: 0 14px; border: 0; border-radius: 22px; background: var(--u-btn); color: #FFFFFF; font-size: 15px; font-weight: 700; }
+  #uApp #uAlertX { width: 44px; height: 44px; min-height: 44px; padding: 0; border: 0; background: none; color: var(--u-sub); }
+  #uApp .u-toast { position: fixed; z-index: 45; left: 50%; bottom: 140px; transform: translateX(-50%); margin: 0; padding: 10px 16px; border-radius: 20px; background: rgba(25, 31, 40, .92); color: #FFFFFF; font-size: 14px; line-height: 20px; white-space: nowrap; }
+  #uApp .u-toast[hidden] { display: none; }
+  @media (max-width: 880px) {
+    /* 손잡이를 누르면 시트를 내려 지도를 크게: 한 줄 요약과 버튼만 남긴다 */
+    #uApp.peek .u-pane > :not(.u-bar) { display: none !important; }
+    #uApp.peek .u-bar { border-top: 0; padding-top: 2px; }
+    #uApp.peek .u-peek { display: flex; }
+    #uApp.peek :is(.u-more-n, .u-alt) { display: none; }
+    /* 질환 이름 칸을 누르면 시트를 올려 '찾기 칸 + 질환 목록'만 */
+    #uApp.dsearch .u-sheet { top: calc(80px + env(safe-area-inset-top)); max-height: none; }
+    #uApp.dsearch .u-pick > :not(.u-scr) { display: none; }
+    #uApp.dsearch .u-pick .u-scr > :not(.u-dq):not(.u-opts) { display: none; }
+    #uApp.dsearch .u-dq { position: sticky; top: 0; z-index: 1; margin: 0 -20px; padding: 8px 20px; display: flex; align-items: center; gap: 4px; background: var(--u-sheet); }
+    #uApp.dsearch .u-dq input { flex: 1; min-width: 0; width: auto; }
+    #uApp.dsearch .u-dq svg { left: 34px; top: 22px; }
+    #uApp.dsearch .u-dqx { display: inline-flex; }
+  }
+  @media (min-width: 881px) { #uApp .u-alert { right: auto; width: 400px; top: 88px; box-sizing: border-box; } }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=42a491bd43887127ca6b4bf69b731aaf&libraries=services&autoload=false"></script>
@@ -1013,6 +1050,8 @@
     </div>
     <a class="u-119" href="tel:119" aria-label="119에 전화">119</a>
   </header>
+  <div class="u-alert" id="uAlert" role="alert" hidden><p id="uAlertT"></p><button type="button" id="uAlertGo">현재 위치에서 다시 찾기</button><button type="button" id="uAlertX" aria-label="알림 닫기"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <p class="u-toast" id="uToast" role="status" hidden></p>
   <section class="u-sheet" id="uSheet" aria-label="응급실 찾기">
     <button type="button" class="u-handle" id="uHandle" aria-label="다른 병원 모두 보기" aria-expanded="false" tabindex="-1" aria-hidden="true"></button>
 
@@ -1021,7 +1060,7 @@
       <p class="u-sub">잘 모르면 '모름'을 고르세요.</p>
       <p class="u-st" role="status" aria-live="polite"></p>
       <div class="u-scr">
-        <div class="u-dq"><label for="uDq" class="sr">질환 이름으로 찾기</label>
+        <div class="u-dq"><label for="uDq" class="sr">질환 이름으로 찾기</label><button type="button" class="u-dqx" id="uDqX">닫기</button>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           <input id="uDq" type="search" placeholder="질환 이름으로 찾기" autocomplete="off"></div>
         <div class="u-opts" id="uOpts" role="radiogroup" aria-labelledby="uQ"></div>
@@ -1059,16 +1098,18 @@
         <div class="u-hero">
           <h2 class="u-hn" id="uName"></h2>
           <div class="u-ht">
-            <div class="u-tm"><span class="u-num" id="uNum"></span><span class="u-unit">분</span></div>
-            <div class="u-tl">실효 도착 시간<button type="button" class="u-q" id="uWhat" aria-label="실효 도착 시간이 뭔가요?" aria-expanded="false" aria-controls="uWhatT"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"/><path d="M12 17h.01"/></svg></button></div>
+            <div class="u-tm" id="uTm"><span class="u-num" id="uNum"></span><span class="u-unit">분</span></div>
+            <div class="u-tl"><button type="button" class="u-q" id="uWhat" aria-label="실효 도착 시간 풀어 보기" aria-expanded="false" aria-controls="uWhatT">실효 도착 시간<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"/><path d="M12 17h.01"/></svg></button></div>
           </div>
         </div>
-        <p class="u-what" id="uWhatT" hidden>이동 시간에, 거절될 확률만큼 다른 병원으로 다시 가는 시간을 더한 값이에요. 거절될 확률은 그동안 모은 기록의 통계로 계산해요.</p>
+        <p class="u-what" id="uWhatT" hidden></p>
         <dl class="u-dl" id="uDl"></dl>
         <p class="u-near" id="uNote"></p>
+        <div class="u-x"><button type="button" id="uShare"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>병원 정보 보내기</button><button type="button" id="uNaver" hidden>네이버 지도로 길안내</button></div>
         <button type="button" class="u-more u-more-s" id="uMoreS">다른 병원 모두 보기<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg></button>
       </div>
       <div class="u-bar">
+        <p class="u-peek" id="uPeekT"></p>
         <div class="u-acts" id="uActs">
           <a class="u-nav" id="uNavi" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 22 2l-9 19-2-8-8-2z"/></svg><span class="nl">카카오맵 길안내</span><span class="ns">길안내</span></a>
           <a class="u-tel" id="uTel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>전화</a>
@@ -1131,6 +1172,10 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pct = (p) => (p > 0 && p < 0.005 ? '1% 미만' : `${Math.round(p * 100)}%`);
 const min1 = (m) => (m < 10 ? m.toFixed(1) : Math.round(m).toString());
+// 시간 글자: 60분 이상이면 'n시간 m분' (11-23)
+const fmin = (m) => { if (m < 60) return `${min1(m)}분`; const t = Math.round(m); return `${Math.floor(t / 60)}시간${t % 60 ? ` ${t % 60}분` : ''}`; };
+const ago = (m) => (m < 1 ? '방금 전' : `${fmin(Math.round(m)).replace('.0', '')} 전`);
+const eul = (w) => { const c = String(w).replace(/[^가-힣]+$/, '').slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 ? ((c - 0xAC00) % 28 ? '을' : '를') : '을(를)'; };
 // 상태 줄: state = 'busy'(계산 중, 돌아가는 표시) · 'err' · ''(끝). 계산 중에는 출발지 버튼을 잠근다
 const setStatus = (msg, state = '') => {
   if (state === true) state = 'err';
@@ -1467,7 +1512,7 @@ const tierName = (t) => (t === 'ok' ? (hasItems() ? '가능 확인' : '병상 �
 
 // 실패 창: 닫기 전까지 그대로 → 닫으면 오른쪽 아래 작은 표시 → 누르면 다시 열림
 function showFail(html) {
-  $('failBody').innerHTML = html;
+  $('failBody').innerHTML = isUser() ? '<p>지금 길찾기를 할 수 없어요. 다시 시도하거나 119에 전화하세요.</p>' : html; // 사용자 모드는 쉬운 말, 자세한 원인은 개발자 모드 (11-23)
   $('failBadge').hidden = true;
   $('failDlg').hidden = false;
   $('failClose').focus();
@@ -1581,7 +1626,7 @@ function clearLists() {
   for (const id of ['resultCard', 'listCard', 'distCard', 'checkBox', 'noBox']) $(id).hidden = true;
   document.body.classList.remove('folded'); // 결과가 없으면 입력 칸·상태 줄을 다시 보여 준다
   dockSet(null);
-  uClearMap(); $('uFast').hidden = true;
+  uClearMap(); $('uFast').hidden = true; $('uAlert').hidden = true; uAlertKey = '';
 }
 
 // 판단 까닭을 쉬운 말로 (11-22 결정: '질환 정보 없음' → '○○ 가능 여부 미공개', '관련 메시지 n건' → '병원 공지 n건')
@@ -1650,7 +1695,7 @@ function render() {
       `<div class="meta dev">거절 확률 ${pct(r.pReject)}</div><div class="hwhy user">${whyChips(r.id)}</div></div><div class="htime"><span class="hlabel">실효 도착 시간</span>${min1(r.effectiveMin)}<small>분</small></div></div>${actsHtml(byId[r.id])}<p class="hage">병상 정보 ${Math.round(sinceObsMin())}분 전 기준</p></div>`
     : `<div class="cmp best"><span class="tag gray">${k}</span><div class="n">해당 없음</div></div>`);
   const moveBox = (k, r) => (r
-    ? `<div class="cmp"><div class="k">${k}</div><div class="v">${min1(r.travelMin)}분 이동</div><div class="n">${esc(r.name)}</div>${tierChip(r.id)}</div>`
+    ? `<div class="cmp"><div class="k">${k}</div><div class="v">${fmin(r.travelMin)} 이동</div><div class="n">${esc(r.name)}</div>${tierChip(r.id)}</div>`
     : none(k));
   // 정보가 언제 것인지 늘 보여 준다 (공공데이터는 10분마다 바뀜)
   $('listMeta').textContent = `${known ? '가능이 확인된 곳' : '병상 기준'} · 실효 도착 시간 순 · 병상 정보 ${Math.round(sinceObsMin())}분 전`;
@@ -1670,11 +1715,11 @@ function render() {
     if (nearest.id === best.id) say.push('가장 가까운 곳이 실효 도착 시간으로도 가장 빨라요.');
     else if (jn.tier === 'ok') {
       const gain = nearest.effectiveMin - best.effectiveMin;
-      say.push(gain < 0.5 ? '가장 가까운 곳과 추천한 곳의 실효 도착 시간이 거의 같아요.' : `가장 가까운 곳은 거절될 가능성이 높아, 추천한 곳의 실효 도착 시간이 ${min1(gain)}분 짧아요.`);
+      say.push(gain < 0.5 ? '가장 가까운 곳과 추천한 곳의 실효 도착 시간이 거의 같아요.' : `가장 가까운 곳은 거절될 가능성이 높아, 추천한 곳의 실효 도착 시간이 ${fmin(gain)} 짧아요.`);
     } else say.push(`가장 가까운 ${nearest.name}${eun(nearest.name)} ${jn.tier === 'no' ? '지금 받을 수 없다고 표시돼 있어요' : '받아 줄지 확인이 필요해요'}(${jn.why.join(' · ')}).`);
     const c = checks[0];
     if (sev && !disease.items.length && disease.id !== 'none') say.push('이 질환은 병원별 수용 정보가 없어, 병상과 메시지만 보고 추천했어요.');
-    if (c && c.travelMin < best.effectiveMin - 0.5) say.push(`${c.name}에 전화해 받아 준다고 하면 추천 병원의 실효 도착 시간보다 ${min1(best.effectiveMin - c.travelMin)}분 더 빨리 갈 수 있어요.`);
+    if (c && c.travelMin < best.effectiveMin - 0.5) say.push(`${c.name}에 전화해 받아 준다고 하면 추천 병원의 실효 도착 시간보다 ${fmin(best.effectiveMin - c.travelMin)} 더 빨리 갈 수 있어요.`);
   }
   // 사용자 모드 한 줄: 가장 가까운 곳이 추천과 다를 때만, 이유를 짧게
   let short = '';
@@ -1682,7 +1727,7 @@ function render() {
   else if (nearest.id !== best.id) {
     const jn = judge[nearest.id];
     const g = nearest.effectiveMin - best.effectiveMin; // 개발자 모드 문장과 같은 기준: 0.5분 미만이면 '거의 같음'이라 따로 알리지 않는다
-    short = jn.tier === 'ok' ? (g < 0.5 ? '' : `가장 가까운 ${nearest.name}보다 ${min1(g)}분 빨라요`)
+    short = jn.tier === 'ok' ? (g < 0.5 ? '' : `가장 가까운 ${nearest.name}보다 ${fmin(g)} 빨라요`)
       : `가장 가까운 ${nearest.name}${eun(nearest.name)} ${jn.tier === 'no' ? '지금 받을 수 없다고 표시돼 있어요' : '전화로 확인이 필요해요'}`;
     // 개발자 모드·자동 창과 같은 기준: '확인 필요' 병원까지 이동 시간이 추천 병원의 실효 도착 시간보다 0.5분 넘게 짧으면 알린다 (11-22 결정, 가안)
     const c = checks[0];
@@ -1703,9 +1748,9 @@ function render() {
     </li>`;
   const more = (n, shown) => (n > shown ? `· 가까운 ${shown}곳만 보여 줘요(모두 ${n}곳)` : `· ${n}곳`);
   $('list').innerHTML = results.slice(0, SHOW.ok).map((r, i) => item(r, `<span class="rk">${i + 1}<i class="rkd">. </i></span><span>${brk(r.name)}</span>`,
-    `<span class="eff">${min1(r.effectiveMin)}분</span></div><div class="meta dev">이동 ${min1(r.travelMin)}분${r.extraMin >= 0.05 ? ` + 거절될 때 대비 ${min1(r.extraMin)}분` : ''} · 거절 확률 ${pct(r.pReject)}`,
+    `<span class="eff">${fmin(r.effectiveMin)}</span></div><div class="meta dev">이동 ${fmin(r.travelMin)}${r.extraMin >= 0.05 ? ` + 거절될 때 대비 ${fmin(r.extraMin)}` : ''} · 거절 확률 ${pct(r.pReject)}`,
     '', i === 0 ? '<span class="tag plain user">추천 병원</span>' : '')).join('');
-  const moveMeta = (r) => `<span class="eff move"><small>이동 </small>${min1(r.travelMin)}분</span>`;
+  const moveMeta = (r) => `<span class="eff move"><small>이동 </small>${fmin(r.travelMin)}</span>`;
   $('checkList').innerHTML = checks.slice(0, SHOW.check).map((r) => item(r, brk(r.name), moveMeta(r))).join('');
   $('checkMeta').textContent = more(checks.length, SHOW.check);
   $('checkBox').hidden = !checks.length;
@@ -1752,7 +1797,7 @@ const actsHtml = (h, telLabel = '전화') => `<div class="acts"><a class="btn pr
 function detailHtml(r) {
   const h = byId[r.id], j = judge[r.id];
   const out = [actsHtml(h, h.tel)]; // 길안내·전화가 먼저 (펼친 내용이 길어도 바로 누를 수 있게)
-  if (r.chain?.length > 1) out.push('<div class="dev"><b>여기서 받아 주지 않으면</b><ol class="chain">' + r.chain.slice(1).map((s) => `<li>${esc(s.name)} <span class="meta">${min1(s.travelMin)}분 더 · 거절 확률 ${pct(s.p)}</span></li>`).join('') +
+  if (r.chain?.length > 1) out.push('<div class="dev"><b>여기서 받아 주지 않으면</b><ol class="chain">' + r.chain.slice(1).map((s) => `<li>${esc(s.name)} <span class="meta">${fmin(s.travelMin)} 더 · 거절 확률 ${pct(s.p)}</span></li>`).join('') +
     '</ol>' + (r.unresolved > 0.05 ? `<span class="meta">세 곳 모두 거절될 확률 ${pct(r.unresolved)}</span>` : '') + '</div>');
   if (j.tier !== 'ok') out.push(`<div><b>${tierName(j.tier)}</b>: ${esc(j.why.join(' · '))}</div>`);
   if (j.tier === 'ok' && sev && disease.items.length) { const st = stability(sev.hosp[r.id], disease); out.push(`<div class="meta dev">${st.unstable ? "'가능' 표시가 최근 24시간 안에 바뀌었거나 병상이 급히 줄고 있어요. 도착 전에 바뀔 가능성을 더 크게 계산했어요." : "'가능' 표시가 24시간 넘게 그대로예요."}</div>`); }
@@ -1841,7 +1886,7 @@ function showCall(id, auto = null, user = true) {
   if (auto) {
     const [a, b] = min2(auto.fast.travelMin, auto.best.effectiveMin);
     const why = j.why.filter((w) => w !== '사전 연락 필요').map(plainWhy).join(' · ');
-    $('callLead').innerHTML = `<p>${esc(h.name)}까지 ${a}분이에요. 추천 병원(${esc(auto.best.name)}, 실효 도착 시간 ${b}분)보다 ${min1(auto.best.effectiveMin - auto.fast.travelMin)}분 빨라요.</p>`
+    $('callLead').innerHTML = `<p>${esc(h.name)}까지 ${a}분이에요. 추천 병원(${esc(auto.best.name)}, 실효 도착 시간 ${b}분)보다 ${fmin(auto.best.effectiveMin - auto.fast.travelMin)} 빨라요.</p>`
       + (contact ? '<p>다만 이 병원은 환자를 보내기 전에 연락해 달라고 했어요. 전화로 받아 주는지 먼저 확인하고, 어렵다고 하면 추천 병원으로 가세요.</p>'
         : `<p>다만 이 병원은 받아 줄지 알 수 없어요${why ? `(${esc(why)})` : ''}. 전화로 받아 주는지 먼저 확인하고, 어렵다고 하면 추천 병원으로 가세요.</p>`);
     if (!contact) msgs = j.rel.filter((m) => m.block);
@@ -1881,7 +1926,7 @@ function renderDist() {
   const rk = (x) => (x == null ? '' : `<small>${Number.isInteger(x) ? x : x.toFixed(1)}</small>`);
   $('distTable').innerHTML = '<tr><th>응급실</th><th>직선</th><th>도로 거리</th><th>도로 시간</th></tr>' +
     rows.map((r) => `<tr data-id="${esc(r.id)}"><td>${esc(r.name)}</td><td>${km(r.straightM)}${rk(rS[r.id])}</td>` +
-      `<td>${km(r.roadM)}${rk(rR[r.id])}</td><td>${min1(r.travelMin)}분${rk(rM[r.id])}</td></tr>`).join('');
+      `<td>${km(r.roadM)}${rk(rR[r.id])}</td><td>${fmin(r.travelMin)}${rk(rM[r.id])}</td></tr>`).join('');
   for (const tr of $('distTable').querySelectorAll('tr[data-id]')) tr.addEventListener('click', () => select(tr.dataset.id));
 
   const lines = [];
@@ -1957,6 +2002,8 @@ $('searchForm').addEventListener('submit', (e) => {
     $('places').innerHTML = items.length
       ? items.slice(0, 5).map((p, i) => `<li><button type="button" data-i="${i}">${esc(p.name)}<small>${esc(p.addr)}</small></button></li>`).join('')
       : '<li class="hint">검색 결과가 없어요.</li>';
+    if (!items.length) setStatus(`'${q}'${eul(q)} 찾지 못했어요. 도로명 주소나 건물 이름으로 검색해 보세요. (예: 세종대로 110, 수원역)`, true);
+    else if ($('status').dataset.state === 'err') setStatus('목록에서 출발지를 고르세요.');
     $('places').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
       const p = items[Number(b.dataset.i)];
       setOrigin({ lat: p.lat, lon: p.lon, label: p.name });
@@ -2008,14 +2055,15 @@ function uStatus(msg, state) {
   for (const id of ['uGo', 'uGo2']) { $(id).disabled = busy; $(id).setAttribute('aria-busy', String(busy)); }
   $('uGoT').textContent = busy ? '찾는 중…' : uGoLabel();
   $('uGo2T').textContent = busy ? '찾는 중…' : '현재 위치에서 찾기';
+  // 찾는 동안에는 질환 목록·검색 칸을 잠근다(어느 질환으로 계산하는지 헷갈리지 않게, 11-23)
+  $('uApp').classList.toggle('busy', busy);
+  for (const id of ['uOpts', 'uAll', 'uFindBox']) $(id).inert = busy;
+  $('uDq').disabled = busy;
 }
 function uState(st) {
   $('uApp').dataset.st = st;
-  const h = $('uHandle'), on = st === 'res' || st === 'list';
-  h.tabIndex = on ? 0 : -1;
-  h.setAttribute('aria-hidden', String(!on));
-  h.setAttribute('aria-label', st === 'list' ? '추천 병원 보기' : '다른 병원 모두 보기');
-  h.setAttribute('aria-expanded', String(st === 'list'));
+  $('uApp').classList.remove('peek', 'dsearch');
+  uHandleSync();
   if (st === 'pick') uPickRender();
   if (!$('uGo').disabled) $('uGoT').textContent = uGoLabel();
 }
@@ -2026,7 +2074,7 @@ function uPickRender() {
   const cur = disease.id, locked = !!ers && !sev; // 질환 표시를 못 읽었으면 '모름'만 고를 수 있다
   let ds = DISEASES.slice(1);
   if (q) ds = ds.filter((d) => (d.label + d.group).replace(/\s+/g, '').includes(q));
-  else if (!uAllOpen) ds = ds.filter((d) => U_QUICK.includes(d.id) || d.id === cur);
+  else if (!uAllOpen && !$('uApp').classList.contains('dsearch')) ds = ds.filter((d) => U_QUICK.includes(d.id) || d.id === cur);
   const opt = (d) => { const on = d.id === cur, off = locked && d.id !== 'none';
     return `<label class="u-opt${on ? ' on' : ''}${off ? ' off' : ''}"><input type="radio" name="uDis" value="${esc(d.id)}"${on ? ' checked' : ''}${off ? ' disabled' : ''}><span>${esc(d.label)}</span><i aria-hidden="true">${CHECK_SVG}</i></label>`; };
   let html = q ? '' : opt(DISEASES[0]);
@@ -2044,8 +2092,9 @@ function uPickDisease(id) {
   $('disease').value = id;
   disease = diseaseById[id] ?? DISEASES[0];
   if (ers) { rejudge(); drawPins(); }
-  uPickRender();
-  $('uOpts').querySelector('input:checked')?.focus({ preventScroll: true });
+  const back = () => { uPickRender(); $('uOpts').querySelector('input:checked')?.focus({ preventScroll: true }); };
+  if ($('uApp').classList.contains('dsearch')) { $('uDq').value = ''; uAnim(() => { $('uApp').classList.remove('dsearch'); back(); }); } // 질환 찾기 화면에서 고르면 원래 화면으로
+  else back();
 }
 $('uOpts').addEventListener('change', (e) => { if (e.target.name === 'uDis') uPickDisease(e.target.value); });
 $('uDq').addEventListener('input', uPickRender);
@@ -2074,24 +2123,29 @@ function uRender() {
   $('uNoBest').textContent = best ? '' : `계산한 범위 안에 ${known ? '받을 수 있다고 확인된' : '막는 메시지가 없는'} 응급실이 없어요. 아래 '전화로 먼저 확인할 곳'에 전화로 확인하거나 119에 신고하세요.`;
   $('uLess').hidden = !best;
   if (best) {
-    const h = byId[best.id], cls = bedClass(h, since), age = Math.round(since);
+    const h = byId[best.id], cls = bedClass(h, since);
     $('uOkT').textContent = known ? '받을 수 있는 곳 중 가장 빨리 닿아요' : '막는 메시지가 없는 곳 중 가장 빨리 닿아요';
     let near = '';
     if (nearest.id !== best.id) {
       const jn = judge[nearest.id];
-      if (jn.tier === 'ok') { const g = nearest.effectiveMin - best.effectiveMin; near = g < 0.5 ? '' : `가장 가까운 ${nearest.name}보다 ${min1(g)}분 빨라요.`; }
+      if (jn.tier === 'ok') { const g = nearest.effectiveMin - best.effectiveMin; near = g < 0.5 ? '' : `가장 가까운 ${nearest.name}보다 ${fmin(g)} 빨라요.`; }
       else if (jn.tier === 'no') near = `가장 가까운 ${nearest.name}${eun(nearest.name)} 지금 받을 수 없다고 표시돼 있어요.`;
       else if (fast?.id !== nearest.id) near = `가장 가까운 ${nearest.name}${eun(nearest.name)} 전화로 확인이 필요해요.`;
     }
     if (sev && !disease.items.length && disease.id !== 'none') near += `${near ? ' ' : ''}이 질환은 병원별 수용 정보가 없어, 병상과 메시지만 보고 추천했어요.`;
     $('uNear').textContent = near;
     $('uName').innerHTML = brk(best.name);
-    $('uNum').textContent = min1(best.effectiveMin);
+    $('uTm').innerHTML = best.effectiveMin < 60 ? `<span class="u-num" id="uNum">${min1(best.effectiveMin)}</span><span class="u-unit">분</span>`
+      : ((t) => `<span class="u-num" id="uNum">${Math.floor(t / 60)}</span><span class="u-unit">시간</span>${t % 60 ? `<span class="u-num">${t % 60}</span><span class="u-unit">분</span>` : ''}`)(Math.round(best.effectiveMin));
+    $('uWhatT').innerHTML = `차로 이동 <b>${fmin(best.travelMin)}</b> + 거절될 때 대비 <b>${best.extraMin >= 0.05 ? fmin(best.extraMin) : '0분'}</b> = <b>${fmin(best.effectiveMin)}</b><br>이 병원이 받아 주지 못할 확률(${pct(best.pReject)})만큼, 다른 병원으로 다시 가는 시간을 더했어요. 확률은 그동안 모은 기록의 통계로 계산해요.`;
+    $('uPeekT').innerHTML = `<b>${esc(best.name)}</b><span>${fmin(best.effectiveMin)}</span>`;
     const bed = h.hvec == null ? '정보 없음' : h.hvec <= 0 ? '없음' : `${h.hvec}개`;
     const rows = [];
     if (known) rows.push(`<div><dt>${esc(dShort())} 치료</dt><dd class="ok">${CHECK_SVG.replace('<svg ', '<svg aria-hidden="true" ')}받을 수 있어요</dd></div>`);
+    rows.push(`<div><dt>이동 시간</dt><dd>차로 ${fmin(best.travelMin)}</dd></div>`);
     rows.push(`<div><dt>남은 병상</dt><dd${cls === 'full' ? ' class="no"' : ''}>${esc(bed)}${cls === 'stale' && h.hvec != null ? ' (오래된 정보)' : ''}</dd></div>`);
-    rows.push(`<div><dt>병상 정보</dt><dd>${age < 1 ? '방금 전' : `${age}분 전`}</dd></div>`);
+    // 병원이 병상 정보를 입력한 시각 = 수집 때 입력 경과(ageMin) + 수집 뒤 지난 시간 (11-23: 수집 시각이 아니라 병원 입력 시각으로)
+    rows.push(`<div><dt>병상 정보</dt><dd>${h.ageMin == null ? '입력 시각 모름' : `병원 입력 ${ago(h.ageMin + since)}`}</dd></div>`);
     $('uDl').innerHTML = rows.join('');
     $('uNavi').href = naviHref(h);
     $('uNavi').setAttribute('aria-label', `${best.name} 카카오맵 길안내`);
@@ -2113,9 +2167,9 @@ function uBubbles(best, checks) {
     const ov = new kakao.maps.CustomOverlay({ position: LL(byId[r.id]), content: el, xAnchor: 0.5, yAnchor, zIndex: z, clickable: true });
     ov.setMap(map); uOv.push(ov);
   };
-  for (const r of checks.slice(0, 3)) add(r, `이동 ${min1(r.travelMin)}분`, 'u-bub chk', 3, 0.5, `${r.name}, 이동 ${min1(r.travelMin)}분, 전화로 확인할 곳`);
-  for (const r of results.slice(1, 5)) add(r, `${min1(r.effectiveMin)}분`, 'u-bub', 3, 0.5, `${r.name}, 실효 도착 ${min1(r.effectiveMin)}분`);
-  if (best) add(best, `<b>${min1(best.effectiveMin)}분</b><i></i><s></s>`, 'u-best', 4, 1, `추천 병원 ${best.name}, 실효 도착 ${min1(best.effectiveMin)}분`);
+  for (const r of checks.slice(0, 3)) add(r, `이동 ${fmin(r.travelMin)}`, 'u-bub chk', 3, 0.5, `${r.name}, 이동 ${fmin(r.travelMin)}, 전화로 확인할 곳`);
+  for (const r of results.slice(1, 5)) add(r, `${fmin(r.effectiveMin)}`, 'u-bub', 3, 0.5, `${r.name}, 실효 도착 ${fmin(r.effectiveMin)}`);
+  if (best) add(best, `<b>${fmin(best.effectiveMin)}</b><i></i><s></s>`, 'u-best', 4, 1, `추천 병원 ${best.name}, 실효 도착 ${fmin(best.effectiveMin)}`);
 }
 // 말풍선·목록에서 병원 하나를 보여 준다: 추천 병원이면 결과 화면, 아니면 목록에서 펼친다
 function uShow(id) {
@@ -2140,17 +2194,82 @@ $('uMoreN').addEventListener('click', uOpenList);
 $('uLess').addEventListener('click', () => { uState('res'); $('uName').tabIndex = -1; $('uName').focus({ preventScroll: true }); });
 $('uWhat').addEventListener('click', () => { const on = $('uWhat').getAttribute('aria-expanded') !== 'true'; $('uWhat').setAttribute('aria-expanded', String(on)); $('uWhatT').hidden = !on; });
 $('uFast').addEventListener('click', () => { if (uFastR) uCallOpen(uFastR.fast.id, uFastR); });
-// 손잡이: 누르면 목록 펴기·접기, 위·아래로 끌어도 된다
+// 손잡이(휴대폰): 누르면 시트를 내려 지도를 크게 보고, 다시 누르면 올린다. 목록에서는 추천 병원으로. 위로 끌면 목록, 아래로 끌면 내리기 (11-23)
+// 시트가 부드럽게 오르내리게: 바꾸기 전·후 위치 차이만큼 옮겨 놓고 제자리로 움직인다(화면 요소는 그대로라 움직이는 동안에도 누를 수 있음)
+function uAnim(fn) {
+  const sh = $('uSheet');
+  if (reduceMo()) return fn();
+  const t0 = sh.getBoundingClientRect().top; fn(); const t1 = sh.getBoundingClientRect().top;
+  if (Math.abs(t0 - t1) >= 2) sh.animate([{ transform: `translateY(${t0 - t1}px)` }, { transform: 'translateY(0)' }], { duration: 280, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+}
+const uPeeked = () => $('uApp').classList.contains('peek');
+function uHandleSync() {
+  const h = $('uHandle'), st = uSt(), pk = uPeeked();
+  h.tabIndex = 0; h.setAttribute('aria-hidden', 'false');
+  h.setAttribute('aria-label', pk ? '시트 올리기' : st === 'list' ? '추천 병원 보기' : '시트 내리고 지도 크게 보기');
+  h.setAttribute('aria-expanded', String(!pk));
+}
+function uPeek(on) { if (uPeeked() === on) return; uAnim(() => { $('uApp').classList.toggle('peek', on); uHandleSync(); }); }
+function uHandleTap() { if (uPeeked()) uPeek(false); else if (uSt() === 'list') uState('res'); else uPeek(true); }
 {
   let y0 = null;
   const h = $('uHandle');
   h.addEventListener('pointerdown', (e) => { y0 = e.clientY; });
   h.addEventListener('pointerup', (e) => {
-    if (y0 == null || !view) return; const dy = e.clientY - y0; y0 = null;
-    if (Math.abs(dy) > 30) uState(dy < 0 ? 'list' : 'res'); else uState(uSt() === 'list' ? 'res' : 'list');
+    if (y0 == null) return; const dy = e.clientY - y0; y0 = null;
+    if (Math.abs(dy) <= 30) return uHandleTap();
+    if (dy < 0) { if (uPeeked()) uPeek(false); else if (uSt() === 'res') uState('list'); }
+    else if (uSt() === 'list') uState('res'); else uPeek(true);
   });
-  h.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && view) { e.preventDefault(); uState(uSt() === 'list' ? 'res' : 'list'); } });
+  h.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); uHandleTap(); } });
 }
+// 질환 이름 칸을 누르면(휴대폰) 시트를 올려 '찾기 칸 + 질환 목록'만 보여 준다
+function uDsearch(on) { if ($('uApp').classList.contains('dsearch') === on) return; uAnim(() => { $('uApp').classList.toggle('dsearch', on); uPickRender(); }); }
+$('uDq').addEventListener('focus', () => { if (innerWidth <= 880 && uSt() === 'pick') uDsearch(true); });
+$('uDqX').addEventListener('click', () => { $('uDq').value = ''; uDsearch(false); });
+
+// 병원 정보 보내기: 병원 이름·주소·전화·지도 링크 (출발지 좌표는 넣지 않음)
+function uToast(t) { const e = $('uToast'); e.textContent = t; e.hidden = false; clearTimeout(uToast.k); uToast.k = setTimeout(() => { e.hidden = true; }, 2500); }
+$('uShare').addEventListener('click', async () => {
+  const best = results?.[0]; if (!best) return;
+  const h = byId[best.id];
+  const text = [`[골든타임] 추천 응급실 (${sev ? dShort() : '병상 기준'})`, h.fullName || h.name, h.addr && `주소: ${h.addr}`, h.tel && `전화: ${h.tel}`,
+    `실효 도착 시간 ${fmin(best.effectiveMin)} (차로 ${fmin(best.travelMin)})`,
+    `지도: https://map.kakao.com/link/map/${encodeURIComponent(String(h.name).replace(/[,/]/g, ' '))},${h.lat},${h.lon}`].filter(Boolean).join('\n');
+  try { if (navigator.share) { await navigator.share({ title: '추천 응급실', text }); return; } } catch (e) { if (e?.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(text); uToast('복사했어요. 메시지 앱에 붙여 넣으세요.'); } catch { uToast('복사하지 못했어요.'); }
+});
+// 네이버 지도 길안내 (휴대폰만): 네이버 공식 URL Scheme. 앱이 없으면 안드로이드는 스토어, 아이폰은 1.5초 뒤 앱스토어
+$('uNaver').hidden = !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+$('uNaver').addEventListener('click', () => {
+  const best = results?.[0]; if (!best) return;
+  const h = byId[best.id];
+  const q = `dlat=${h.lat}&dlng=${h.lon}&dname=${encodeURIComponent(h.name)}&appname=${encodeURIComponent(location.hostname || 'goldentime')}`;
+  if (/Android/i.test(navigator.userAgent)) { location.href = `intent://route/car?${q}#Intent;scheme=nmap;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package=com.nhn.android.nmap;end`; return; }
+  const t = Date.now();
+  location.href = `nmap://route/car?${q}`;
+  setTimeout(() => { if (Date.now() - t < 2000 && document.visibilityState === 'visible') location.href = 'https://itunes.apple.com/app/id311867728?mt=8'; }, 1500);
+});
+// 이동 중 다시 확인: 결과를 본 뒤 병상·질환 데이터만 다시 받아(길찾기는 다시 하지 않음), 추천 병원이 바뀌면 알린다
+let uAlertKey = '';
+async function uWatch() {
+  if (!isUser() || !results?.length || document.visibilityState !== 'visible' || !['res', 'list'].includes(uSt())) return;
+  if (sinceObsMin() <= REFRESH_AFTER_MIN) return;
+  const best = results[0];
+  if (!(await refreshIfOld()) || results?.[0]?.id !== best.id) return;
+  uRender();
+  const h = byId[best.id], j = judge[best.id];
+  const why = !h || !j ? '정보를 더 이상 받을 수 없어요' : j.tier === 'no' ? '지금 받을 수 없다고 표시가 바뀌었어요'
+    : h.hvec != null && h.hvec <= 0 ? '남은 병상이 0이 됐어요' : j.tier === 'check' ? '받을 수 있는지 확인이 필요하게 바뀌었어요' : '';
+  if (!why || uAlertKey === best.id + why) return;
+  uAlertKey = best.id + why;
+  $('uAlertT').textContent = `추천 병원 ${best.name}: ${why}.`;
+  $('uAlert').hidden = false;
+}
+setInterval(uWatch, 60e3);
+document.addEventListener('visibilitychange', uWatch);
+$('uAlertGo').addEventListener('click', () => { $('uAlert').hidden = true; $('gps').click(); });
+$('uAlertX').addEventListener('click', () => { $('uAlert').hidden = true; });
 
 // 전화 확인 창 (아래에서 올라오는 창). auto = { fast, best }: 강조 카드를 눌렀을 때. 없으면 사전 연락 글이 있는 병원을 눌렀을 때
 let uCallFrom = null, uCallHist = false, uBackPending = 0;
@@ -2168,7 +2287,7 @@ function uCallOpen(id, auto) {
   }
   const why = j.why.filter((w) => w !== '사전 연락 필요').map(plainWhy).join(', ');
   $('uCd').innerHTML = auto
-    ? `받아 주면 <b>${min1(auto.best.effectiveMin - auto.fast.travelMin)}분 빨리</b> 닿아요. ` + (contact ? '이 병원은 환자를 보내기 전에 연락해 달라고 했어요. ' : `이 병원은 ${why ? `${esc(why)} 때문에 ` : ''}받아 줄지 알 수 없어요. `) + '어렵다고 하면 추천 병원으로 가세요.'
+    ? `받아 주면 <b>${fmin(auto.best.effectiveMin - auto.fast.travelMin)} 빨리</b> 닿아요. ` + (contact ? '이 병원은 환자를 보내기 전에 연락해 달라고 했어요. ' : `이 병원은 ${why ? `${esc(why)} 때문에 ` : ''}받아 줄지 알 수 없어요. `) + '어렵다고 하면 추천 병원으로 가세요.'
     : '전화로 받아 주는지 먼저 확인하세요.';
   const msgs = contact ? j.contact : j.rel.filter((m) => m.block);
   $('uMsg').hidden = !msgs.length;
@@ -2201,7 +2320,7 @@ $('uCallX').addEventListener('click', () => uCallClose());
 $('uDim').addEventListener('click', () => uCallClose());
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || !isUser() || !$('failDlg').hidden) return;
-  if (!$('uCall').hidden) uCallClose(); else if (uSt() === 'list' && view) uState('res');
+  if (!$('uCall').hidden) uCallClose(); else if ($('uApp').classList.contains('dsearch')) { $('uDq').value = ''; uDsearch(false); } else if (uPeeked()) uPeek(false); else if (uSt() === 'list' && view) uState('res');
 });
 
 // 모드를 바꿀 때: 같이 쓰는 요소(검색 칸·검색 결과·병원 목록·모드 전환)를 옮기고 지도 크기를 다시 잰다
@@ -2289,7 +2408,7 @@ function dockSet(r) {
   if (r) {
     const h = byId[r.id];
     $('dockName').textContent = r.name;
-    $('dockTime').textContent = `실효 도착 시간 ${min1(r.effectiveMin)}분`;
+    $('dockTime').textContent = `실효 도착 시간 ${fmin(r.effectiveMin)}`;
     $('dockNavi').href = naviHref(h);
     $('dockNavi').setAttribute('aria-label', `${r.name} 카카오맵 길안내`);
     $('dockTel').hidden = !h.tel;
