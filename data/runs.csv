@@ -10431,3 +10431,5 @@
 2026-11-27 15:51:02,severe,0,,,60003,서울특별시: The operation was aborted due to timeout / 경기도: The operation was aborted due to timeout / 인천광역시: The operation was aborted due to timeout,"TIMEOUT,TIMEOUT,TIMEOUT",https:TIMEOUT:20.0|https:TIMEOUT:20.0|https:TIMEOUT:20.0,
 2026-11-27 16:01:09,beds,0,,,60006,서울특별시: The operation was aborted due to timeout / 경기도: The operation was aborted due to timeout / 인천광역시: The operation was aborted due to timeout,"TIMEOUT,TIMEOUT,TIMEOUT",https:TIMEOUT:20.0|https:TIMEOUT:20.0|https:TIMEOUT:20.0,
 2026-11-27 16:01:09,severe,0,,,60004,서울특별시: The operation was aborted due to timeout / 경기도: The operation was aborted due to timeout / 인천광역시: The operation was aborted due to timeout,"TIMEOUT,TIMEOUT,TIMEOUT",https:TIMEOUT:20.0|https:TIMEOUT:20.0|https:TIMEOUT:20.0,
+2026-11-27 16:10:55,beds,1,143,143,2960,,,,
+2026-11-27 16:10:55,severe,1,152,152,1237,,,,
